@@ -1,0 +1,9 @@
+/* Loaded after the storefront CSS inside the page editor (TinyMCE) so editing looks like the site but stays usable. */
+html, body { background: #fff; }
+body { margin: 0; padding: 16px; min-height: 100%; }
+body.mce-content-body [data-mce-selected] { outline: 2px solid #1e88e5; outline-offset: 1px; }
+/* Elementor entrance animations never fire inside the editor */
+.elementor-invisible { visibility: visible !important; }
+.animated { animation: none !important; }
+/* keep empty layout boxes visible so they can be clicked */
+.e-con:empty, .elementor-widget-container:empty { min-height: 12px; outline: 1px dashed #d4d4d4; }

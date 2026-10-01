@@ -1,0 +1,1 @@
+<svg class="pay-icon" viewBox="0 0 64 24" width="64" height="24" aria-label="PayPal" role="img"><rect width="64" height="24" rx="3" fill="#fff" stroke="#e6e6e6"/><text x="32" y="16" font-family="Arial,Helvetica,sans-serif" font-size="10" font-weight="bold" font-style="italic" text-anchor="middle"><tspan fill="#003087">Pay</tspan><tspan fill="#009cde">Pal</tspan></text></svg>

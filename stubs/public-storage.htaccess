@@ -1,0 +1,21 @@
+# Uploaded media only: never execute scripts or serve non-media files from here.
+# Written by `php artisan commerce:install` (pine/commerce). public/storage must be a REAL directory, not a symlink.
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phar .pht .cgi .pl .py .sh
+RemoveType .php .phtml .php3 .php4 .php5 .php7 .php8 .phar .pht
+Options -Indexes -ExecCGI
+
+<FilesMatch "(?i)\.(php\d?|phps|phtml|phar|pht|inc|asp|aspx|jsp|cgi|pl|py|sh|sql|csv|txt|log|json|xml|zip|gz|tar|bak|env|ini|lock|htaccess|htpasswd|s?html?|xht(ml)?|m?js|swf|user\.ini)$">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "(?i)\.svg$">
+    Header set Content-Security-Policy "script-src 'none'"
+</FilesMatch>
+
+# Never let a browser sniff an upload into HTML/script.
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>

@@ -1,0 +1,12 @@
+# pine/commerce is a library: no lock file, no installed dependencies in the repository
+/vendor/
+/composer.lock
+/.phpunit.cache/
+/.phpunit.result.cache
+/phpunit.xml
+/build/
+/split-output/
+.DS_Store
+Thumbs.db
+/.idea/
+/.vscode/

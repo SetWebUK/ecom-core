@@ -1,0 +1,26 @@
+{
+    "name": "Default",
+    "slug": "default",
+    "version": "1.0.0",
+    "requires": "pine/commerce ^1.0",
+    "description": "Clean, modern, neutral storefront that implements the complete theme contract. Brand colours, fonts and logo are set in Admin › Settings › Theme; child themes add assets/css/theme.css.",
+    "supports": ["side-cart", "ajax-catalog", "quick-view", "mobile-menu", "wishlist", "reviews", "stock-alerts",
+                 "newsletter", "cookie-banner", "blog", "order-tracking", "contact-form", "emails"],
+    "editor_css": ["css/app.css"],
+    "settings": {
+        "logo": { "type": "image", "label": "Header logo", "group": "Brand", "help": "Leave blank to use the store logo from Settings › Store details." },
+        "logo_height": { "type": "int", "default": 40, "min": 20, "max": 120, "label": "Logo height (pixels)", "group": "Brand" },
+        "primary_color": { "type": "color", "default": "#1d4ed8", "label": "Brand colour", "group": "Colours", "help": "Buttons, links, prices and highlights." },
+        "accent_color": { "type": "color", "default": "#e11d48", "label": "Accent colour", "group": "Colours", "help": "Sale badges and small highlights." },
+        "text_color": { "type": "color", "default": "#0f172a", "label": "Text colour", "group": "Colours" },
+        "background_color": { "type": "color", "default": "#ffffff", "label": "Page background", "group": "Colours" },
+        "surface_color": { "type": "color", "default": "#f4f5f7", "label": "Panel background", "group": "Colours", "help": "Section backgrounds, the footer and form panels." },
+        "header_style": { "type": "select", "default": "light", "label": "Header style", "group": "Layout", "options": { "light": "Light", "brand": "Brand colour" } },
+        "font_body": { "type": "select", "default": "inter", "label": "Body font", "group": "Typography", "options": { "inter": "Inter", "manrope": "Manrope", "system": "System font (fastest)", "serif": "Serif (Georgia)" } },
+        "font_heading": { "type": "select", "default": "manrope", "label": "Heading font", "group": "Typography", "options": { "manrope": "Manrope", "inter": "Inter", "system": "System font", "serif": "Serif (Georgia)" } },
+        "radius": { "type": "select", "default": "md", "label": "Corner style", "group": "Layout", "options": { "none": "Square", "sm": "Subtle", "md": "Rounded", "lg": "Extra rounded" } },
+        "show_top_bar": { "type": "bool", "default": true, "label": "Show the announcement bar", "group": "Layout", "help": "Message and link from Settings › Store details › Announcement bar." },
+        "show_newsletter": { "type": "bool", "default": true, "label": "Show the newsletter sign-up in the footer", "group": "Layout" },
+        "featured_title": { "type": "text", "default": "Featured products", "label": "Home page products heading", "group": "Home page", "help": "Used when the home page blocks give no heading." }
+    }
+}

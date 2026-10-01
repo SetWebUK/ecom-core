@@ -1,0 +1,29 @@
+/.phpunit.cache
+/node_modules
+/public/build
+/public/hot
+/storage/*.key
+/storage/pail
+/vendor
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+*.log
+
+# Uploaded media: public/storage is a REAL directory (LiteSpeed does not follow symlinks). Keep only its .htaccess in git.
+/public/storage/*
+!/public/storage/.htaccess
+
+# Published copies (php artisan commerce:publish / commerce:theme:publish) - build output, never edit here
+/public/vendor/commerce
+/public/themes
+/public/images/placeholder.png
+
+# Secrets: composer credentials for the private pine/commerce repository live in ~/.composer/auth.json on each
+# server (or COMPOSER_AUTH), never in the project
+/auth.json
+# Database dumps and local reference captures of the old site
+/backups
+*.sql
+*.sql.gz

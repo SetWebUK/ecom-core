@@ -1,0 +1,81 @@
+{
+    "name": "pine/commerce",
+    "description": "Pine Commerce - client-agnostic Laravel e-commerce platform: storefront, hand-built Blade/Alpine back office, themes, WordPress/WooCommerce importer and install/doctor tooling.",
+    "keywords": [
+        "laravel",
+        "ecommerce",
+        "shop",
+        "woocommerce",
+        "wordpress",
+        "migration",
+        "blade",
+        "alpinejs"
+    ],
+    "type": "library",
+    "license": "MIT",
+    "homepage": "https://github.com/SetWebUK/ecom-core",
+    "authors": [
+        {
+            "name": "Pine",
+            "role": "Developer"
+        }
+    ],
+    "support": {
+        "docs": "https://github.com/SetWebUK/ecom-core/blob/main/README.md"
+    },
+    "require": {
+        "php": "^8.3",
+        "dompdf/dompdf": "^3.1",
+        "laravel/framework": "^13.17",
+        "stripe/stripe-php": "^21.3"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^11.0",
+        "phpunit/phpunit": "^12.5.12"
+    },
+    "suggest": {
+        "ext-zip": "Bulk invoice / packing-slip downloads as a ZIP of PDFs (without it, one merged PDF is sent)"
+    },
+    "autoload": {
+        "psr-4": {
+            "Pine\\Commerce\\": "src/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Pine\\Commerce\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "@php vendor/bin/phpunit",
+        "validate-package": "@composer validate --strict"
+    },
+    "scripts-descriptions": {
+        "test": "Run the package's own test suite standalone (Orchestra Testbench, in-memory SQLite)",
+        "validate-package": "Validate composer.json strictly"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Pine\\Commerce\\CommerceServiceProvider"
+            ]
+        },
+        "branch-alias": {
+            "dev-main": "1.2.x-dev"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "archive": {
+        "exclude": [
+            "/tests"
+        ]
+    }
+}

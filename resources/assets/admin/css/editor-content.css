@@ -1,0 +1,32 @@
+/* Default styles inside the TinyMCE editing area (<x-admin.rich-editor>). Pass content-css="…" to use the storefront's CSS instead. */
+@font-face {
+    font-family: 'Inter Variable';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 100 900;
+    src: url(../vendor/inter/inter-latin-wght-normal.woff2) format('woff2-variations');
+}
+body {
+    margin: 16px 20px;
+    font-family: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    color: #1f1f1f;
+    background: #fff;
+}
+h1, h2, h3, h4, h5, h6 { line-height: 1.25; margin: 1.2em 0 .5em; font-weight: 700; }
+h1 { font-size: 1.9em; } h2 { font-size: 1.5em; } h3 { font-size: 1.25em; } h4 { font-size: 1.1em; }
+p { margin: 0 0 1em; }
+a { color: #1461b8; }
+img { max-width: 100%; height: auto; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+table td, table th { border: 1px solid #d4d4d4; padding: 6px 10px; }
+table th { background: #f7f7f7; text-align: left; }
+blockquote { margin: 1em 0; padding: .5em 1em; border-left: 3px solid #1e88e5; background: #f5f9fe; }
+pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em; background: #f4f4f4; border-radius: 4px; }
+pre { padding: 10px 12px; overflow: auto; }
+code { padding: 1px 4px; }
+hr { border: 0; border-top: 1px solid #e3e3e3; margin: 1.5em 0; }
+ul, ol { padding-left: 1.4em; }
+/* Imported page-builder markup: show structure faintly so empty wrappers stay clickable */
+div:empty:not([class*="elementor-background"]) { min-height: 8px; }

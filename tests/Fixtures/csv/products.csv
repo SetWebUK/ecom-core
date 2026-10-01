@@ -1,0 +1,7 @@
+id,type,sku,name,slug,status,parent_sku,categories,primary_category,short_description,description,regular_price,sale_price,sale_starts_at,sale_ends_at,manage_stock,stock_quantity,stock_status,weight,images,attributes,variation_options,specs,meta_title,featured
+,simple,OWN-LAMP,Desk Lamp,desk-lamp,published,,Home > Lighting | Offers,Home > Lighting,A bright lamp.,"<p>Line one
+line two, with a comma</p>",£24.99,19.99,2026-01-01,2030-12-31,yes,4,,1.25,/storage/uploads/2026/01/lamp.jpg,"Colour: Black, White | Finish: Matt",,"Bulb: E27 | Power: 40W, dimmable",Lamp SEO,no
+,variable,OWN-SCARF,Wool Scarf,,draft,,Clothing,,,,,,,,,,,,,"Colour: Red, Blue",,,,yes
+,variation,OWN-SCARF-R,,,published,OWN-SCARF,,,,,20,15,,,yes,3,,,,,Colour: Red,,,
+,variation,OWN-SCARF-B,,,draft,OWN-SCARF,,,,,20,,,,no,,outofstock,,,,Colour: Blue,,,
+,variation,OWN-ORPHAN,,,published,NO-SUCH-PARENT,,,,,5,,,,,,,,,,Colour: Red,,,

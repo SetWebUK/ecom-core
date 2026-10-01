@@ -1,0 +1,46 @@
+# Pine Commerce front controller (LiteSpeed / Apache). The document root must be this public/ directory.
+#
+# LiteSpeed notes:
+#  - it does NOT follow symlinks out of public/: public/storage, public/vendor/commerce and the theme assets are real
+#    copies (commerce:install / commerce:publish / commerce:theme:publish) - never `php artisan storage:link`.
+#  - when the old WordPress site's .htaccess sits in a parent directory and sets auto_prepend_file (Wordfence,
+#    security plugins), uncomment the next line so it is not prepended to the shop:
+# php_value auto_prepend_file none
+
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # Never serve dotfiles (.env, .git) should they ever end up in public/
+    RewriteRule (^|/)\.(?!well-known/) - [F,L]
+
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Handle X-XSRF-Token Header
+    RewriteCond %{HTTP:x-xsrf-token} .
+    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
+
+    # Trailing slashes are KEPT: old WordPress/WooCommerce URLs end in "/". Adding or removing the slash is done by
+    # the application (Pine\Commerce\Http\Middleware\TrailingSlash, one 301), so do NOT add the stock Laravel
+    # "Redirect Trailing Slashes If Not A Folder" rule here - it would create redirect loops.
+
+    # Send Requests To Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    # HSTS: enable ONLY after https works on every host name of the site (see the go-live checklist in pine/commerce docs/PLAYBOOK.md).
+    # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
+
+    # Long browser caching for published, versioned assets (URLs carry ?v=filemtime)
+    <FilesMatch "\.(css|js|woff2?|ttf|svg|png|jpe?g|gif|webp|avif|ico)$">
+        Header set Cache-Control "public, max-age=31536000"
+    </FilesMatch>
+</IfModule>
