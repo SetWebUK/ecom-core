@@ -21,7 +21,7 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 class Commerce
 {
     /** Package version (SemVer; the theme contract, config keys and extension API are the public API). */
-    public const VERSION = '1.3.1';
+    public const VERSION = '1.3.2';
 
     /** Session fields never flashed back as "old input" when validation fails. */
     public const DONT_FLASH = ['password_current', 'password_1', 'password_2', 'account_password', 'pass1', 'pass2',

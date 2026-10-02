@@ -104,7 +104,7 @@ PHP);
  * Colours and fonts are CSS custom properties (Admin › Settings › Theme sets the main ones), e.g.:
  *
  * :root {
- *     --color-primary: #0f766e;
+ *     --c-primary: #0f766e;
  *     --radius: 14px;
  * }
  */

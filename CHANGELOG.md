@@ -9,6 +9,21 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-10-02
+
+### Fixed
+- Default theme: Admin › Settings › Theme colours, fonts and corner radius now show on the storefront and checkout.
+  The inline `--c-*` variables were printed before `css/app.css`, whose own `:root` defaults then won the cascade.
+  Order is now: `app.css` defaults → theme settings → child theme `theme.css`. Regression test added.
+- `commerce:theme:make`: the generated `theme.css` example uses the real variable names (`--c-primary`, not
+  `--color-primary`).
+
+### Added
+- `SECURITY.md`: report vulnerabilities privately via GitHub's "Report a vulnerability".
+
+### Client actions required
+- None. Child themes that worked around the bug by setting `--c-*` in `theme.css` keep working (theme.css still loads last).
+
 ## [1.3.1] - 2026-10-02
 
 A patch release from the first roll-out of Admin › Updates. No migrations, no config changes.
@@ -505,6 +520,7 @@ like-for-like), with every client-specific value moved out to client config, the
 - PHP 8.3+, Laravel 13, MySQL 8 / MariaDB 10.6+ (SQLite for tests), `stripe/stripe-php` ^21.
 
 [Unreleased]: https://github.com/SetWebUK/ecom-core/compare/v1.3.1...HEAD
+[1.3.2]: https://github.com/SetWebUK/ecom-core/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/SetWebUK/ecom-core/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/SetWebUK/ecom-core/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/SetWebUK/ecom-core/releases/tag/v1.2.1

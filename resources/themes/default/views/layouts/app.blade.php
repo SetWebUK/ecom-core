@@ -42,8 +42,10 @@
         <link rel="icon" href="{{ $faviconUrl }}">
         <link rel="apple-touch-icon" href="{{ $faviconUrl }}">
     @endif
-    <style>{!! $S::fontFaces() !!}{!! $S::cssVariables() !!}</style>
+    <style>{!! $S::fontFaces() !!}</style>
     <link rel="stylesheet" href="{{ theme_asset('css/app.css') }}">
+    {{-- Admin › Settings › Theme values must come after app.css (which declares the defaults) and before child theme CSS --}}
+    <style>{!! $S::cssVariables() !!}</style>
     @foreach ($childCss as $href)
         <link rel="stylesheet" href="{{ $href }}">
     @endforeach

@@ -20,8 +20,9 @@
     <meta name="robots" content="noindex, nofollow">
     <title>@yield('title', 'Checkout | '.$store['name'])</title>
     @if ($favicon)<link rel="icon" href="{{ media_url($favicon) }}">@endif
-    <style>{!! $S::fontFaces() !!}{!! $S::cssVariables() !!}</style>
+    <style>{!! $S::fontFaces() !!}</style>
     <link rel="stylesheet" href="{{ theme_asset('css/app.css') }}">
+    <style>{!! $S::cssVariables() !!}</style>
     @foreach ($childCss as $href)<link rel="stylesheet" href="{{ $href }}">@endforeach
     <script>window.dataLayer = window.dataLayer || [];</script>
     @stack('head')
