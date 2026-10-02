@@ -215,9 +215,9 @@ class TaxShippingAdminTest extends TestCase
         $this->get(route('admin.orders.edit', $order))->assertOk();
         $this->get(route('admin.print', ['document' => 'invoice', 'orders' => $order->id]))->assertOk()->assertSee('VAT 20%');
 
-        $report = $this->get(route('admin.reports.index', ['from' => now()->subDay()->toDateString(), 'to' => now()->toDateString()]))->assertOk();
+        $report = $this->get(route('admin.reports.index', ['from' => now()->subDay()->toDateString(), 'to' => now()->addDay()->toDateString()]))->assertOk();
         $report->assertSee('Tax by rate');
-        $csv = $this->get(route('admin.reports.export', ['table' => 'taxes', 'from' => now()->subDay()->toDateString(), 'to' => now()->toDateString()]))->assertOk()->streamedContent();
+        $csv = $this->get(route('admin.reports.export', ['table' => 'taxes', 'from' => now()->subDay()->toDateString(), 'to' => now()->addDay()->toDateString()]))->assertOk()->streamedContent();
         $this->assertStringContainsString('VAT 20%', $csv);
     }
 }
