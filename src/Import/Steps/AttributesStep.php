@@ -74,23 +74,9 @@ class AttributesStep extends AbstractStep
         $this->ctx->count('Attribute values', $terms->count(), $this->ctx->owned('attribute_values')->count());
     }
 
-    /** Upsert attribute values on (attribute_id, slug). Returns ["attrId|slug" => id]. */
+    /** Upsert attribute values on (attribute_id, slug). Returns ["attrId|slug" => id]. (Mapping\ProductChildren::saveValues) */
     public static function saveValues(array $values, string $now): array
     {
-        $existing = [];
-        foreach (DB::table('attribute_values')->get(['id', 'attribute_id', 'slug']) as $v) {
-            $existing[$v->attribute_id.'|'.$v->slug] = $v->id;
-        }
-        foreach ($values as $v) {
-            $key = $v['attribute_id'].'|'.$v['slug'];
-            $data = $v + ['updated_at' => $now];
-            if (isset($existing[$key])) {
-                DB::table('attribute_values')->where('id', $existing[$key])->update($data);
-            } else {
-                $existing[$key] = DB::table('attribute_values')->insertGetId($data + ['created_at' => $now]);
-            }
-        }
-
-        return $existing;
+        return \Pine\Commerce\Import\Mapping\ProductChildren::saveValues($values, $now);
     }
 }

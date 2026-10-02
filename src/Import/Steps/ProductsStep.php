@@ -8,6 +8,8 @@ use Pine\Commerce\Import\Contracts\ProductMapper;
 use Pine\Commerce\Import\Data\WpPost;
 use Pine\Commerce\Import\Data\WpProduct;
 use Pine\Commerce\Import\Data\WpTerm;
+use Pine\Commerce\Import\Mapping\ProductChildren;
+use Pine\Commerce\Import\Mapping\ProductRows;
 use Pine\Commerce\Import\Source\WordPressSource;
 use Pine\Commerce\Import\Support\Formatter;
 
@@ -63,7 +65,15 @@ class ProductsStep extends AbstractStep
         $ids = $posts->pluck('ID')->all();
 
         // Local (non-taxonomy) attributes become global attributes too.
-        $localValues = $this->localAttributes($this->wp->postMeta($ids, ['_product_attributes']), $attributeIds);
+        $local = [];
+        foreach ($this->wp->postMeta($ids, ['_product_attributes']) as $m) {
+            foreach ((array) (WordPressSource::unserialize($m['_product_attributes'] ?? '') ?: []) as $attr) {
+                if (is_array($attr) && empty($attr['is_taxonomy']) && ! empty($attr['name'])) {
+                    $local[] = ['name' => (string) $attr['name'], 'values' => explode('|', (string) ($attr['value'] ?? ''))];
+                }
+            }
+        }
+        $localValues = ProductChildren::localAttributes($local, $attributeIds, $this->now());
 
         $usedSlugs = [];
         $allRows = [];
@@ -130,79 +140,20 @@ class ProductsStep extends AbstractStep
                     fn ($id) => isset($productCats[$id]) ? ['id' => (int) $id, 'name' => (string) $productCats[$id]->name, 'parent' => (int) $productCats[$id]->parent] : null,
                     $cats)))) : null;
 
-                $slug = $post->post_name !== '' ? urldecode($post->post_name) : Str::slug($name);
-                $base = $slug;
-                $i = 2;
-                while (isset($usedSlugs[$slug])) {
-                    $slug = $base.'-'.$i++;
-                }
-                $usedSlugs[$slug] = true;
-
-                $sku = trim((string) ($m['_sku'] ?? '')) ?: null;
-                $regular = WordPressSource::decimal($m['_regular_price'] ?? null);
-                $sale = WordPressSource::decimal($m['_sale_price'] ?? null);
-                $saleFrom = WordPressSource::ts($m['_sale_price_dates_from'] ?? null);
-                $saleTo = WordPressSource::ts($m['_sale_price_dates_to'] ?? null);
-                $manage = WordPressSource::yes($m['_manage_stock'] ?? 'no');
-                $stock = isset($m['_stock']) && is_numeric($m['_stock']) ? (int) $m['_stock'] : null;
-                $status = match ($post->post_status) {
-                    'publish' => 'published',
-                    'private' => 'private',
-                    default => 'draft',
-                };
+                $slug = ProductRows::uniqueSlug($post->post_name !== '' ? urldecode($post->post_name) : Str::slug($name), $usedSlugs);
                 $vars = ['title' => $name, 'excerpt' => Formatter::excerpt($post->post_excerpt ?: $post->post_content, 30)];
                 $seo = $this->ctx->postSeo($wpPost, $m, $vars);
-                if ($type === 'external' || $type === 'grouped') {
-                    $this->ctx->warn("Product #{$post->ID} '$name' is a $type product – imported as a simple product"
-                        .($type === 'external' ? ' (external URL: '.($m['_product_url'] ?? '?').')' : ' (children linked as related products)'));
+                if ($warning = ProductRows::typeWarning((int) $post->ID, $name, $type, $m['_product_url'] ?? null)) {
+                    $this->ctx->warn($warning);
                 }
 
-                $row = [
-                    'wp_id' => $post->ID,
-                    'name' => $name,
+                $row = ProductRows::row($product, [
                     'slug' => $slug,
-                    'sku' => $sku,
-                    'type' => $type === 'variable' ? 'variable' : 'simple',
-                    'status' => $status,
                     'primary_category_id' => $primary ? ($categoryIds[$primary] ?? null) : null,
                     'breadcrumb_category_id' => $breadcrumb && (int) $breadcrumb !== (int) $primary ? ($categoryIds[$breadcrumb] ?? null) : null,
-                    'short_description' => Formatter::clean(Formatter::autop($post->post_excerpt)),
-                    'description' => Formatter::clean(Formatter::autop($post->post_content)),
-                    'subtitle' => null,
-                    'condition' => null,
-                    'brand' => null,
-                    'regular_price' => $regular,
-                    'sale_price' => $sale,
-                    'sale_starts_at' => $saleFrom,
-                    'sale_ends_at' => $saleTo,
-                    'price' => $this->effectivePrice($regular, $sale, $saleFrom, $saleTo),
-                    'cost_price' => null,
-                    'manage_stock' => $manage,
-                    'stock_quantity' => $manage ? $stock : null,
-                    'stock_status' => in_array($m['_stock_status'] ?? '', ['instock', 'outofstock', 'onbackorder'], true) ? $m['_stock_status'] : 'instock',
-                    'backorders' => in_array($m['_backorders'] ?? '', ['no', 'notify', 'yes'], true) ? $m['_backorders'] : 'no',
-                    'low_stock_threshold' => isset($m['_low_stock_amount']) && is_numeric($m['_low_stock_amount']) ? (int) $m['_low_stock_amount'] : null,
-                    'sold_individually' => WordPressSource::yes($m['_sold_individually'] ?? 'no'),
-                    'weight' => $this->dimension($m['_weight'] ?? null),
-                    'length' => $this->dimension($m['_length'] ?? null),
-                    'width' => $this->dimension($m['_width'] ?? null),
-                    'height' => $this->dimension($m['_height'] ?? null),
-                    'tax_status' => $m['_tax_status'] ?? 'taxable',
-                    'tax_class' => ($m['_tax_class'] ?? '') !== '' ? $m['_tax_class'] : null,
-                    'is_featured' => in_array('featured', $visibility, true),
-                    'sort_order' => (int) $post->menu_order,
-                    'total_sales' => max(0, (int) ($m['total_sales'] ?? 0)),
-                    'average_rating' => round((float) ($m['_wc_average_rating'] ?? 0), 2),
-                    'review_count' => (int) ($m['_wc_review_count'] ?? 0),
-                    'meta_title' => Str::limit((string) $seo?->title, 250, '') ?: null,
-                    'meta_description' => $seo?->description,
-                    'focus_keyword' => Str::limit((string) $seo?->focusKeyword, 250, '') ?: null,
-                    'gtin' => trim((string) ($m['_global_unique_id'] ?? '')) ?: null,
-                    'published_at' => $post->post_status === 'publish' ? WordPressSource::gmt($post->post_date_gmt) : null,
-                    'created_at' => WordPressSource::gmt($post->post_date_gmt) ?? WordPressSource::gmt($post->post_modified_gmt) ?? $this->now(),
-                    'updated_at' => WordPressSource::gmt($post->post_modified_gmt) ?? $this->now(),
-                    'deleted_at' => null,
-                ];
+                    'seo' => $seo,
+                    'featured' => in_array('featured', $visibility, true),
+                ], $this->now());
                 foreach ($attributeMap as $attribute => $column) {
                     if (($attrJoined['pa_'.$attribute] ?? '') !== '') {
                         $row[$column] = Str::limit($attrJoined['pa_'.$attribute], 250, '');
@@ -271,40 +222,23 @@ class ProductsStep extends AbstractStep
             .($typeNote ? '; '.$typeNote : ''));
     }
 
+    /** Resolve WordPress ids (terms, attachments, attribute terms) to local ids, then write via ProductChildren. */
     private function productChildren(array $children, array $productIds, array $categoryIds, array $attributeIds, array $localValues): void
     {
-        $ids = array_values($productIds);
-        foreach (['category_product', 'product_images', 'product_attributes', 'attribute_value_product', 'product_specs'] as $table) {
-            foreach (array_chunk($ids, 500) as $chunk) {
-                DB::table($table)->whereIn('product_id', $chunk)->delete();
-            }
-        }
-
         $valueIds = $this->ctx->owned('attribute_values')->pluck('id', 'wp_id')->all();
         $attachments = $this->ctx->attachments();
-        $cats = $images = $attrs = $values = $specs = [];
-        $missingImages = 0;
-
+        $resolved = [];
         foreach ($children as $wpId => $c) {
-            $pid = $productIds[$wpId] ?? null;
-            if (! $pid) {
-                continue;
-            }
+            $r = ['categories' => [], 'images' => [], 'attributes' => [], 'values' => [], 'specs' => $c['specs']];
             foreach (array_unique($c['categories']) as $termId) {
                 if (isset($categoryIds[$termId])) {
-                    $cats[] = ['category_id' => $categoryIds[$termId], 'product_id' => $pid];
+                    $r['categories'][] = $categoryIds[$termId];
                 }
             }
-            foreach ($c['images'] as $pos => $attachmentId) {
-                $a = $attachments[$attachmentId] ?? null;
-                if (! $a) {
-                    continue;
+            foreach ($c['images'] as $attachmentId) {
+                if ($a = $attachments[$attachmentId] ?? null) {
+                    $r['images'][] = ['path' => $a['path'], 'alt' => $a['alt'], 'exists' => $a['exists']];
                 }
-                if (! $a['exists']) {
-                    $missingImages++;
-                }
-                $images[] = ['product_id' => $pid, 'path' => $a['path'], 'alt' => $a['alt'], 'sort_order' => $pos,
-                    'created_at' => $this->now(), 'updated_at' => $this->now()];
             }
             $position = 0;
             foreach ((array) $c['attributes'] as $key => $attr) {
@@ -317,13 +251,13 @@ class ProductsStep extends AbstractStep
                 if (! $attributeId) {
                     continue;
                 }
-                $attrs[$pid.'|'.$attributeId] = ['product_id' => $pid, 'attribute_id' => $attributeId, 'position' => (int) ($attr['position'] ?? $position),
+                $r['attributes'][] = ['attribute_id' => $attributeId, 'position' => (int) ($attr['position'] ?? $position),
                     'is_visible' => ! empty($attr['is_visible']), 'is_variation' => ! empty($attr['is_variation'])];
                 $position++;
                 if (! $isTaxonomy) {
                     foreach (array_filter(array_map('trim', explode('|', (string) ($attr['value'] ?? '')))) as $v) {
                         if ($valueId = $localValues[$attributeId.'|'.Str::slug($v)] ?? null) {
-                            $values[$pid.'|'.$valueId] = ['attribute_value_id' => $valueId, 'product_id' => $pid];
+                            $r['values'][] = $valueId;
                         }
                     }
                 }
@@ -331,25 +265,18 @@ class ProductsStep extends AbstractStep
             foreach ($c['attrTerms'] as $list) {
                 foreach ($list as $t) {
                     if ($valueId = $valueIds[$t['term']] ?? null) {
-                        $values[$pid.'|'.$valueId] = ['attribute_value_id' => $valueId, 'product_id' => $pid];
+                        $r['values'][] = $valueId;
                     }
                 }
             }
-            foreach ($c['specs'] as $i => $s) {
-                $specs[] = ['product_id' => $pid, 'key' => $s['key'], 'label' => $s['label'], 'value' => $s['value'], 'description' => $s['description'], 'sort_order' => $i];
-            }
+            $resolved[$wpId] = $r;
         }
+        $counts = ProductChildren::write($resolved, $productIds, $this->now(), $this->ctx->upserter());
 
-        $this->ctx->insert('category_product', $cats);
-        $this->ctx->insert('product_images', $images);
-        $this->ctx->insert('product_attributes', array_values($attrs));
-        $this->ctx->insert('attribute_value_product', array_values($values));
-        $this->ctx->insert('product_specs', $specs);
-
-        $this->add('Product images', count($images), $missingImages ? '%d image files missing' : '', $missingImages);
-        $this->add('Product ↔ category links', count($cats));
-        $this->add('Product attribute values', count($values));
-        $this->add('Product spec rows', count($specs), 'Technical specification table');
+        $this->add('Product images', $counts['images'], $counts['missing_images'] ? '%d image files missing' : '', $counts['missing_images']);
+        $this->add('Product ↔ category links', $counts['categories']);
+        $this->add('Product attribute values', $counts['values']);
+        $this->add('Product spec rows', $counts['specs'], 'Technical specification table');
     }
 
     /** Accumulate a summary row over chunks. */
@@ -364,46 +291,8 @@ class ProductsStep extends AbstractStep
 
     private function relatedProducts(array $related, array $productIds): void
     {
-        $ids = array_values($productIds);
-        foreach (array_chunk($ids, 500) as $chunk) {
-            DB::table('related_products')->whereIn('product_id', $chunk)->delete();
-        }
-        $rows = [];
-        foreach ($related as [$wpId, $relatedWp, $type]) {
-            $pid = $productIds[$wpId] ?? null;
-            $rid = $productIds[$relatedWp] ?? null;
-            if ($pid && $rid && $rid !== $pid) {
-                $rows[$pid.'|'.$rid.'|'.$type] = ['product_id' => $pid, 'related_id' => $rid, 'type' => $type];
-            }
-        }
-        $this->ctx->insert('related_products', array_values($rows));
-        $this->ctx->count('Up-sells / cross-sells', '—', count($rows));
-    }
-
-    /** Local (non-taxonomy) product attributes -> global attributes + values. Returns ["attrId|slug" => id]. */
-    private function localAttributes(array $meta, array &$attributeIds): array
-    {
-        $values = [];
-        foreach ($meta as $m) {
-            foreach ((array) (WordPressSource::unserialize($m['_product_attributes'] ?? '') ?: []) as $attr) {
-                if (! is_array($attr) || ! empty($attr['is_taxonomy']) || empty($attr['name'])) {
-                    continue;
-                }
-                $name = Formatter::decode($attr['name']);
-                $slug = Str::slug($name);
-                if (! isset($attributeIds[$slug])) {
-                    $attributeIds[$slug] = DB::table('attributes')->insertGetId([
-                        'name' => $name, 'slug' => $slug, 'type' => 'select', 'is_filterable' => false,
-                        'sort_order' => 50, 'created_at' => $this->now(), 'updated_at' => $this->now(),
-                    ]);
-                }
-                foreach (array_filter(array_map('trim', explode('|', (string) ($attr['value'] ?? '')))) as $i => $v) {
-                    $values[$attributeIds[$slug].'|'.Str::slug($v)] = ['attribute_id' => $attributeIds[$slug], 'value' => $v, 'slug' => Str::slug($v), 'sort_order' => $i, 'wp_id' => null];
-                }
-            }
-        }
-
-        return $values ? AttributesStep::saveValues(array_values($values), $this->now()) : [];
+        $count = ProductChildren::related($related, $productIds, array_values($productIds), $this->ctx->upserter());
+        $this->ctx->count('Up-sells / cross-sells', '—', $count);
     }
 
     private function imageIds(array $m): array
@@ -419,20 +308,5 @@ class ProductsStep extends AbstractStep
         }
 
         return array_values(array_unique($ids));
-    }
-
-    private function effectivePrice(?float $regular, ?float $sale, ?string $from, ?string $to): ?float
-    {
-        $now = gmdate('Y-m-d H:i:s');
-        // Same rule as Product::isOnSale()
-        $onSale = $sale !== null && $regular !== null && $sale < $regular
-            && (! $from || $from <= $now) && (! $to || $to >= $now);
-
-        return $onSale ? $sale : $regular;
-    }
-
-    private function dimension($value): ?float
-    {
-        return is_numeric($value) && (float) $value > 0 ? (float) $value : null;
     }
 }
