@@ -5,6 +5,8 @@ namespace Pine\Commerce\Console;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
+use Pine\Commerce\Commerce;
+use Pine\Commerce\Updater\Skeleton\SkeletonBaseline;
 
 /**
  * Scaffolds a new client project (a Laravel app that requires pine/commerce) from stubs/client-skeleton.
@@ -101,6 +103,7 @@ class NewClientCommand extends Command
 
         $files->ensureDirectoryExists($target);
         $count = 0;
+        $hashes = [];
         foreach ($files->allFiles($skeleton, true) as $file) {
             $relative = $file->getRelativePathname();
             // stored under another name so they do not act on this repository (a .gitignore would hide skeleton files)
@@ -112,11 +115,25 @@ class NewClientCommand extends Command
                 $contents = strtr($contents, $replace);
             }
             $files->put($destination, $contents);
+            $hashes[$relative] = SkeletonBaseline::hash($contents);
             if ($relative === 'artisan') {
                 @chmod($destination, 0755);
             }
             $count++;
         }
+        // skeleton baseline (Admin › Updates › skeleton files): which skeleton release these files are, and their hashes
+        SkeletonBaseline::write([
+            'repository' => (string) config('commerce.updater.skeleton_repository', 'https://github.com/SetWebUK/ecom-skeleton.git'),
+            'ref' => 'v'.Commerce::VERSION,
+            'name' => $name,
+            'slug' => $slug,
+            'updates' => true,
+            'created_by' => 'commerce:new-client',
+            'created_at' => now()->toDateString(),
+            'files' => $hashes,
+        ], $target);
+        $count++;
+
         // .env from the documented example (never overwrite an existing one)
         if (! is_file($target.'/.env') && is_file($target.'/.env.example')) {
             $files->copy($target.'/.env.example', $target.'/.env');

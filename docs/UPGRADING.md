@@ -16,8 +16,8 @@ Clients install it in one of two modes (`composer.json`):
 
 New clients: `commerce:new-client … --repo=<git url>` (VCS) or `--path=<dir>` (path). Switching an existing client
 from a path repository: PLAYBOOK part 1.7. Repository access on servers: PLAYBOOK part 1.6 (none needed for the public
-HTTPS URL). The package's `extra.branch-alias` maps `dev-main` to `1.2.x-dev`, so a staging site can track unreleased
-work with `"pine/commerce": "1.2.x-dev"`.
+HTTPS URL). The package's `extra.branch-alias` maps `dev-main` to `1.3.x-dev`, so a staging site can track unreleased
+work with `"pine/commerce": "1.3.x-dev"`.
 
 ## Releasing
 

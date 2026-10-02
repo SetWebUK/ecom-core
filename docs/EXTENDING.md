@@ -35,7 +35,7 @@ package's own tests show every extension point in use: `tests/Feature/ExtensionA
 - [Product presentation](#product-presentation) · [Facet sorter](#facet-sorter)
 - [Order events, hooks and emails](#order-events-hooks-and-emails)
 - [Views and view composers](#views-and-view-composers) · [Client routes](#client-routes)
-- [Scheduled tasks](#scheduled-tasks) · [Importer adapters and steps](#importer-adapters-and-steps)
+- [Scheduled tasks](#scheduled-tasks) · [Updates](#updates) · [Importer adapters and steps](#importer-adapters-and-steps)
 - [Client data](#client-data) · [Checklist](#checklist-for-client-code)
 
 ---
@@ -107,6 +107,7 @@ View-bearing switches (`blog`, `wishlist`, `reviews`, `stock_alerts`, `newslette
 | `wp_404_guess` | on | old WordPress URLs: guess the product/category by slug before the 404 |
 | `add_to_cart_query` | on | old `?add-to-cart={id}` links |
 | `product_csv` | on | admin Products › Import / Export (full product CSV, WooCommerce exports accepted), `commerce:products:export` / `commerce:products:import` ([PRODUCT-CSV.md](PRODUCT-CSV.md)) |
+| `updater` | on | admin Updates (administrators only): daily update check, dashboard notice + sidebar badge, approved pine/commerce updates, skeleton file updates; `commerce:update:*`, `commerce:skeleton:*`, scheduler task `updates.check` ([Updates](#updates)) |
 
 Tests: `tests/Feature/FeatureFlagsTest.php` turns each one on and off.
 
@@ -612,6 +613,38 @@ Rules:
   breaks the run: the task is recorded as failed with the message and logged.
 - `Schedule::command(...)` in `routes/console.php` still works for jobs that need Laravel's full scheduling API
   (`between()`, `onOneServer()`, sub-minute), but those jobs have no web fallback and do not appear in the status.
+
+## Updates
+
+*Since 1.3.* Admin › Updates finds new pine/commerce releases and installs one only after an administrator approves
+it (PLAYBOOK part 3.6). Nothing to register in client code; the `updater` block of `config/commerce.php` adapts it to a
+server. A client config without the block gets the package defaults (top-level keys merge shallowly: copy the whole
+block to change one key).
+
+| `commerce.updater.*` | Default | |
+|---|---|---|
+| `repository` | `env('COMMERCE_UPDATER_REPOSITORY')` | where to look for releases; null = the `vcs`/`git` repository of `pine/commerce` in `composer.json` (a `path` repository = development checkout: the admin refuses to update) |
+| `default_repository` | `https://github.com/SetWebUK/ecom-core.git` | when `composer.json` names no repository (installed from a registry) |
+| `skeleton_repository` | `https://github.com/SetWebUK/ecom-skeleton.git` | skeleton file updates (a project's `.commerce-skeleton.json` may name another) |
+| `github_token` | `env('COMMERCE_UPDATER_GITHUB_TOKEN')` | optional: private repositories / GitHub API rate limit (anonymous: 60 requests an hour; the checker falls back to `git ls-remote`) |
+| `check` | `true` | the daily scheduled check (task `updates.check`; or switch the task off with `'scheduler' => ['tasks' => ['updates.check' => false]]`) |
+| `php_binary` | `env('COMMERCE_PHP_BINARY')` | the PHP **CLI** for `php artisan …`; null = detected (a web request's `PHP_BINARY` is `lsphp`/`php-fpm`, so `PHP_BINDIR/php` and `php` in PATH are tried) |
+| `composer_binary` | `env('COMMERCE_COMPOSER_BINARY')` | null = `composer` / `composer.phar` in PATH, `~/bin`, the project |
+| `mysqldump_binary`, `git_binary` | null | null = found in PATH (`mysqldump` or `mariadb-dump`; `git`) |
+| `home` | `env('COMMERCE_UPDATER_HOME')` | HOME for composer and git started from the web (null = `$HOME`, else the account's home directory) – composer's cache, auth.json and SSH keys live there |
+| `composer_home` | `env('COMMERCE_COMPOSER_HOME')` | null = `$COMPOSER_HOME`, `~/.config/composer` (if it exists) or `~/.composer` |
+| `path` | null | working directory (lock, run logs, skeleton checkouts); null = `storage/app/private/updater` |
+| `backup` | `true` | database backup before every update (`mysqldump` + gzip, or a copy of the SQLite file); false only if you back up yourself |
+| `backup_path` | null | null = `storage/app/private/updater/backups`; refused when under `public/` |
+| `keep_backups` | `5` | newest N backups kept |
+| `min_free_mb` | `1024` | free disk space needed to start |
+| `timeout` | `900` | seconds per composer / mysqldump step |
+| `http_timeout`, `git_timeout` | `10`, `120` | seconds per GitHub request / git command |
+| `project_path` | null | the project root (tests only) |
+
+Audit log: table `platform_updates` (model `Pine\Commerce\Models\PlatformUpdate`, additive migration
+`2026_10_02_000100_create_platform_updates_table`). Process execution goes through the `Pine\Commerce\Updater\ProcessRunner`
+interface (bound to `SystemProcessRunner`; tests bind `Tests\Fixtures\FakeProcessRunner`).
 
 ## Importer adapters and steps
 

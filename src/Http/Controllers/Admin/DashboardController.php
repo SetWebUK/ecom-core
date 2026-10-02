@@ -123,6 +123,7 @@ class DashboardController extends Controller
             'submissions' => $submissions,
             'unreadCount' => $unreadCount,
             'lastOrder' => $lastOrder,
+            'platformUpdate' => $this->platformUpdate($request),
             'greeting' => $hour < 12 ? 'Good morning' : ($hour < 18 ? 'Good afternoon' : 'Good evening'),
             'showMessages' => Features::enabled('contact_form', false),
             'widgets' => static::widgets($request),
@@ -188,6 +189,27 @@ class DashboardController extends Controller
         }
 
         return $out;
+    }
+
+    /**
+     * Admin › Updates notice for administrators (feature "updater"): the newest check found an installable release.
+     *
+     * @return array{latest:string, installed:string}|null
+     */
+    protected function platformUpdate(Request $request): ?array
+    {
+        $user = $request->user();
+        if (! Features::enabled('updater', false) || ! $user?->isAdmin() || ! \Illuminate\Support\Facades\Route::has('admin.updates.index')) {
+            return null;
+        }
+        try {
+            $status = \Pine\Commerce\Updater\UpdateChecker::status();
+        } catch (Throwable) {
+            return null;
+        }
+
+        return $status['available'] ? ['latest' => (string) $status['latest'], 'installed' => (string) $status['installed'],
+            'actions' => (bool) ($status['check']?->result['actions_required'] ?? false)] : null;
     }
 
     /** Living style guide: every <x-admin.*> component with real data (not in the menu – see docs/ADMIN_UI.md). */

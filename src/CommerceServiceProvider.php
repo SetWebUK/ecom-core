@@ -64,6 +64,8 @@ class CommerceServiceProvider extends ServiceProvider
         );
 
         $this->app->singleton(Cart::class);
+        // Admin › Updates: external programs (composer, git, mysqldump, artisan) – tests bind a fake runner
+        $this->app->bindIf(Updater\ProcessRunner::class, Updater\SystemProcessRunner::class);
         // extension API state (Commerce::gateway(), ::adminMenu(), ::settings() …) – one per application instance
         $this->app->singleton(Extensions\ExtensionRegistry::class);
         $this->app->singleton(Extensions\AdminMenu::class);
@@ -152,6 +154,9 @@ class CommerceServiceProvider extends ServiceProvider
 
         // Basket / checkout: cookies written by the storefront JS (cart.js) stay plain
         EncryptCookies::except([Attribution::cookieName(), CartController::openCookie()]);
+        // maintenance-mode bypass cookie set by Admin › Updates for the approving administrator (read raw by Laravel's
+        // PreventRequestsDuringMaintenance before the web group decrypts cookies)
+        EncryptCookies::except(['laravel_maintenance']);
 
         // legacy ?add-to-cart= links work everywhere
         if (Features::enabled('add_to_cart_query', false)) {
@@ -171,6 +176,9 @@ class CommerceServiceProvider extends ServiceProvider
         $this->commands([Console\ProductsExportCommand::class, Console\ProductsImportCommand::class]);
         // scheduled tasks: status table + run one task by hand
         $this->commands([Console\ScheduleStatusCommand::class, Console\ScheduleTaskCommand::class]);
+        // Admin › Updates from the command line: check, run an approved update, skeleton baseline / comparison
+        $this->commands([Console\UpdateCheckCommand::class, Console\UpdateRunCommand::class,
+            Console\SkeletonBaselineCommand::class, Console\SkeletonCheckCommand::class]);
 
         if ($this->app->runningInConsole()) {
             $this->optimizes(optimize: 'commerce:theme:cache', clear: 'commerce:theme:clear', key: 'commerce-themes');

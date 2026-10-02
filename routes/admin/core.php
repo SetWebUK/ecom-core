@@ -5,6 +5,7 @@ use Pine\Commerce\Http\Controllers\Admin\DashboardController;
 use Pine\Commerce\Http\Controllers\Admin\MediaUploadController;
 use Pine\Commerce\Http\Controllers\Admin\ProfileController;
 use Pine\Commerce\Http\Controllers\Admin\SearchController;
+use Pine\Commerce\Http\Controllers\Admin\UpdateController;
 use Illuminate\Support\Facades\Route;
 use Pine\Commerce\Http\Middleware\RequireFeature;
 
@@ -41,6 +42,18 @@ Route::middleware(RequireFeature::for('coupons'))->group(function () {
 Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
 Route::put('profile', [ProfileController::class, 'update'])->name('profile.update');
 Route::put('profile/password', [ProfileController::class, 'password'])->middleware('throttle:10,1')->name('profile.password');
+
+// Updates (administrators only, feature switch "updater"): check, approve & install pine/commerce releases, skeleton
+// files, audit history. The status endpoint is polled by the run page while an update runs in the background.
+Route::middleware(['admin:admin', RequireFeature::for('updater')])->prefix('updates')->name('updates.')->group(function () {
+    Route::get('/', [UpdateController::class, 'index'])->name('index');
+    Route::post('check', [UpdateController::class, 'check'])->middleware('throttle:6,1')->name('check');
+    Route::post('install', [UpdateController::class, 'install'])->middleware('throttle:6,1')->name('install');
+    Route::post('skeleton/compare', [UpdateController::class, 'compareSkeleton'])->middleware('throttle:6,1')->name('skeleton.compare');
+    Route::post('skeleton/{update}/apply', [UpdateController::class, 'applySkeleton'])->whereNumber('update')->middleware('throttle:6,1')->name('skeleton.apply');
+    Route::get('{update}', [UpdateController::class, 'show'])->whereNumber('update')->name('show');
+    Route::get('{update}/status', [UpdateController::class, 'status'])->whereNumber('update')->middleware('throttle:120,1')->name('status');
+});
 
 // Living style guide of every admin component (linked from docs/ADMIN_UI.md, not from the menu)
 Route::get('ui-kit', [DashboardController::class, 'uiKit'])->name('ui-kit');

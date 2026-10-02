@@ -75,6 +75,7 @@ return [
         'wp_404_guess' => true,       // unknown old WordPress URLs: guess the new page/product by slug before the 404
         'add_to_cart_query' => true,  // old ?add-to-cart={id} links keep adding to the basket (HandleAddToCartQuery middleware)
         'product_csv' => true,        // admin Products › Import / Export: full product CSV export + import (mapping, dry run, batches), commerce:products:* commands
+        'updater' => true,            // admin Updates (administrators): update check, approved pine/commerce updates, skeleton file updates; commerce:update:* / commerce:skeleton:*
     ],
 
     'catalog' => [
@@ -219,9 +220,38 @@ return [
             'catalog.sale-prices' => true,       // every 5 min: products.price follows scheduled sale start/end dates
             'maintenance.prune' => true,         // daily 03:40: old guest baskets, expired sessions and password-reset links
             'inventory.low-stock-email' => true, // daily 07:00: only while Settings › Scheduled tasks › Low-stock email is on
+            'updates.check' => true,             // daily 06:15: look for a newer pine/commerce release (never installs – Admin › Updates)
         ],
         'web_fallback' => true,              // no cron detected: run due tasks after storefront responses
         'heartbeat_minutes' => 5,            // cron counts as running when schedule:run beat within this many minutes
+    ],
+
+    /*
+    | Admin › Updates (feature switch "updater", administrators only; docs/PLAYBOOK.md part 3.6). Updates are found
+    | automatically (daily task updates.check, "Check now") but only ever installed after an administrator approves
+    | them with their password (or `php artisan commerce:update:run --approve --yes`).
+    */
+    'updater' => [
+        'repository' => env('COMMERCE_UPDATER_REPOSITORY'), // null = the pine/commerce repository in composer.json
+        'default_repository' => 'https://github.com/SetWebUK/ecom-core.git', // when composer.json names none (e.g. installed from a registry)
+        'skeleton_repository' => 'https://github.com/SetWebUK/ecom-skeleton.git', // skeleton file updates (.commerce-skeleton.json may name another)
+        'github_token' => env('COMMERCE_UPDATER_GITHUB_TOKEN'), // optional: private repositories / GitHub API rate limit
+        'check' => true,                     // the daily scheduled check (scheduler task updates.check)
+        'php_binary' => env('COMMERCE_PHP_BINARY'),         // PHP CLI for `php artisan …` (null = detected; a web request's PHP_BINARY is not the CLI)
+        'composer_binary' => env('COMMERCE_COMPOSER_BINARY'), // null = `composer` / `composer.phar` in PATH
+        'mysqldump_binary' => null,          // null = `mysqldump` / `mariadb-dump` in PATH
+        'git_binary' => null,                // null = `git` in PATH
+        'home' => env('COMMERCE_UPDATER_HOME'),             // HOME for composer/git started from the web (null = $HOME or the account's home)
+        'composer_home' => env('COMMERCE_COMPOSER_HOME'),   // null = $COMPOSER_HOME, ~/.config/composer or ~/.composer
+        'path' => null,                      // working directory (lock, logs, skeleton checkouts); null = storage/app/private/updater
+        'backup' => true,                    // back the database up before every update (mysqldump / SQLite copy)
+        'backup_path' => null,               // null = storage/app/private/updater/backups (never under public/)
+        'keep_backups' => 5,                 // newest N database backups kept
+        'min_free_mb' => 1024,               // free disk space needed to start an update
+        'timeout' => 900,                    // seconds per composer / mysqldump step
+        'http_timeout' => 10,                // seconds per GitHub API / raw file request
+        'git_timeout' => 120,                // seconds per git ls-remote / fetch
+        'project_path' => null,              // the project root (null = base_path(); tests only)
     ],
 
     'payments' => [

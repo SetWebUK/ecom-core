@@ -65,7 +65,24 @@ class Sidebar extends Component
 
         $settings = $this->item('Settings', 'cog-6-tooth', 'admin.settings.index', ['admin.settings.*', 'admin.staff.*', 'admin.shipping.*', 'admin.payments.*']);
 
-        return view('commerce::admin.partials.sidebar', ['sections' => $sections, 'settings' => $settings]);
+        return view('commerce::admin.partials.sidebar', ['sections' => $sections, 'settings' => $settings, 'updates' => $this->updates()]);
+    }
+
+    /** Admin › Updates (administrators, feature "updater"), with a badge while a newer release is available. */
+    protected function updates(): ?array
+    {
+        $user = request()->user();
+        if (! Features::enabled('updater', false) || ! $user || ! method_exists($user, 'isAdmin') || ! $user->isAdmin()
+            || ! Route::has('admin.updates.index')) {
+            return null;
+        }
+        try {
+            $available = \Pine\Commerce\Updater\UpdateChecker::status()['available'] ? 1 : null;
+        } catch (Throwable) {
+            $available = null; // e.g. before the platform_updates migration ran
+        }
+
+        return $this->item('Updates', 'arrow-path', 'admin.updates.index', ['admin.updates.*'], $available, 'Platform update available');
     }
 
     /** Merge client entries (Commerce::adminMenu(), config commerce.admin.menu) into the core menu. */

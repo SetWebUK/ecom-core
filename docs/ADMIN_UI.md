@@ -640,3 +640,19 @@ without help text; a group tied to a feature (`'feature' => …` in `StoreSettin
 | Products › Import / Export | `admin.products.csv`, `.csv.export`, `.csv.upload` → `.csv.mapping` / `.csv.map` → `.csv.run` (page drives `.csv.start` / `.csv.step` batches) → `.csv.report`, `.csv.destroy` | feature `product_csv`; each batch is one request, pause/resume, per-row CSV report ([PRODUCT-CSV.md](PRODUCT-CSV.md)) |
 | Media / uploads | `admin.media.upload` (unchanged URL) | every upload goes through `ImageGenerator` (sizes + WebP per `commerce.images`); `<x-admin.thumb>` shows the 240px-or-nearest size via `media_url($src, 240)` |
 | Settings › System | `admin.settings.system` | doctor checks now include "Image sizes" and the cron heartbeat |
+
+## 1.3 additions (Updates)
+
+Built with the components above – no new library. Administrators only (`admin:admin`) and feature `updater`
+(`RequireFeature`); controller `Admin\UpdateController`, views `resources/views/admin/updates/{index,show}.blade.php`,
+CSS section 21 of `admin.css` (`.update-log`, `.update-steps`, `.changelog`, `.diff`).
+
+| Screen | Route names | Notes |
+|---|---|---|
+| Updates (sidebar footer, above Settings; badge while a release is available) | `admin.updates.index`, `admin.updates.check` (POST, "Check now") | installed version, constraint, source repository, last check, newest installable release, majors that need a developer, release notes per version (Markdown rendered with HTML escaped; "Client actions required" highlighted), skeleton baseline + comparison table, history of every check / update / skeleton apply |
+| Approve & install (modal) | `admin.updates.install` (POST: `check` id, `password`, `confirm`) | re-enter password (`StaffPassword::check`) + tick the confirmation; the version comes from the stored check, never from the form; starts `commerce:update:run {id}` in the background and gives the approver the maintenance bypass cookie |
+| Update run | `admin.updates.show`, `admin.updates.status` (JSON `?from=N`: status, step, new log lines) | Alpine `updateRun` polls every 2 s, tolerates errors while composer replaces files; log rendered with `x-text` (no HTML) |
+| Skeleton files | `admin.updates.skeleton.compare` (POST), `admin.updates.skeleton.apply` (POST: `files[]`, `password`, `confirm`) | only files the comparison marked safe are accepted, each re-checked against its hash |
+
+Dashboard: a callout for administrators while a release is available (`DashboardController::platformUpdate()`).
+

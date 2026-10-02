@@ -1175,3 +1175,29 @@ a.list__item:hover { background: var(--surface-hover); }
     .menu-node__meta { display: none; }
     .media-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: var(--s-2); padding: var(--s-3); }
 }
+
+/* 21. Updates (Admin › Updates, 1.3) ---------------------------------------------------------- */
+.update-log { margin: 0; padding: var(--s-4); max-height: 520px; min-height: 160px; overflow: auto; background: #1f2328; color: #e6edf3;
+    font-size: 12.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+.update-steps { margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.update-steps li { position: relative; padding: 6px 0 6px 30px; color: var(--text-muted); font-size: var(--text-sm, 13px); counter-increment: step; }
+.update-steps li::before { content: counter(step); position: absolute; left: 0; top: 5px; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--surface-subdued); border: 1px solid var(--border); font-size: 11px; line-height: 18px; text-align: center; }
+.update-steps li.is-done { color: var(--text); }
+.update-steps li.is-done::before { content: '✓'; background: var(--success-bg); border-color: var(--success); color: var(--success-text); }
+.update-steps li.is-current { color: var(--text); font-weight: 600; }
+.update-steps li.is-current::before { background: var(--warning-bg); border-color: var(--warning); }
+.update-steps li.is-failed { color: var(--danger-text); font-weight: 600; }
+.update-steps li.is-failed::before { content: '✕'; background: var(--danger-bg); border-color: var(--danger); color: var(--danger-text); }
+.changelog + .changelog { border-top: 1px solid var(--border); padding-top: var(--s-4); }
+.changelog__title { display: flex; align-items: center; gap: var(--s-2); margin: 0 0 var(--s-2); font-size: 15px; }
+.changelog__body { font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.changelog__body h3 { font-size: 13px; margin: var(--s-3) 0 var(--s-1); }
+.changelog__body ul { margin: 0 0 var(--s-2); padding-left: 20px; }
+.changelog__body p { margin: 0 0 var(--s-2); }
+.diff { margin: var(--s-2) 0 0; padding: var(--s-2); max-height: 320px; overflow: auto; background: var(--surface-subdued); border: 1px solid var(--border);
+    border-radius: var(--radius); font-size: 12px; line-height: 1.5; white-space: pre; }
+.diff span { display: block; }
+.diff__add { background: var(--success-bg); color: var(--success-text); }
+.diff__del { background: var(--danger-bg); color: var(--danger-text); }
+.diff__hunk { color: var(--text-subtle); }

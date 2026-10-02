@@ -11,12 +11,14 @@
 #   bin/export-client-skeleton.sh ../ecom-skeleton
 #   bin/export-client-skeleton.sh ../ecom-skeleton --push=git@github.com:SetWebUK/ecom-skeleton.git
 #   bin/export-client-skeleton.sh ../ecom-skeleton --repo=git@github.com:SetWebUK/ecom-core.git --constraint=^1.2
+#   bin/export-client-skeleton.sh ../ecom-skeleton --tag --push=git@github.com:SetWebUK/ecom-skeleton.git   (release)
 #
 # <out-dir> empty/missing: a new git repository (branch main) with one commit.
 # <out-dir> already a git checkout of repo B: its files are replaced (git history kept) and the changes committed –
 # re-run after every skeleton change in pine/commerce.
 # Options: --repo=<pine/commerce git url> (default https://github.com/SetWebUK/ecom-core.git), --constraint=
-#          (default ^MAJOR.MINOR of VERSION), --name=, --slug=, --push=<repo B git url> (push main after committing).
+#          (default ^MAJOR.MINOR of VERSION), --name=, --slug=, --push=<repo B git url> (push main after committing),
+#          --tag (tag the skeleton vVERSION – skeleton baselines / Admin › Updates use these tags; pushed with --push).
 # =====================================================================================================================
 set -euo pipefail
 
@@ -26,6 +28,7 @@ CONSTRAINT=""
 NAME="Commerce Skeleton"
 SLUG="commerce-skeleton"
 PUSH=""
+TAG=0
 for arg in "$@"; do
     case "$arg" in
         --repo=*) REPO="${arg#*=}" ;;
@@ -33,7 +36,8 @@ for arg in "$@"; do
         --name=*) NAME="${arg#*=}" ;;
         --slug=*) SLUG="${arg#*=}" ;;
         --push=*) PUSH="${arg#*=}" ;;
-        -h|--help) sed -n '2,21p' "$0"; exit 0 ;;
+        --tag) TAG=1 ;;
+        -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
         -*) echo "Unknown option: $arg (see --help)" >&2; exit 2 ;;
         *) OUT="$arg" ;;
     esac
@@ -144,8 +148,20 @@ else
     echo "==> committed: $(git -C "$OUT" log --oneline -1)"
 fi
 
+if [ "$TAG" = 1 ]; then
+    if git -C "$OUT" rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+        echo "==> tag v$VERSION already exists in $OUT (not moved)"
+    else
+        git -C "$OUT" tag -a "v$VERSION" -m "Base system (client skeleton) for pine/commerce $VERSION"
+        echo "==> tagged v$VERSION"
+    fi
+fi
+
 if [ -n "$PUSH" ]; then
     git -C "$OUT" push "$PUSH" main
+    if [ "$TAG" = 1 ]; then
+        git -C "$OUT" push "$PUSH" "v$VERSION"
+    fi
 fi
 
 cat <<EOF

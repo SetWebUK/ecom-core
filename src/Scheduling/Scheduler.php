@@ -60,6 +60,9 @@ class Scheduler
         'inventory.low-stock-email' => ['Daily low-stock email',
             'Emails the shop a list of products that are running low or sold out (Settings › Scheduled tasks, off by default).',
             '0 7 * * *', Tasks\SendLowStockReport::class],
+        'updates.check' => ['Check for platform updates',
+            'Looks for a newer pine/commerce release once a day and shows it in Admin › Updates (installing always needs an administrator’s approval).',
+            '15 6 * * *', Tasks\CheckForUpdates::class],
     ];
 
     /**

@@ -39,6 +39,17 @@
     </nav>
     <div class="sidebar__footer">
         <ul class="nav">
+            @if (! empty($updates))
+                <li>
+                    <a href="{{ $updates['url'] }}" @class(['nav__link', 'is-active' => $updates['active']]) @if ($updates['active']) aria-current="page" @endif>
+                        <x-admin.icon :name="$updates['icon']" />
+                        <span>{{ $updates['label'] }}</span>
+                        @if ($updates['count'])
+                            <span class="nav__count nav__count--alert" title="{{ $updates['countLabel'] }}">1<span class="sr-only"> {{ $updates['countLabel'] }}</span></span>
+                        @endif
+                    </a>
+                </li>
+            @endif
             <li>
                 <a href="{{ $settings['url'] }}" @class(['nav__link', 'is-active' => $settings['active'], 'is-disabled' => ! $settings['exists']]) @if ($settings['active']) aria-current="page" @endif>
                     <x-admin.icon :name="$settings['icon']" />

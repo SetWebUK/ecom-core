@@ -9,6 +9,82 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-02
+
+A minor release: **Admin › Updates** – the shop finds new platform releases by itself and an administrator installs
+one with a click, after approving it with their password. Additive: one new table, one new feature switch (on), one
+new scheduled task. Storefront output does not change.
+
+### Added
+- **Admin › Updates** (administrators only, sidebar footer; feature switch `updater`, default on):
+  - **Update check** – the tags of the repository `composer.json` installs pine/commerce from (GitHub: public API,
+    `git ls-remote --tags` as the fallback; other hosts: `git ls-remote`). Offers the newest stable release above the
+    installed one **within the project's composer constraint**; newer majors (or releases outside the constraint) are
+    listed as "requires a developer". The CHANGELOG.md sections in between are fetched from the new tag and shown,
+    with **Client actions required** highlighted. "Check now" button, a daily scheduled check (core task
+    `updates.check`, 06:15) – never an automatic install. Dashboard notice and a sidebar badge while an update is
+    available.
+  - **Approve & install** – password re-entry + confirmation; the run starts in the background
+    (`php artisan commerce:update:run {id}` detached with `setsid`/`nohup` – no queue worker needed) and the page
+    follows its log through a status endpoint. One run at a time (file lock). Steps: pre-flight (PHP CLI + composer
+    found, HOME/COMPOSER_HOME set for web-started processes, disk space, writable directories, git tree warning,
+    `commerce:doctor` baseline), database backup (`mysqldump` + gzip or a SQLite copy, outside `public/`, newest 5
+    kept), composer.json/composer.lock saved, maintenance mode with a bypass secret for the approver,
+    `composer update pine/commerce --with-dependencies` pinned to the approved version (`preferred-install` respected),
+    `migrate --force`, `commerce:publish`, `commerce:theme:publish`, `optimize:clear` + `optimize`,
+    `commerce:doctor --json` (new failures fail the update), `up`. **On any failure** composer.lock is restored,
+    `composer install` brings the previous code back, assets are published again, caches rebuilt and the site comes
+    back up; the database backup is kept and the log says how to restore it (never restored automatically).
+  - **Skeleton file updates** – `.commerce-skeleton.json` records the skeleton release a project was created from
+    (written by `commerce:new-client`, so also present in ecom-skeleton) with a hash of every file. The updater
+    compares the baseline with the newest skeleton release for the installed core (shallow git checkouts) and
+    classifies each changed file: safe (new, unchanged here, removed upstream) or needs a developer (changed here,
+    deleted here …, with line counts and the upstream diff); `.env`, `composer.lock`, `themes/`, README/LICENSE are never
+    touched. The administrator ticks the safe files (or all of them); overwritten files are backed up and the
+    baseline follows.
+  - **History** – every check, approval, update and skeleton apply with who, versions, files, status, timestamps
+    and the full log (table `platform_updates`).
+- Commands: `commerce:update:check [--json]`, `commerce:update:run [id] [--approve --yes]` (the CLI approves only with
+  both flags; without an approved id it refuses), `commerce:skeleton:baseline [ref] [--detect] [--disabled] [--note=]`,
+  `commerce:skeleton:check [--apply-safe --yes]`.
+- `Pine\Commerce\Updater\*` (UpdateChecker, UpdateManager, UpdateRunner, ReleaseSource, Versions, Changelog,
+  ComposerProject, DatabaseBackup, UpdateLock, Environment, Skeleton\*), the `ProcessRunner` interface
+  (`SystemProcessRunner`; tests use a fake), model `PlatformUpdate`.
+- `bin/export-client-skeleton.sh --tag`: tags the skeleton repository with the core version (pushed with `--push`).
+- Dependency `composer/semver` ^3.4 (version constraints).
+
+### Config keys added
+- `features.updater` (true).
+- `scheduler.tasks.updates.check` (true).
+- `updater` block: `repository` (env `COMMERCE_UPDATER_REPOSITORY`, null = from composer.json), `default_repository`,
+  `skeleton_repository` (`https://github.com/SetWebUK/ecom-skeleton.git`), `github_token`
+  (env `COMMERCE_UPDATER_GITHUB_TOKEN`), `check` (true), `php_binary` (env `COMMERCE_PHP_BINARY`), `composer_binary`
+  (env `COMMERCE_COMPOSER_BINARY`), `mysqldump_binary`, `git_binary`, `home` (env `COMMERCE_UPDATER_HOME`),
+  `composer_home` (env `COMMERCE_COMPOSER_HOME`), `path`, `backup` (true), `backup_path`, `keep_backups` (5),
+  `min_free_mb` (1024), `timeout` (900), `http_timeout` (10), `git_timeout` (120), `project_path`.
+  Documented in `docs/EXTENDING.md` "Updates".
+
+### Theme contract
+- No changes.
+
+### Migrations
+- `2026_10_02_000100_create_platform_updates_table` – new table `platform_updates` (additive).
+
+### Client skeleton (`stubs/client-skeleton`)
+- New projects get `.commerce-skeleton.json` from `commerce:new-client`. The skeleton repository is tagged with the
+  core version from this release on (`v1.3.0`).
+
+### Client actions required
+- After `composer update pine/commerce`: `php artisan migrate --force` (one new table), `commerce:publish` (admin
+  CSS), `optimize`. A project on 1.2.x has no updater yet, so **this** update is done the usual way (PLAYBOOK 3.3);
+  later releases can be installed from Admin › Updates.
+- Optional: record the skeleton baseline once – `php artisan commerce:skeleton:baseline v1.3.0` (`--detect` to
+  compare; `--disabled --note="…"` for a project that was not created from the skeleton).
+- Optional: a project whose `config/commerce.php` overrides the whole `scheduler` block keeps working (the new task
+  defaults to on); add `'updates.check' => false` to its `tasks` to switch the daily check off.
+- Web servers that cannot start background processes (`proc_open` disabled): the approved update waits and the page
+  shows the command to run on the server (`php artisan commerce:update:run {id}`).
+
 ## [1.2.1] - 2026-10-01
 
 1.2.1 - public release: client/infrastructure references removed, MIT licence; no code behaviour changes.
@@ -414,5 +490,6 @@ like-for-like), with every client-specific value moved out to client config, the
 ### Requirements
 - PHP 8.3+, Laravel 13, MySQL 8 / MariaDB 10.6+ (SQLite for tests), `stripe/stripe-php` ^21.
 
-[Unreleased]: https://github.com/SetWebUK/ecom-core/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/SetWebUK/ecom-core/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/SetWebUK/ecom-core/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/SetWebUK/ecom-core/releases/tag/v1.2.1

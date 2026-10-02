@@ -634,6 +634,8 @@ return [
         'bacs'   => \Pine\Commerce\Services\Payments\Gateways\BacsGateway::class,
     ]],
     'content' => ['shortcode_aliases' => []],      // e.g. ['acme_contact_form' => 'contact_form'] (or via Theme::boot)
+    'updater' => ['repository' => null, 'skeleton_repository' => 'https://github.com/SetWebUK/ecom-skeleton.git', 'check' => true,
+        'php_binary' => null, 'composer_binary' => null, 'home' => null, 'backup' => true, 'keep_backups' => 5, /* … */],  // 1.3, PLAYBOOK 3.6
 ];
 ```
 
@@ -929,6 +931,8 @@ return [
 | `commerce:scratch:drop {--connection=scratch}` | drops tables with the connection's prefix; refuses empty prefix or a prefix not starting with `zz_` |
 | `commerce:schedule:status [--json]` | cron heartbeat + every scheduled task (core and client): schedule (store timezone), state (on / idle: why / off in config), last run + result, next run (§13.2) |
 | `commerce:schedule:task {task}` | run one core scheduled task now (recorded as a manual run) |
+| `commerce:update:check [--json]` / `commerce:update:run [id] [--approve --yes]` | Admin › Updates (1.3, `Pine\Commerce\Updater`): find the newest installable release (tags of the composer repository, semver + the project's constraint, CHANGELOG sections); run an approved update – backup, maintenance, `composer update pine/commerce` pinned to the approved version, migrate, publish, optimize, doctor, up – with rollback on failure (PLAYBOOK 3.6) |
+| `commerce:skeleton:baseline [ref]` / `commerce:skeleton:check [--apply-safe --yes]` | `.commerce-skeleton.json` (skeleton release + file hashes, written by `commerce:new-client`); classify skeleton changes against it and apply only files the project never changed |
 
 ### 13.1 Tests
 
@@ -957,6 +961,7 @@ return [
 | `catalog.sale-prices` | `*/5 * * * *` | rewrite `products.price` when a scheduled sale starts/ends (updated_at untouched; feed cache cleared) | – |
 | `maintenance.prune` | `40 3 * * *` | guest baskets idle > `scheduler.cart_retention_days` (default 90, 0 = keep), expired DB sessions, expired password-reset tokens | – |
 | `inventory.low-stock-email` | `0 7 * * *` | `Mail\LowStockReport` to the order-notification addresses | setting `scheduler.low_stock_email` (off) |
+| `updates.check` | `15 6 * * *` | look for a newer pine/commerce / skeleton release (`Updater\UpdateChecker`, an audit row in `platform_updates`); never installs | feature `updater` + `commerce.updater.check` |
 
 - Config `commerce.scheduler`: `enabled`, `tasks` (key => bool; off = not scheduled and never run by a fallback),
   `web_fallback` (package default true), `heartbeat_minutes` (5). Owner switches are settings (Settings › Scheduled

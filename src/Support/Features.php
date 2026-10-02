@@ -44,6 +44,7 @@ class Features
         'wp_404_guess' => [true, 'Unknown old WordPress URLs: guess the new page/product by slug before the 404'],
         'add_to_cart_query' => [true, 'Old ?add-to-cart={id} links keep adding to the basket'],
         'product_csv' => [true, 'Admin Products › Import / Export (full product CSV export and import with column mapping, dry run and batches); commerce:products:export / commerce:products:import'],
+        'updater' => [true, 'Admin Updates (administrators only): daily update check, dashboard notice + sidebar badge, password-approved pine/commerce updates with backup and rollback, skeleton file updates; commerce:update:* and commerce:skeleton:* commands'],
     ];
 
     /** Feature => theme.json "supports" key the storefront side needs (a theme without it shows no entry points). */

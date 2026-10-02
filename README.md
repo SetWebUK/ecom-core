@@ -9,6 +9,13 @@ cron line runs the scheduled tasks), no symlinks in `public/`.
 onboarding a new WooCommerce client, releasing updates and troubleshooting. Index of every document:
 [docs/README.md](docs/README.md).
 
+What is in the box: storefront with themes, back office (orders, customers, products, content, discounts, analytics,
+settings), tax classes and shipping zones, PDF invoices, product CSV import/export, scheduled tasks without cron,
+abandoned-cart emails, a WordPress/WooCommerce importer, install/health tooling and, since 1.3, **Admin › Updates**:
+a daily check for new releases, the release notes with their client actions, and one-click updates that an
+administrator approves with their password (database backup, maintenance mode, `composer update`, migrations, health
+check, automatic rollback) plus updates of untouched skeleton files ([PLAYBOOK part 3.6](docs/PLAYBOOK.md)).
+
 - Current version: see [VERSION](VERSION) (= `Pine\Commerce\Commerce::VERSION`), history in [CHANGELOG.md](CHANGELOG.md).
 - Requirements: PHP 8.3+, Laravel 13, MySQL 8 / MariaDB 10.6+ (SQLite for tests).
 
@@ -74,7 +81,7 @@ To work on the package against a real client, point the client at your clone wit
 ## Versioning and releases
 
 Semantic Versioning, tags `vMAJOR.MINOR.PATCH`. There is deliberately **no `version` key in composer.json** – composer
-reads versions from the git tags; `dev-main` is aliased to `1.2.x-dev` (`extra.branch-alias`). The public API
+reads versions from the git tags; `dev-main` is aliased to `1.3.x-dev` (`extra.branch-alias`). The public API
 (theme contract, config keys, `Commerce::` extension API, events, importer interfaces, route names, schema) is listed
 in [docs/UPGRADING.md](docs/UPGRADING.md).
 
@@ -84,7 +91,8 @@ Release checklist (full version: PLAYBOOK part 3):
 2. Move the `[Unreleased]` notes in `CHANGELOG.md` under the new version with today's date.
 3. Set the same number in `VERSION` and `Pine\Commerce\Commerce::VERSION` (a test checks all three agree).
 4. Commit `Release vX.Y.Z`, then `git tag -a vX.Y.Z -m "pine/commerce vX.Y.Z" && git push origin main vX.Y.Z`.
-   Clients pick it up with `composer update pine/commerce`.
+5. Refresh and tag the skeleton: `bin/export-client-skeleton.sh ../ecom-skeleton --tag --push=git@github.com:SetWebUK/ecom-skeleton.git`.
+   Clients pick the release up in Admin › Updates (or `composer update pine/commerce`, PLAYBOOK part 3).
 
 ## Commands
 
@@ -99,6 +107,9 @@ Release checklist (full version: PLAYBOOK part 3):
 | `commerce:verify-urls {sitemap-url\|file} [--base=] [--resolve=] [--report=] …` | old URLs must answer 200 or 301→200 on the new site |
 | `commerce:new-client {path} [--name=] [--slug=] [--repo=<git url> \| --path=<dir>] [--constraint=] [--force]` | scaffold a client project from `stubs/client-skeleton` |
 | `commerce:scratch:drop [--connection=scratch] [--force]` | drop `zz_`-prefixed test tables (refuses any other prefix) |
+| `commerce:update:check [--json]` | newest installable release within the composer constraint, newer majors, changelog + client actions (never installs) |
+| `commerce:update:run [id] [--approve --yes]` | install an update approved in Admin › Updates (or approve from the CLI): backup, maintenance mode, composer, migrate, publish, health check, rollback on failure |
+| `commerce:skeleton:baseline [ref] [--detect] [--disabled]` / `commerce:skeleton:check [--apply-safe --yes]` | record which skeleton release the project matches; compare and apply skeleton files the project never changed |
 
 ## Layout
 
@@ -125,7 +136,9 @@ contain them (read the docs in this repository).
 ## Admin
 
 `/admin` (path: `commerce.admin.path`). Settings › System (administrators) shows the platform version, active
-theme, feature switches, the doctor checks and the last import report. UI conventions: [docs/ADMIN_UI.md](docs/ADMIN_UI.md).
+theme, feature switches, the doctor checks and the last import report. Updates (administrators, feature `updater`)
+checks for releases and installs an approved one ([docs/PLAYBOOK.md](docs/PLAYBOOK.md) part 3.6). UI conventions:
+[docs/ADMIN_UI.md](docs/ADMIN_UI.md).
 
 ## License
 

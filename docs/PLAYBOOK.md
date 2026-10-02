@@ -732,13 +732,15 @@ git push origin main v1.3.0
 ```
 
 That is the whole release: there is no split or export step for the package. Optionally create a GitHub release
-from the tag with the CHANGELOG section as notes. If `stubs/client-skeleton` changed, refresh repo B from the same
-clone: `bin/export-client-skeleton.sh ~/work/ecom-skeleton --push=git@github.com:SetWebUK/ecom-skeleton.git`.
+from the tag with the CHANGELOG section as notes. Then refresh repo B from the same clone and **tag it with the same
+version** (skeleton baselines and Admin › Updates refer to skeleton tags):
+`bin/export-client-skeleton.sh ~/work/ecom-skeleton --tag --push=git@github.com:SetWebUK/ecom-skeleton.git`.
 Clients then pick the release up with `composer update pine/commerce` (3.3).
 
 ### 3.3 Rolling an update out to a client
 
-Staging first, then live. On the client project (your machine or the staging server):
+Staging first, then live. From 1.3 an administrator can do this from Admin › Updates (3.6) – the same steps with a
+backup, maintenance mode and an automatic rollback. By hand, on the client project (your machine or the staging server):
 
 ```bash
 mysqldump --single-transaction acme_shop | gzip > ~/backups/acme_shop-$(date +%Y%m%d-%H%M)-pre-update.sql.gz
@@ -814,6 +816,90 @@ git switch main && git merge --no-ff hotfix/1.1.1 && git push   # the fix must a
 
 Clients on `^1.1` get it with `composer update pine/commerce` (3.3). A client-only hotfix is an ordinary commit in its
 repo C + deploy.
+
+### 3.6 Updating from the admin (since 1.3)
+
+From 1.3 a client can take a release **from the back office**: Admin › **Updates** (administrators only, feature
+switch `updater`, on by default). It finds updates by itself, but **nothing is installed until an administrator
+approves it** with their password.
+
+**Finding updates.** Once a day (scheduler task `updates.check`, 06:15 – cron or the web fallback) and whenever an
+administrator presses **Check now**, the updater reads the tags of the repository `composer.json` installs
+`pine/commerce` from (`repositories` entry; GitHub: the public API, then `git ls-remote --tags`; other hosts: `git
+ls-remote`). It offers the newest stable `vX.Y.Z` above the installed version **that the project's composer
+constraint allows** (`^1.2` → 1.3.0 yes, 2.0.0 no). A newer major or a release outside the constraint is shown as
+"requires a developer" – change `composer.json`, read the upgrade notes and test it first. The check fetches
+`CHANGELOG.md` at the new tag and shows every section in between, with **Client actions required** highlighted.
+The dashboard shows a notice and the sidebar's Updates entry a badge while an update is available. Each check is
+kept in the history (who, when, what was found).
+
+**Installing (approve & install).** The administrator reads the notes, presses *Approve & install*, re-enters their
+password and ticks the confirmation. The update then runs **in the background** (`php artisan commerce:update:run
+{id}` started with `setsid`/`nohup`; no queue worker needed) while the page follows its log live. Only one update
+runs at a time (a lock file in `storage/app/private/updater/`). Steps:
+
+1. **Pre-flight** – PHP CLI and composer found (from a web request PHP_BINARY is the web SAPI and HOME is often
+   unset: the updater resolves both, see the config keys below), enough free disk space, `vendor/`, `composer.lock`,
+   `bootstrap/cache`, `storage/` and `public/` writable, uncommitted changes in the project's git tree (a warning),
+   `commerce:doctor` before the update.
+2. **Database backup** – `mysqldump --single-transaction` (gzip) or a copy of the SQLite file, in
+   `storage/app/private/updater/backups/` (`commerce.updater.backup_path`, never under `public/`), newest 5 kept.
+3. **Record** `composer.json` + `composer.lock` and the installed version.
+4. **Maintenance mode** – `php artisan down --secret=…`. The approving administrator gets the bypass cookie (they
+   can keep using the site) and the run page shows the bypass link while it runs.
+5. `composer update pine/commerce --with-dependencies --with=pine/commerce:X.Y.Z --no-interaction` – pinned to the
+   approved version; the project's `preferred-install` is respected; `--no-dev` when the project was installed
+   without dev packages.
+6. `php artisan migrate --force` → `commerce:publish` → `commerce:theme:publish` → `optimize:clear` + `optimize`.
+7. **Health check** – `commerce:doctor --json`; a check that fails now but did not fail before fails the update.
+8. `php artisan up`.
+
+**When a step fails** the updater restores `composer.json` / `composer.lock`, runs `composer install` (the previous
+code comes back), publishes the admin and theme assets again from it, rebuilds the caches and brings the site up. The
+run is marked *failed* with its full log. **The database is never restored automatically**: package migrations are
+additive, so the previous version keeps working. If a migration ran and the shop misbehaves, restore the backup by
+hand – the log and the run page print the command, e.g.
+
+```bash
+gunzip -c storage/app/private/updater/backups/db-20261015-0930-before-1.3.0.sql.gz | mysql -u acme_shop -p acme_shop
+```
+
+A run whose process disappears (server restart) is marked failed ("interrupted") the next time the page is opened –
+check `php artisan up` and `composer install` by hand.
+
+**From the command line** (same steps, same audit log):
+
+```bash
+php artisan commerce:update:check                 # what is available + changelog + client actions (never installs)
+php artisan commerce:update:run --approve --yes   # approve the newest installable release as "CLI" and install it now
+php artisan commerce:update:run 12                # run update #12, approved in the admin (fallback when the web server
+                                                  # cannot start background processes, e.g. proc_open disabled)
+```
+
+`commerce:update:run` without an approved id refuses to run; `--approve` needs `--yes` when not interactive.
+
+**Skeleton files.** Files a project got from the base system (repo B: `bootstrap/app.php`, `config/*.php` stubs,
+`tests/TestCase.php` …) are updated separately, under *Project files from the skeleton*. `commerce:new-client`
+writes `.commerce-skeleton.json` (skeleton tag, project name/slug, a hash of every file it wrote); projects made
+before 1.3 record it once with `php artisan commerce:skeleton:baseline v1.3.0` (`--detect` compares the newest
+skeleton releases with the project; `--disabled --note="…"` records it but switches skeleton updates off, e.g. for
+a project that was not created from the skeleton). *Compare skeleton files* fetches the baseline tag and the newest
+skeleton tag that is not newer than the installed core (shallow git checkouts in
+`storage/app/private/updater/skeleton/`) and classifies every file the skeleton changed:
+
+| Class | Meaning | Admin |
+|---|---|---|
+| New file / Unchanged here / Removed from the skeleton | the project never changed it | tick to apply (or "select all safe files"), password + confirm |
+| Changed here and upstream / Deleted here / Exists here / Removed upstream, changed here | needs a developer: upstream and local line counts and the upstream diff are shown | never applied |
+| Never updated automatically | `.env*` (not `.env.example`), `composer.lock`, `themes/`, `README.md`, `LICENSE`, `storage/` data, `public/vendor`, `public/assets` | never applied |
+
+Applied files are backed up first (`storage/app/private/updater/skeleton-backups/{id}/`) and their hashes recorded;
+the baseline moves to the new tag once nothing is left to apply or review. CLI: `php artisan commerce:skeleton:check
+[--apply-safe --yes]`. The skeleton repository is tagged with the core version it was exported from (3.2), so
+update the core first, then the skeleton files.
+
+**The first update to 1.3.** A project on 1.2.x has no updater yet: take 1.3.0 the usual way (3.3), then use the
+admin for every later release.
 
 ---
 
@@ -894,8 +980,12 @@ repo C + deploy.
 | `commerce:images:generate` | `--missing` `--size=<name>` (repeatable) `--path=<folder or file>` `--scan` `--no-webp` `--dry-run` `--chunk=100` `--limit=` `-v` | (re)build the `commerce.images.sizes` variants + WebP twins of existing uploads; never modifies/deletes an original or overwrites another library item; `--missing` never replaces any file; exit 1 when a file failed |
 | `commerce:schedule:status` | `--json` | cron heartbeat, every core scheduled task with last/next run |
 | `commerce:schedule:task {task}` | – | run one scheduled task now (e.g. `carts.abandoned-emails`, `maintenance.prune`) |
+| `commerce:update:check` | `--json` | newest installable pine/commerce release, majors that need a developer, changelog + client actions, skeleton status (3.6). Never installs |
+| `commerce:update:run [id]` | `--approve` `--yes` | install update `{id}` approved in Admin › Updates, or approve the newest release from the CLI (`--approve --yes`): backup, maintenance, composer, migrate, publish, health check, rollback on failure |
+| `commerce:skeleton:baseline [ref]` | `--detect` `--write` `--name=` `--slug=` `--repository=` `--disabled` `--enabled` `--note=` | show or record `.commerce-skeleton.json` (the skeleton release the project matches) |
+| `commerce:skeleton:check` | `--apply-safe` `--yes` | compare the project with the newest skeleton release; apply the files nobody changed here |
 
-Repo A script: `bin/export-client-skeleton.sh <out-dir> [--repo=] [--constraint=] [--push=] [--name=] [--slug=]`
+Repo A script: `bin/export-client-skeleton.sh <out-dir> [--repo=] [--constraint=] [--push=] [--tag] [--name=] [--slug=]`
 (renders repo B, Part 1.4).
 
 ### 6.2 Configuration
@@ -921,6 +1011,7 @@ package block** (shallow merge) – except `features`, merged key by key. Contra
 | `invoices.*` (`numbering`, `prefix`, `suffix`, `padding`, `start`, `assign_on`, `attach.*`, `customer_download`, `paper`, `cache`) | defaults of Settings › Invoices – sequential invoice numbers, PDF on order emails, customer download ([INVOICES.md](INVOICES.md)) |
 | `settings.defaults` | default settings seeded by `commerce:install` |
 | `scheduler` (`enabled`, `tasks`, `web_fallback`, `heartbeat_minutes`) | core scheduled tasks and the no-cron fallback ("Cron" after Step 11) |
+| `updater.*` (`repository`, `default_repository`, `skeleton_repository`, `github_token`, `check`, `php_binary`, `composer_binary`, `mysqldump_binary`, `git_binary`, `home`, `composer_home`, `path`, `backup`, `backup_path`, `keep_backups`, `min_free_mb`, `timeout`, `http_timeout`, `git_timeout`) | Admin › Updates (3.6; every key in [EXTENDING.md](EXTENDING.md) "Updates") |
 | `payments.gateways` | payment gateway classes in checkout order |
 | `content` (shortcode aliases, legacy class prefix) | content rendering |
 
@@ -944,7 +1035,7 @@ Environment variables (`.env`, documented in the skeleton's `.env.example`): `AP
 
 On by default: `blog`, `wishlist`, `reviews`, `stock_alerts`, `newsletter`, `contact_form`, `order_tracking`,
 `quick_view`, `google_feed`, `abandoned_carts`, `coupons`, `guest_checkout`, `registration`, `reports`, `redirects`,
-`multi_shipping`, `product_brand`, `legacy_content`, `wp_404_guess`, `add_to_cart_query`, `product_csv`.
+`multi_shipping`, `product_brand`, `legacy_content`, `wp_404_guess`, `add_to_cart_query`, `product_csv`, `updater`.
 Off by default: `product_condition`, `spec_highlights`, `pay_in_3`.
 
 A switched-off feature is off everywhere: its routes answer 404 (names kept), admin pages and menu entries

@@ -23,6 +23,14 @@
     </x-admin.page-header>
 
     <div class="stack">
+        @if (! empty($platformUpdate))
+            <x-admin.callout type="info" icon="arrow-path" :title="'Platform update available: pine/commerce '.$platformUpdate['latest']">
+                You are running {{ $platformUpdate['installed'] }}.
+                @if ($platformUpdate['actions'])The release notes list actions for this site – read them first.@endif
+                Nothing is installed until an administrator approves it.
+                <a href="{{ route('admin.updates.index') }}">Review the update</a>
+            </x-admin.callout>
+        @endif
         @if ($totals['orders'] === 0)
             <x-admin.callout type="neutral" icon="calendar-days">
                 No paid orders {{ $range === 'today' ? 'yet today' : 'in the last '.$config['days'].' days' }}.
