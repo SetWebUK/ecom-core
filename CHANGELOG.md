@@ -9,6 +9,20 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-10-02
+
+A patch release from the first roll-out of Admin › Updates. No migrations, no config changes.
+
+### Fixed
+- Database backup: `mariadb-dump` is preferred over `mysqldump` when both exist (MariaDB 11 prints a "Deprecated
+  program name" warning for `mysqldump`, which ended up in the update log).
+- `.commerce-skeleton.json`: an empty hash list is written as `{}` (was `[]`).
+- Update check: says why no skeleton release was found (`commerce:update:check` and the stored check result) instead
+  of an empty value.
+
+### Client actions required
+- None. This is the first release that 1.3.0 clients can install from Admin › Updates.
+
 ## [1.3.0] - 2026-10-02
 
 A minor release: **Admin › Updates** – the shop finds new platform releases by itself and an administrator installs
@@ -490,6 +504,7 @@ like-for-like), with every client-specific value moved out to client config, the
 ### Requirements
 - PHP 8.3+, Laravel 13, MySQL 8 / MariaDB 10.6+ (SQLite for tests), `stripe/stripe-php` ^21.
 
-[Unreleased]: https://github.com/SetWebUK/ecom-core/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/SetWebUK/ecom-core/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/SetWebUK/ecom-core/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/SetWebUK/ecom-core/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/SetWebUK/ecom-core/releases/tag/v1.2.1

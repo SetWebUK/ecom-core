@@ -86,7 +86,8 @@ class Environment
     {
         $configured = trim((string) config('commerce.updater.mysqldump_binary'));
 
-        return $configured !== '' ? $configured : (static::which('mysqldump') ?? static::which('mariadb-dump'));
+        // MariaDB 11 warns "Deprecated program name" for mysqldump: use its own name when it is there
+        return $configured !== '' ? $configured : (static::which('mariadb-dump') ?? static::which('mysqldump'));
     }
 
     public function git(): string

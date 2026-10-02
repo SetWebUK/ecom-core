@@ -53,6 +53,7 @@ final class SkeletonBaseline
     {
         $data = static::normalise($data);
         ksort($data['files']);
+        $data['files'] = (object) $data['files']; // {} rather than [] when empty
         $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n";
         if (file_put_contents(static::path($project), $json) === false) {
             throw new RuntimeException('Cannot write '.static::path($project).'.');

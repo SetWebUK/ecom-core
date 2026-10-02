@@ -71,6 +71,9 @@ class UpdateCheckCommand extends Command
             if ($skeleton['note']) {
                 $this->line('  <fg=gray>'.$skeleton['note'].'</>');
             }
+            if ($skeleton['error']) {
+                $this->line('  <fg=yellow>Skeleton releases not available: '.$skeleton['error'].'</>');
+            }
         }
 
         return self::SUCCESS;

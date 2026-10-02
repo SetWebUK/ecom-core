@@ -235,6 +235,7 @@ class SkeletonUpdateTest extends TestCase
         $this->assertSame('v1.3.0', $baseline['ref']);
         $this->assertFalse($baseline['updates']);
         $this->assertSame('Not created from the skeleton', $baseline['note']);
+        $this->assertStringContainsString('"files": {}', File::get($this->root.'/project/.commerce-skeleton.json'), 'an empty hash list is a JSON object');
         $this->artisan('commerce:skeleton:baseline', ['ref' => 'v1.3.0; rm -rf /'])->assertFailed();
         $this->artisan('commerce:skeleton:baseline', ['--enabled' => true])->assertSuccessful();
         $this->assertTrue(SkeletonBaseline::read($this->root.'/project')['updates']);

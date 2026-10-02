@@ -136,6 +136,9 @@ class UpdateChecker
         try {
             $target = $this->skeleton->target();
             $status['latest'] = $target['tag'];
+            if ($target['tag'] === null) {
+                $status['error'] = 'No skeleton release (vX.Y.Z tag) up to the installed core version in '.$this->skeleton->repository($baseline).'.';
+            }
             $baseVersion = Versions::fromTag((string) $baseline['ref']);
             $targetVersion = $target['version'];
             $status['update_available'] = $status['enabled'] && $targetVersion !== null
