@@ -3,8 +3,7 @@
 namespace Pine\Commerce\Import\Steps;
 
 use Illuminate\Support\Facades\DB;
-use Pine\Commerce\Import\Source\WordPressSource;
-use Pine\Commerce\Import\Support\Formatter;
+use Pine\Commerce\Import\Mapping\CatalogRows;
 
 /** WooCommerce product reviews (comments with a rating) -> product_reviews, matched on product + email + date. */
 class ReviewsStep extends AbstractStep
@@ -41,9 +40,7 @@ class ReviewsStep extends AbstractStep
         }
         $users = DB::table('users')->pluck('id', 'email')->all();
 
-        $existing = DB::table('product_reviews')->get(['id', 'product_id', 'email', 'created_at'])
-            ->keyBy(fn ($r) => $r->product_id.'|'.$r->email.'|'.$r->created_at)->all();
-        $count = 0;
+        $rows = [];
         foreach ($comments as $c) {
             $productId = $productMap[$c->comment_post_ID] ?? null;
             $rating = (int) ($meta[$c->comment_ID]['rating'] ?? 0);
@@ -51,27 +48,10 @@ class ReviewsStep extends AbstractStep
                 continue;
             }
             $email = strtolower((string) $c->comment_author_email) ?: null;
-            $created = WordPressSource::gmt($c->comment_date_gmt) ?? $this->now();
-            $row = [
-                'product_id' => $productId,
-                'user_id' => $email ? ($users[$email] ?? null) : null,
-                'name' => Formatter::decode($c->comment_author) ?: 'Customer',
-                'email' => $email,
-                'rating' => min(5, $rating),
-                'content' => Formatter::decode($c->comment_content) ?: null,
-                'is_approved' => $c->comment_approved === '1',
-                'is_verified_owner' => ($meta[$c->comment_ID]['verified'] ?? '0') === '1',
-                'created_at' => $created,
-                'updated_at' => $created,
-            ];
-            $key = $productId.'|'.$email.'|'.$created;
-            if (isset($existing[$key])) {
-                DB::table('product_reviews')->where('id', $existing[$key]->id)->update($row);
-            } else {
-                DB::table('product_reviews')->insert($row);
-            }
-            $count++;
+            $rows[] = CatalogRows::review($productId, $email ? ($users[$email] ?? null) : null, (string) $c->comment_author, $email, $rating,
+                (string) $c->comment_content, $c->comment_approved === '1', ($meta[$c->comment_ID]['verified'] ?? '0') === '1', $c->comment_date_gmt, $this->now());
         }
+        $count = CatalogRows::saveReviews($rows);
         $this->ctx->count('Product reviews', $comments->count(), $count);
     }
 }

@@ -3,8 +3,8 @@
 namespace Pine\Commerce\Import\Steps;
 
 use Illuminate\Support\Facades\DB;
+use Pine\Commerce\Import\Mapping\CustomerRows;
 use Pine\Commerce\Import\Source\WordPressSource;
-use Pine\Commerce\Import\Support\Formatter;
 use Pine\Commerce\Support\WpPassword;
 
 /**
@@ -20,8 +20,6 @@ class UsersStep extends AbstractStep
     {
         return 'users';
     }
-
-    private const ADDRESS_FIELDS = ['first_name', 'last_name', 'company', 'address_1', 'address_2', 'city', 'state', 'postcode', 'country', 'phone', 'email'];
 
     protected function clear(): void
     {
@@ -96,10 +94,10 @@ class UsersStep extends AbstractStep
                 $id = $existing->id;
             }
             $out[$email] = $id;
-            $this->ensureAddresses($id, [
+            $this->addresses()->ensureAddresses($id, [
                 'billing' => $this->addressFrom($m, 'billing_'),
                 'shipping' => $this->addressFrom($m, 'shipping_'),
-            ], WordPressSource::gmt($u->user_registered));
+            ], WordPressSource::gmt($u->user_registered), $this->now());
         }
 
         $this->ctx->count('WP users (staff)', $users->count(), $this->ctx->owned('users')->count(), 'administrators → role admin, WP hash kept');
@@ -120,8 +118,7 @@ class UsersStep extends AbstractStep
             if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 continue;
             }
-            $customers[$email] ??= ['email' => $email, 'first_name' => null, 'last_name' => null, 'phone' => null,
-                'created_at' => null, 'last_order' => null, 'billing' => null, 'shipping' => null, 'wp_user' => null];
+            $customers[$email] ??= CustomerRows::blank($email);
             $customers[$email]['first_name'] ??= trim((string) $c->first_name) ?: null;
             $customers[$email]['last_name'] ??= trim((string) $c->last_name) ?: null;
             $customers[$email]['wp_user'] ??= $c->user_id ?: null;
@@ -144,30 +141,9 @@ class UsersStep extends AbstractStep
         usort($orders, fn ($a, $b) => [$a[0], $a[1]] <=> [$b[0], $b[1]]);
         $orderEmails = [];
         foreach ($orders as [$date, $id, $billingRaw, $shippingRaw]) {
-            $email = strtolower(trim((string) ($billingRaw['email'] ?? '')));
-            if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                continue;
+            if ($email = CustomerRows::addOrder($customers, $date, $billingRaw, $shippingRaw)) {
+                $orderEmails[$email] = true;
             }
-            $orderEmails[$email] = true;
-            $customers[$email] ??= ['email' => $email, 'first_name' => null, 'last_name' => null, 'phone' => null,
-                'created_at' => null, 'last_order' => null, 'billing' => null, 'shipping' => null, 'wp_user' => null];
-            $c = &$customers[$email];
-            $c['first_name'] = trim($billingRaw['first_name'] ?? '') ?: $c['first_name'];
-            $c['last_name'] = trim($billingRaw['last_name'] ?? '') ?: $c['last_name'];
-            $c['phone'] = trim($billingRaw['phone'] ?? '') ?: $c['phone'];
-            if (! $c['created_at'] || $date < $c['created_at']) {
-                $c['created_at'] = $date;
-            }
-            $c['last_order'] = $date;
-            $billing = $this->address($billingRaw);
-            $shipping = $this->address($shippingRaw);
-            if ($billing) {
-                $c['billing'] = $billing;
-            }
-            if ($shipping) {
-                $c['shipping'] = $shipping;
-            }
-            unset($c);
         }
 
         return [$customers, count($orderEmails)];
@@ -175,48 +151,21 @@ class UsersStep extends AbstractStep
 
     private function importCustomers(array $customers, array $staff): void
     {
-        $rows = [];
-        foreach ($customers as $email => $c) {
-            if (isset($staff[$email])) {
-                continue; // staff account already exists for this email
-            }
-            $first = $c['first_name'] ? Formatter::decode($c['first_name']) : null;
-            $last = $c['last_name'] ? Formatter::decode($c['last_name']) : null;
-            $rows[] = [
-                'email' => $email,
-                'name' => trim(($first ?? '').' '.($last ?? '')) ?: $email,
-                'first_name' => $first,
-                'last_name' => $last,
-                'phone' => $c['phone'],
-                'role' => 'customer',
-                'is_active' => true,
-                'password' => null,
-                'created_at' => $c['created_at'] ?? $this->now(),
-                'updated_at' => $c['last_order'] ?? $c['created_at'] ?? $this->now(),
-            ];
-        }
         // Existing accounts keep their role / password / active flag.
-        $map = $this->ctx->save('users', $rows, 'email', ['role', 'password', 'is_active', 'created_at']);
+        $map = $this->ctx->save('users', CustomerRows::guestRows($customers, $staff, $this->now()), 'email', ['role', 'password', 'is_active', 'created_at']);
 
         foreach ($customers as $email => $c) {
             if (isset($map[$email])) {
-                $this->ensureAddresses($map[$email], ['billing' => $c['billing'], 'shipping' => $c['shipping'] ?? $c['billing']], $c['last_order']);
+                $this->addresses()->ensureAddresses($map[$email], ['billing' => $c['billing'], 'shipping' => $c['shipping'] ?? $c['billing']], $c['last_order'], $this->now());
             }
         }
     }
 
-    /** WcOrder billing/shipping array -> address (decoded) or null when it has no street and no postcode. */
-    private function address(array $raw): ?array
-    {
-        $a = [];
-        foreach (self::ADDRESS_FIELDS as $f) {
-            $a[$f] = trim(Formatter::decode($raw[$f] ?? '')) ?: null;
-        }
-        if (! $a['address_1'] && ! $a['postcode']) {
-            return null;
-        }
+    private ?CustomerRows $addressWriter = null;
 
-        return $a;
+    private function addresses(): CustomerRows
+    {
+        return $this->addressWriter ??= new CustomerRows($this->defaultCountry());
     }
 
     private function defaultCountry(): string
@@ -226,53 +175,11 @@ class UsersStep extends AbstractStep
 
     private function addressFrom(array $meta, string $prefix): ?array
     {
-        $a = [];
-        foreach (self::ADDRESS_FIELDS as $f) {
-            $a[$f] = trim(Formatter::decode($meta[$prefix.$f] ?? '')) ?: null;
-        }
-        if (! $a['address_1'] && ! $a['postcode']) {
-            return null;
+        $raw = [];
+        foreach (CustomerRows::ADDRESS_FIELDS as $f) {
+            $raw[$f] = $meta[$prefix.$f] ?? '';
         }
 
-        return $a;
-    }
-
-    private ?array $withAddresses = null;
-
-    /** Create default addresses once; never overwrite addresses the customer may have edited since. */
-    private function ensureAddresses(int $userId, array $addresses, ?string $date): void
-    {
-        $this->withAddresses ??= array_flip(DB::table('addresses')->distinct()->pluck('user_id')->all());
-        if (isset($this->withAddresses[$userId])) {
-            return;
-        }
-        $rows = [];
-        foreach ($addresses as $type => $a) {
-            if (! $a) {
-                continue;
-            }
-            $rows[] = [
-                'user_id' => $userId,
-                'type' => $type,
-                'first_name' => $a['first_name'],
-                'last_name' => $a['last_name'],
-                'company' => $a['company'],
-                'address_1' => $a['address_1'],
-                'address_2' => $a['address_2'],
-                'city' => $a['city'],
-                'county' => $a['state'],
-                'postcode' => $a['postcode'],
-                'country' => strtoupper(substr($a['country'] ?: $this->defaultCountry(), 0, 2)),
-                'phone' => $a['phone'],
-                'email' => $a['email'] ? strtolower($a['email']) : null,
-                'is_default' => true,
-                'created_at' => $date ?? $this->now(),
-                'updated_at' => $date ?? $this->now(),
-            ];
-        }
-        if ($rows) {
-            DB::table('addresses')->insert($rows);
-            $this->withAddresses[$userId] = true;
-        }
+        return CustomerRows::address($raw);
     }
 }

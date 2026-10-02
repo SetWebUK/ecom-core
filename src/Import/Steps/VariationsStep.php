@@ -2,8 +2,6 @@
 
 namespace Pine\Commerce\Import\Steps;
 
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Pine\Commerce\Import\Mapping\ProductRows;
 use Pine\Commerce\Models\Product;
 

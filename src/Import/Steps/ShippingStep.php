@@ -4,10 +4,10 @@ namespace Pine\Commerce\Import\Steps;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Pine\Commerce\Import\Mapping\ShippingTaxRows;
 use Pine\Commerce\Import\Source\WordPressSource;
 use Pine\Commerce\Import\Support\Formatter;
 use Pine\Commerce\Import\Support\WooCommerceContinents;
-use Pine\Commerce\Services\Shipping\CostExpression;
 use Pine\Commerce\Services\Shipping\ShippingRates;
 
 /**
@@ -97,19 +97,8 @@ class ShippingStep extends AbstractStep
 
         $zoneRows = [];
         foreach ($zones as $zone) {
-            $regions = array_map('strtoupper', array_merge($locations[(int) $zone->zone_id]['country'] ?? [], $locations[(int) $zone->zone_id]['state'] ?? []));
-            foreach ($locations[(int) $zone->zone_id]['continent'] ?? [] as $continent) {
-                $countries = WooCommerceContinents::countries($continent);
-                if ($countries) {
-                    $regions = array_merge($regions, $countries);
-                } else {
-                    $this->ctx->warn("Shipping zone '{$zone->zone_name}': unknown continent '{$continent}' is not imported – add its countries in Settings › Shipping");
-                }
-            }
-            $zoneRows[] = ['wp_id' => (int) $zone->zone_id + 1, 'name' => Formatter::decode((string) $zone->zone_name),
-                'regions' => $regions ? json_encode(array_values(array_unique($regions))) : null,
-                'postcodes' => implode("\n", $locations[(int) $zone->zone_id]['postcode'] ?? []) ?: null,
-                'sort_order' => (int) $zone->zone_order + 1, 'created_at' => $this->now(), 'updated_at' => $this->now()];
+            $zoneRows[] = ShippingTaxRows::zone((int) $zone->zone_id + 1, (string) $zone->zone_name, $locations[(int) $zone->zone_id] ?? [],
+                (int) $zone->zone_order + 1, $this->now(), fn ($w) => $this->ctx->warn($w));
         }
         if ($methods->contains(fn ($m) => (int) $m->zone_id === 0)) {
             $zoneRows[] = ['wp_id' => 1, 'name' => 'Rest of the world', 'regions' => null, 'postcodes' => null,
@@ -140,54 +129,8 @@ class ShippingStep extends AbstractStep
 
     protected function methodRow(object $method, array $settings, string $code, int $zoneId, array $classMap): array
     {
-        $type = (string) $method->method_id;
-        $title = Formatter::decode((string) ($settings['title'] ?? Str::headline($type)));
-        $taxStatus = ($settings['tax_status'] ?? 'taxable') === 'none' ? 'none' : 'taxable';
-        $cost = trim((string) ($settings['cost'] ?? ''));
-        $row = ['code' => $code, 'name' => $title, 'description' => null, 'shipping_zone_id' => $zoneId, 'tax_status' => $taxStatus,
-            'countries' => null, 'min_order_amount' => null, 'is_active' => (bool) $method->is_enabled, 'sort_order' => (int) $method->method_order,
-            'created_at' => $this->now(), 'updated_at' => $this->now()];
-
-        switch ($type) {
-            case 'free_shipping':
-                return array_merge($row, ['type' => 'free_shipping', 'cost' => 0,
-                    'settings' => json_encode(['requires' => in_array($settings['requires'] ?? '', ['coupon', 'min_amount', 'either', 'both'], true) ? $settings['requires'] : '',
-                        'ignore_discounts' => ($settings['ignore_discounts'] ?? 'no') === 'yes']),
-                    'min_order_amount' => WordPressSource::decimal($settings['min_amount'] ?? null) ?: null]);
-
-            case 'local_pickup':
-            case 'pickup_location':
-                return array_merge($row, ['type' => 'local_pickup', 'cost' => WordPressSource::decimal($cost) ?? 0, 'settings' => null]);
-
-            case 'flat_rate':
-                $classCosts = [];
-                foreach ($settings as $key => $value) {
-                    if (preg_match('/^class_cost_(\d+)$/', (string) $key, $m) && trim((string) $value) !== '' && isset($classMap[(int) $m[1]])) {
-                        $classCosts[(string) $classMap[(int) $m[1]]] = trim((string) $value);
-                    }
-                }
-                $noClass = trim((string) ($settings['no_class_cost'] ?? ''));
-                $formula = $cost !== '' && WordPressSource::decimal($cost) === null ? $cost : null;
-                foreach (array_filter(array_merge([$formula, $noClass], $classCosts)) as $expression) {
-                    if (! CostExpression::valid($expression)) {
-                        $this->ctx->warn("Shipping method '$code': cost '$expression' uses a formula this platform cannot read – check it in Settings › Shipping");
-                    }
-                }
-
-                return array_merge($row, ['type' => 'flat_rate', 'cost' => $formula ? 0 : (WordPressSource::decimal($cost) ?? 0),
-                    'settings' => json_encode(array_filter([
-                        'cost' => $formula,
-                        'calculation' => $classCosts || $noClass !== '' ? 'class' : 'order',
-                        'class_costs' => $classCosts ?: null,
-                        'no_class_cost' => $noClass !== '' ? $noClass : null,
-                        'class_mode' => ($settings['type'] ?? 'class') === 'order' ? 'max' : 'sum',
-                    ], fn ($v) => $v !== null))]);
-
-            default:
-                $this->ctx->warn("Shipping method '$code' ($type) is a plugin method – imported switched off as a flat rate, set it up in Settings › Shipping");
-
-                return array_merge($row, ['type' => 'flat_rate', 'cost' => WordPressSource::decimal($cost) ?? 0, 'is_active' => false, 'settings' => null]);
-        }
+        return ShippingTaxRows::method((string) $method->method_id, (bool) $method->is_enabled, (int) $method->method_order, $settings, $code,
+            $zoneId, $classMap, $this->now(), fn ($w) => $this->ctx->warn($w));
     }
 
     /** The pre-v1.1 import: one flat list of methods, country-limited, no zones. */
@@ -235,9 +178,6 @@ class ShippingStep extends AbstractStep
 
     protected function uniqueClassSlug(string $slug, int $termId): string
     {
-        $slug = Str::slug($slug) ?: 'class-'.$termId;
-        $taken = DB::table('shipping_classes')->where('slug', $slug)->where(fn ($q) => $q->whereNull('wp_id')->orWhere('wp_id', '!=', $termId))->exists();
-
-        return $taken ? $slug.'-'.$termId : $slug;
+        return ShippingTaxRows::uniqueClassSlug($slug, $termId);
     }
 }

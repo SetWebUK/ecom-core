@@ -2,9 +2,9 @@
 
 namespace Pine\Commerce\Import\Steps;
 
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Pine\Commerce\Import\ImportContext;
+use Pine\Commerce\Import\Mapping\ShippingTaxRows;
 use Pine\Commerce\Import\Support\Formatter;
 use Pine\Commerce\Services\Tax\TaxRates;
 
@@ -54,13 +54,7 @@ class TaxStep extends AbstractStep
                 $classes[Str::slug($name)] = Formatter::decode($name);
             }
         }
-        $order = (int) DB::table('tax_classes')->max('sort_order');
-        $classRows = [];
-        foreach ($classes as $slug => $name) {
-            if ($slug !== '' && $slug !== 'standard') {
-                $classRows[] = ['slug' => $slug, 'name' => $name, 'sort_order' => ++$order, 'created_at' => $this->now(), 'updated_at' => $this->now()];
-            }
-        }
+        $classRows = ShippingTaxRows::taxClasses($classes, $this->now());
         $this->ctx->save('tax_classes', $classRows, 'slug', ['sort_order', 'created_at']);
 
         $locations = [];
@@ -71,22 +65,11 @@ class TaxStep extends AbstractStep
         }
         $rows = [];
         foreach ($this->wp->table('woocommerce_tax_rates')->orderBy('tax_rate_order')->orderBy('tax_rate_id')->get() as $i => $r) {
-            $rows[] = [
-                'wp_id' => (int) $r->tax_rate_id,
-                'tax_class' => ((string) $r->tax_rate_class) !== '' ? (string) $r->tax_rate_class : 'standard',
-                'country' => strtoupper((string) $r->tax_rate_country),
-                'state' => (string) $r->tax_rate_state,
-                'postcodes' => implode("\n", $locations[(int) $r->tax_rate_id]['postcode'] ?? []) ?: null,
-                'cities' => implode("\n", $locations[(int) $r->tax_rate_id]['city'] ?? []) ?: null,
-                'rate' => round((float) $r->tax_rate, 4),
-                'name' => Formatter::decode((string) $r->tax_rate_name),
-                'priority' => max(1, (int) $r->tax_rate_priority),
-                'compound' => (bool) $r->tax_rate_compound,
-                'shipping' => (bool) $r->tax_rate_shipping,
-                'sort_order' => (int) ($r->tax_rate_order ?? $i),
-                'created_at' => $this->now(),
-                'updated_at' => $this->now(),
-            ];
+            $rows[] = ShippingTaxRows::taxRate(['id' => (int) $r->tax_rate_id, 'class' => (string) $r->tax_rate_class, 'country' => (string) $r->tax_rate_country,
+                'state' => (string) $r->tax_rate_state, 'postcodes' => $locations[(int) $r->tax_rate_id]['postcode'] ?? [],
+                'cities' => $locations[(int) $r->tax_rate_id]['city'] ?? [], 'rate' => $r->tax_rate, 'name' => (string) $r->tax_rate_name,
+                'priority' => (int) $r->tax_rate_priority, 'compound' => (bool) $r->tax_rate_compound, 'shipping' => (bool) $r->tax_rate_shipping,
+                'order' => (int) ($r->tax_rate_order ?? $i)], $this->now());
         }
         $this->ctx->save('tax_rates', $rows, 'wp_id', ['created_at']);
         TaxRates::flush();

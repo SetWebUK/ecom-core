@@ -2,7 +2,6 @@
 
 namespace Pine\Commerce\Import\Steps;
 
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Pine\Commerce\Import\Source\WordPressSource;
 use Pine\Commerce\Import\Support\Formatter;

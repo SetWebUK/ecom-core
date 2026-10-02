@@ -2,10 +2,9 @@
 
 namespace Pine\Commerce\Import\Steps;
 
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Pine\Commerce\Import\Contracts\TermMapper;
 use Pine\Commerce\Import\Data\WpTerm;
+use Pine\Commerce\Import\Mapping\CatalogRows;
 use Pine\Commerce\Import\Support\Formatter;
 
 /**
@@ -36,23 +35,7 @@ class CategoriesStep extends AbstractStep
     /** @return array<int,string> term id => Laravel path */
     public static function paths(iterable $terms): array
     {
-        $byId = [];
-        foreach ($terms as $id => $t) {
-            $byId[(int) $id] = $t;
-        }
-        $out = [];
-        $path = function (int $id, array $seen = []) use (&$path, $byId) {
-            $t = $byId[$id];
-            $slug = urldecode((string) $t->slug);
-            $parent = (int) $t->parent;
-
-            return ($parent && isset($byId[$parent]) && ! isset($seen[$parent]) ? $path($parent, $seen + [$id => true]).'/' : '').$slug;
-        };
-        foreach (array_keys($byId) as $id) {
-            $out[$id] = $path($id);
-        }
-
-        return $out;
+        return CatalogRows::paths($terms);
     }
 
     protected function import(): void
@@ -81,23 +64,10 @@ class CategoriesStep extends AbstractStep
                 $vars = ['term' => $name, 'term_description' => Formatter::excerpt($description, 100000)]; // SEO plugins output the whole description
                 $seo = $this->ctx->termSeo($term, 'product_cat', $vars);
                 $path = $paths[$t->term_id];
-                $row = [
-                    'wp_id' => $t->term_id,
-                    'parent_id' => $t->parent ? ($map[$t->parent] ?? null) : null,
-                    'name' => $name,
-                    'slug' => urldecode((string) $t->slug),
-                    'path' => $path,
-                    'description' => $description,
-                    'extra_content' => null,
-                    'image' => $this->ctx->attachmentPath($m['thumbnail_id'] ?? 0),
-                    'sort_order' => (int) ($m['order'] ?? 0),
-                    'is_visible' => true,
-                    'show_in_menu' => (int) $t->term_id !== $defaultCat,
-                    'meta_title' => Str::limit((string) $seo?->title, 250, '') ?: null,
-                    'meta_description' => $seo?->description ?? ($rendered ? $this->ctx->renderedSeo($this->sourcePath($t->term_id, $path))['description'] : null),
-                    'created_at' => $this->now(),
-                    'updated_at' => $this->now(),
-                ];
+                $row = CatalogRows::category($term, $path, $t->parent ? ($map[$t->parent] ?? null) : null,
+                    $this->ctx->attachmentPath($m['thumbnail_id'] ?? 0), $seo,
+                    $seo?->description === null && $rendered ? $this->ctx->renderedSeo($this->sourcePath($t->term_id, $path))['description'] : null,
+                    (int) $t->term_id !== $defaultCat, $this->now(), $description);
                 foreach ($mappers as $mapper) {
                     $row = $mapper->mapCategory($row, $term, $m, $this->ctx);
                 }
