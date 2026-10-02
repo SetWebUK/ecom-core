@@ -71,7 +71,7 @@ class AttributesStep extends AbstractStep
         self::saveValues($values, $this->now());
 
         $this->ctx->count('Attributes', $taxes->count(), DB::table('attributes')->count());
-        $this->ctx->count('Attribute values', $terms->count(), DB::table('attribute_values')->whereNotNull('wp_id')->count());
+        $this->ctx->count('Attribute values', $terms->count(), $this->ctx->owned('attribute_values')->count());
     }
 
     /** Upsert attribute values on (attribute_id, slug). Returns ["attrId|slug" => id]. */

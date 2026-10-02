@@ -27,7 +27,7 @@ class VariationsStep extends AbstractStep
 
     protected function clear(): void
     {
-        DB::table('product_variations')->whereNotNull('wp_id')->delete();
+        $this->ctx->owned('product_variations')->delete();
     }
 
     protected function import(): void
@@ -81,7 +81,7 @@ class VariationsStep extends AbstractStep
             Product::whereIn('id', $chunk)->get()->each->refreshVariablePrice();
         }
 
-        $this->ctx->count('Variations', $posts->count(), DB::table('product_variations')->whereNotNull('wp_id')->count());
+        $this->ctx->count('Variations', $posts->count(), $this->ctx->owned('product_variations')->count());
     }
 
     /**

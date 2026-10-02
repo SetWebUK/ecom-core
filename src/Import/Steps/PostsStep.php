@@ -31,7 +31,7 @@ class PostsStep extends AbstractStep
 
     protected function clear(): void
     {
-        DB::table('posts')->whereNotNull('wp_id')->delete();
+        $this->ctx->owned('posts')->delete();
     }
 
     protected function import(): void
@@ -50,7 +50,7 @@ class PostsStep extends AbstractStep
         $posts = $this->wp->posts('post', ['publish', 'draft', 'private', 'future', 'pending']);
         $meta = $this->wp->postMeta($posts->pluck('ID')->all());
         $objectTerms = $this->wp->objectTerms($posts->pluck('ID')->all(), 'category');
-        $authors = DB::table('users')->whereNotNull('wp_id')->pluck('id', 'wp_id')->all();
+        $authors = $this->ctx->owned('users')->pluck('id', 'wp_id')->all();
         $sourcePaths = $this->ctx->permalinks()->posts();
         $builder = $this->ctx->permalinks()->builder();
         $rendered = (bool) $this->ctx->config('seo.rendered_fallback', true);
@@ -95,7 +95,7 @@ class PostsStep extends AbstractStep
         $this->ctx->save('posts', $rows, 'wp_id', ['created_at']);
 
         $this->ctx->count('Blog categories', $terms->count(), DB::table('post_categories')->count());
-        $this->ctx->count('Blog posts', $posts->count(), DB::table('posts')->whereNotNull('wp_id')->count(),
+        $this->ctx->count('Blog posts', $posts->count(), $this->ctx->owned('posts')->count(),
             collect($sources)->map(fn ($c, $s) => "$s $c")->implode(', '));
     }
 }

@@ -28,9 +28,9 @@ class CategoriesStep extends AbstractStep
 
     protected function clear(): void
     {
-        DB::table('products')->whereNotNull('wp_id')->update(['primary_category_id' => null]);
-        DB::table('categories')->whereNotNull('wp_id')->update(['parent_id' => null]);
-        DB::table('categories')->whereNotNull('wp_id')->delete();
+        $this->ctx->owned('products')->update(['primary_category_id' => null]);
+        $this->ctx->owned('categories')->update(['parent_id' => null]);
+        $this->ctx->owned('categories')->delete();
     }
 
     /** @return array<int,string> term id => Laravel path */
@@ -125,7 +125,7 @@ class CategoriesStep extends AbstractStep
             $this->ctx->warn("Category URL differs: term $termId WP=/$wpPath/ Laravel=/".($laravel ?? '?').'/ (redirected)');
         }
         $note = $source ? ($mismatch || $legacyBase ? "$mismatch URLs redirected, $legacyBase via /product-category/ fallback" : 'all '.count($source).' URLs match WP') : '';
-        $this->ctx->count('Product categories', $terms->count(), DB::table('categories')->whereNotNull('wp_id')->count(), $note);
+        $this->ctx->count('Product categories', $terms->count(), $this->ctx->owned('categories')->count(), $note);
     }
 
     /** Path of the rendered category page on the source site (its real URL when known). */

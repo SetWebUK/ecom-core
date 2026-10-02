@@ -156,7 +156,7 @@ class RedirectsStep extends AbstractStep
     private function oldSlugRules(array $live): array
     {
         $rules = [];
-        $products = DB::table('products')->whereNotNull('wp_id')->where('status', 'published')->get(['id', 'wp_id', 'slug', 'primary_category_id']);
+        $products = $this->ctx->owned('products')->where('status', 'published')->get(['id', 'wp_id', 'slug', 'primary_category_id']);
         $paths = DB::table('categories')->pluck('path', 'id')->all();
         $productCats = DB::table('category_product')->get()->groupBy('product_id');
         $old = $this->wp->postMetaMulti($products->pluck('wp_id')->all(), '_wp_old_slug');
@@ -181,7 +181,7 @@ class RedirectsStep extends AbstractStep
         }
 
         foreach (['posts' => fn ($r) => '/blog/'.$r->slug.'/', 'pages' => fn ($r) => $r->path === '' ? '/' : '/'.$r->path.'/'] as $table => $urlOf) {
-            $rowsById = DB::table($table)->whereNotNull('wp_id')->where('status', 'published')->get()->keyBy('wp_id');
+            $rowsById = $this->ctx->owned($table)->where('status', 'published')->get()->keyBy('wp_id');
             foreach ($this->wp->postMetaMulti($rowsById->keys()->all(), '_wp_old_slug') as $wpId => $slugs) {
                 $row = $rowsById[$wpId];
                 foreach (array_unique($slugs) as $slug) {
@@ -206,7 +206,7 @@ class RedirectsStep extends AbstractStep
     {
         $links = $this->ctx->permalinks();
         $rules = [];
-        $categories = DB::table('categories')->whereNotNull('wp_id')->pluck('path', 'wp_id')->all();
+        $categories = $this->ctx->owned('categories')->pluck('path', 'wp_id')->all();
         foreach ($links->categories() as $termId => $source) {
             $laravel = $categories[$termId] ?? null;
             $from = $this->normalise('/'.$source.'/');
@@ -215,7 +215,7 @@ class RedirectsStep extends AbstractStep
             }
         }
         $paths = DB::table('categories')->pluck('path', 'id')->all();
-        $products = DB::table('products')->whereNotNull('wp_id')->where('status', 'published')->get(['wp_id', 'slug', 'primary_category_id'])->keyBy('wp_id');
+        $products = $this->ctx->owned('products')->where('status', 'published')->get(['wp_id', 'slug', 'primary_category_id'])->keyBy('wp_id');
         foreach ($links->products() as $wpId => $source) {
             $p = $products->get($wpId);
             if (! $p) {
@@ -227,7 +227,7 @@ class RedirectsStep extends AbstractStep
                 $rules[$from] = '/'.$laravel.'/';
             }
         }
-        $posts = DB::table('posts')->whereNotNull('wp_id')->where('status', 'published')->pluck('slug', 'wp_id')->all();
+        $posts = $this->ctx->owned('posts')->where('status', 'published')->pluck('slug', 'wp_id')->all();
         foreach ($links->posts() as $wpId => $source) {
             $from = $this->normalise('/'.$source.'/');
             if (isset($posts[$wpId]) && $from !== null && $from !== 'blog/'.strtolower($posts[$wpId]) && ! isset($live[$from])) {

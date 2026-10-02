@@ -29,7 +29,7 @@ class UsersStep extends AbstractStep
         foreach (array_chunk($emails, 500) as $chunk) {
             DB::table('users')->whereIn('email', $chunk)->where('role', 'customer')->whereNull('wp_id')->delete();
         }
-        DB::table('users')->whereNotNull('wp_id')->delete();
+        $this->ctx->owned('users')->delete();
     }
 
     protected function import(): void
@@ -102,7 +102,7 @@ class UsersStep extends AbstractStep
             ], WordPressSource::gmt($u->user_registered));
         }
 
-        $this->ctx->count('WP users (staff)', $users->count(), DB::table('users')->whereNotNull('wp_id')->count(), 'administrators → role admin, WP hash kept');
+        $this->ctx->count('WP users (staff)', $users->count(), $this->ctx->owned('users')->count(), 'administrators → role admin, WP hash kept');
 
         return $out;
     }

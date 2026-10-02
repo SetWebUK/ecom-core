@@ -15,6 +15,7 @@ use Pine\Commerce\Import\RenderedSite\RenderedSource;
 use Pine\Commerce\Import\Source\SiteProfile;
 use Pine\Commerce\Import\Source\WordPressSource;
 use Pine\Commerce\Import\Support\Formatter;
+use Pine\Commerce\Import\Support\Upserter;
 
 /**
  * Shared state for one import run: the read-only source (WordPressSource + SiteProfile), the adapters, rendered
@@ -149,12 +150,29 @@ class ImportContext
 
     // ------------------------------------------------------------------ id maps
 
-    /** [wp_id => id] for a Laravel table (cached until forget()). */
+    /**
+     * Import source of this run: null = the WordPress database importer (rows imported before 1.5 have no source
+     * either); the WooCommerce REST API importer uses "woo:{host}". wp_id lookups only see rows of the same source.
+     */
+    public ?string $source = null;
+
+    public function upserter(): Upserter
+    {
+        return new Upserter($this->source);
+    }
+
+    /** Imported rows of this run's source: DB::table($table)->whereNotNull('wp_id') + the source scope. */
+    public function owned(string $table): \Illuminate\Database\Query\Builder
+    {
+        return $this->upserter()->owned($table);
+    }
+
+    /** [wp_id => id] for a Laravel table (cached until forget()); wp_id maps are limited to this run's source. */
     public function map(string $table, string $key = 'wp_id'): array
     {
         $cacheKey = $table.'.'.$key;
         if (! isset($this->maps[$cacheKey])) {
-            $this->maps[$cacheKey] = DB::table($table)->whereNotNull($key)->pluck('id', $key)->all();
+            $this->maps[$cacheKey] = $this->upserter()->map($table, $key);
         }
 
         return $this->maps[$cacheKey];
@@ -171,44 +189,12 @@ class ImportContext
 
     /**
      * Insert-or-update rows matched on $key (default wp_id). Rows must share the same columns.
-     * Columns in $keepOnUpdate are only written on insert. Returns [key => id].
+     * Columns in $keepOnUpdate are only written on insert. Returns [key => id]. (Support\Upserter)
      */
     public function save(string $table, array $rows, string $key = 'wp_id', array $keepOnUpdate = []): array
     {
-        if (! $rows) {
-            return [];
-        }
-        $existing = [];
-        foreach (array_chunk(array_column($rows, $key), 1000) as $chunk) {
-            $existing += DB::table($table)->whereIn($key, $chunk)->pluck('id', $key)->all();
-        }
-
-        $inserts = [];
-        $updates = [];
-        foreach ($rows as $row) {
-            $k = $row[$key];
-            if (isset($existing[$k])) {
-                $updates[] = ['id' => $existing[$k]] + $row;
-            } else {
-                $inserts[] = $row;
-            }
-        }
-
-        foreach (array_chunk($inserts, 250) as $chunk) {
-            DB::table($table)->insert($chunk);
-        }
-        if ($updates) {
-            $columns = array_values(array_diff(array_keys($updates[0]), array_merge(['id', $key], $keepOnUpdate)));
-            foreach (array_chunk($updates, 250) as $chunk) {
-                DB::table($table)->upsert($chunk, ['id'], $columns);
-            }
-        }
-
+        $map = $this->upserter()->save($table, $rows, $key, $keepOnUpdate);
         $this->forget($table);
-        $map = [];
-        foreach (array_chunk(array_column($rows, $key), 1000) as $chunk) {
-            $map += DB::table($table)->whereIn($key, $chunk)->pluck('id', $key)->all();
-        }
 
         return $map;
     }
@@ -219,21 +205,14 @@ class ImportContext
      */
     public function adopt(string $table, array $rows, string $naturalKey): void
     {
-        $existing = $this->map($table);
-        foreach ($rows as $row) {
-            if (! isset($existing[$row['wp_id']])) {
-                DB::table($table)->where($naturalKey, $row[$naturalKey])->whereNull('wp_id')->update(['wp_id' => $row['wp_id']]);
-            }
-        }
+        $this->upserter()->adopt($table, $rows, $naturalKey);
         $this->forget($table);
     }
 
     /** Insert rows in chunks. */
     public function insert(string $table, array $rows, int $chunk = 500): void
     {
-        foreach (array_chunk($rows, $chunk) as $part) {
-            DB::table($table)->insert($part);
-        }
+        $this->upserter()->insert($table, $rows, $chunk);
     }
 
     // ------------------------------------------------------------------ WordPress helpers

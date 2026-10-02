@@ -41,12 +41,12 @@ class ProductsStep extends AbstractStep
 
     protected function clear(): void
     {
-        DB::table('products')->whereNotNull('wp_id')->delete(); // cascades to images, pivots, variations, specs
+        $this->ctx->owned('products')->delete(); // cascades to images, pivots, variations, specs
     }
 
     protected function import(): void
     {
-        $categoryPaths = DB::table('categories')->whereNotNull('wp_id')->pluck('path', 'wp_id')->all();
+        $categoryPaths = $this->ctx->owned('categories')->pluck('path', 'wp_id')->all();
         $categoryIds = $this->ctx->map('categories');
         $attributeIds = DB::table('attributes')->pluck('id', 'slug')->all();
         $productCats = $this->wp->terms('product_cat');
@@ -266,7 +266,7 @@ class ProductsStep extends AbstractStep
         $published = collect($allRows)->where('status', 'published')->count();
         $typeNote = collect($types)->map(fn ($c, $t) => "$t $c")->implode(', ');
         $this->ctx->count('Products', $posts->count().' ('.$posts->where('post_status', 'publish')->count().' published)',
-            DB::table('products')->whereNotNull('wp_id')->count().' ('.$published.' published)',
+            $this->ctx->owned('products')->count().' ('.$published.' published)',
             ($wpUrls ? (count($mismatch) || $legacy ? count($mismatch).' URLs redirected, '.$legacy.' via /product/ fallback' : 'all '.count($wpUrls).' product URLs match WP') : '')
             .($typeNote ? '; '.$typeNote : ''));
     }
@@ -280,7 +280,7 @@ class ProductsStep extends AbstractStep
             }
         }
 
-        $valueIds = DB::table('attribute_values')->whereNotNull('wp_id')->pluck('id', 'wp_id')->all();
+        $valueIds = $this->ctx->owned('attribute_values')->pluck('id', 'wp_id')->all();
         $attachments = $this->ctx->attachments();
         $cats = $images = $attrs = $values = $specs = [];
         $missingImages = 0;

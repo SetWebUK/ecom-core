@@ -90,11 +90,11 @@ class TaxStep extends AbstractStep
         }
         $this->ctx->save('tax_rates', $rows, 'wp_id', ['created_at']);
         TaxRates::flush();
-        $this->ctx->count('Tax rates', count($rows), DB::table('tax_rates')->whereNotNull('wp_id')->count(), count($classRows).' extra tax classes');
+        $this->ctx->count('Tax rates', count($rows), $this->ctx->owned('tax_rates')->count(), count($classRows).' extra tax classes');
     }
 
     protected function clear(): void
     {
-        DB::table('tax_rates')->whereNotNull('wp_id')->delete();
+        $this->ctx->owned('tax_rates')->delete();
     }
 }

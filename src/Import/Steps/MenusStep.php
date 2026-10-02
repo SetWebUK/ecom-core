@@ -117,10 +117,10 @@ class MenusStep extends AbstractStep
     private function wordPressMenus(array $map): void
     {
         $menus = $this->wp->terms('nav_menu');
-        $categoryPaths = DB::table('categories')->whereNotNull('wp_id')->pluck('path', 'wp_id')->all();
-        $categoryNames = DB::table('categories')->whereNotNull('wp_id')->pluck('name', 'wp_id')->all();
-        $pages = DB::table('pages')->whereNotNull('wp_id')->get(['wp_id', 'path', 'title'])->keyBy('wp_id');
-        $posts = DB::table('posts')->whereNotNull('wp_id')->get(['wp_id', 'slug', 'title'])->keyBy('wp_id');
+        $categoryPaths = $this->ctx->owned('categories')->pluck('path', 'wp_id')->all();
+        $categoryNames = $this->ctx->owned('categories')->pluck('name', 'wp_id')->all();
+        $pages = $this->ctx->owned('pages')->get(['wp_id', 'path', 'title'])->keyBy('wp_id');
+        $posts = $this->ctx->owned('posts')->get(['wp_id', 'slug', 'title'])->keyBy('wp_id');
 
         foreach ($map as $termId => $location) {
             $menu = $menus[$termId] ?? null;

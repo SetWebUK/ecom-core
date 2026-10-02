@@ -186,6 +186,12 @@ class ImportWordPressCommand extends Command
         }
 
         if (! $ctx->dryRun) {
+            // the WooCommerce REST API importer (1.5) recognises this site: same host = update these rows, not new ones
+            try {
+                \Pine\Commerce\Models\Setting::set('import.wordpress.site_url', $site->homeUrl ?: $site->siteUrl, 'import');
+            } catch (\Throwable) {
+                // settings table missing on an unusual target – only a convenience
+            }
             Cache::forget('settings.all');
             foreach (DB::table('menus')->pluck('location') as $location) {
                 Cache::forget('menu.'.$location);

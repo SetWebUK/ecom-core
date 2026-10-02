@@ -31,7 +31,7 @@ class MediaStep extends AbstractStep
 
     protected function clear(): void
     {
-        DB::table('media')->whereNotNull('wp_id')->delete();
+        $this->ctx->owned('media')->delete();
     }
 
     protected function import(): void
@@ -89,7 +89,7 @@ class MediaStep extends AbstractStep
         foreach ($missing as $item) {
             $this->ctx->warn('Media file missing from the public disk: attachment '.$item);
         }
-        $this->ctx->count('Media (attachments)', $posts->count().' (+'.$skippedPrivate.' private)', DB::table('media')->whereNotNull('wp_id')->count(),
+        $this->ctx->count('Media (attachments)', $posts->count().' (+'.$skippedPrivate.' private)', $this->ctx->owned('media')->count(),
             count($missing).' missing files, private zips/CSV exports skipped');
     }
 }

@@ -33,8 +33,8 @@ class PagesStep extends AbstractStep
 
     protected function clear(): void
     {
-        DB::table('pages')->whereNotNull('wp_id')->update(['parent_id' => null]);
-        DB::table('pages')->whereNotNull('wp_id')->delete();
+        $this->ctx->owned('pages')->update(['parent_id' => null]);
+        $this->ctx->owned('pages')->delete();
     }
 
     protected function import(): void
@@ -135,7 +135,7 @@ class PagesStep extends AbstractStep
             $this->ctx->warn('Page set to draft because WordPress redirected its URL: '.$u);
         }
         $this->ctx->count('Pages', $posts->count().' ('.$posts->where('post_status', 'publish')->count().' published)',
-            DB::table('pages')->whereNotNull('wp_id')->count().' ('.DB::table('pages')->whereNotNull('wp_id')->where('status', 'published')->count().' published)',
+            $this->ctx->owned('pages')->count().' ('.$this->ctx->owned('pages')->where('status', 'published')->count().' published)',
             collect($sources)->map(fn ($c, $s) => "$s $c")->implode(', ').($mismatch ? "; $mismatch URL mismatches" : ''));
     }
 

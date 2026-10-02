@@ -50,7 +50,7 @@ class OrdersStep extends AbstractStep
 
     protected function clear(): void
     {
-        DB::table('orders')->whereNotNull('wp_id')->delete(); // cascades items, notes, refunds, payments
+        $this->ctx->owned('orders')->delete(); // cascades items, notes, refunds, payments
     }
 
     protected function import(): void
@@ -63,7 +63,7 @@ class OrdersStep extends AbstractStep
         $userMap = $this->userMap();
         $productMap = $this->ctx->map('products');
         $variationMap = $this->ctx->map('product_variations');
-        $staffByWpId = DB::table('users')->whereNotNull('wp_id')->pluck('id', 'wp_id')->all();
+        $staffByWpId = $this->ctx->owned('users')->pluck('id', 'wp_id')->all();
 
         // Attribute names for variation meta (pa_memory -> Memory, 16gb -> 16GB)
         $attrNames = DB::table('attributes')->pluck('name', 'slug')->all();
@@ -72,8 +72,8 @@ class OrdersStep extends AbstractStep
             ->get(['attributes.slug as a', 'attribute_values.slug as v', 'attribute_values.value']) as $v) {
             $valueNames[$v->a.'|'.$v->v] = $v->value;
         }
-        $productSkus = DB::table('products')->whereNotNull('wp_id')->pluck('sku', 'wp_id')->all();
-        $variationSkus = DB::table('product_variations')->whereNotNull('wp_id')->pluck('sku', 'wp_id')->all();
+        $productSkus = $this->ctx->owned('products')->pluck('sku', 'wp_id')->all();
+        $variationSkus = $this->ctx->owned('product_variations')->pluck('sku', 'wp_id')->all();
 
         // Numbers already used by orders that did not come from WordPress (e.g. test orders)
         $foreignNumbers = DB::table('orders')->whereNull('wp_id')->pluck('id', 'number')->all();
@@ -254,13 +254,13 @@ class OrdersStep extends AbstractStep
         [$refunds, $wpRefunds] = $this->refunds($source, $orderIds, $itemIdMap, $staffByWpId);
         [$notes, $wpNotes] = $this->notes($orderIds);
 
-        $this->ctx->count('Orders', $wpCount.' ('.$source->storage().' storage)', DB::table('orders')->whereNotNull('wp_id')->count(),
+        $this->ctx->count('Orders', $wpCount.' ('.$source->storage().' storage)', $this->ctx->owned('orders')->count(),
             'statuses: '.collect($statuses)->map(fn ($c, $s) => "$s $c")->implode(', ').($withFees ? "; $withFees with fee lines (orders.meta.fees)" : ''));
         $this->ctx->count('Order line items', $lineItems, $flat);
         $this->ctx->count('Refunds', $wpRefunds, $refunds);
         $this->ctx->count('Order notes', $wpNotes, $notes);
         $this->ctx->count('Payments (paid orders)', '—', $payments);
-        $linked = DB::table('orders')->whereNotNull('wp_id')->whereNotNull('user_id')->count();
+        $linked = $this->ctx->owned('orders')->whereNotNull('user_id')->count();
         $this->ctx->count('Orders linked to customer accounts', '—', $linked, 'by WP user or billing email');
     }
 
