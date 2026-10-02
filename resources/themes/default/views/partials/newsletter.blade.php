@@ -14,7 +14,7 @@
             <input type="hidden" name="page_url" value="{{ url()->current() }}">
             <p class="sr-only"><label for="nl-website">Leave this empty</label><input id="nl-website" type="text" name="website" tabindex="-1" autocomplete="off"></p>
             <label class="sr-only" for="newsletter-email">Email address</label>
-            <input id="newsletter-email" type="email" name="email" required maxlength="190" placeholder="Your email address" autocomplete="email" value="{{ old('email') }}">
+            <input id="newsletter-email" type="email" name="email" required maxlength="190" placeholder="Your email address" autocomplete="email" value="{{ $newsErrors->has('email') ? old('email') : '' }}">
             <button type="submit" class="btn btn--primary">Subscribe</button>
             <p class="newsletter__status" role="status" data-newsletter-status>@if ($newsStatus){{ $newsStatus }}@elseif ($newsErrors->any()){{ $newsErrors->first() }}@endif</p>
         </form>

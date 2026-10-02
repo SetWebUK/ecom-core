@@ -35,13 +35,17 @@ class AuthController extends Controller
 
     public function login(Request $request, Cart $cart)
     {
-        $request->validate([
-            'username' => ['required', 'string', 'max:190'],
-            'password' => ['required', 'string', 'max:4096'],
-        ], [
-            'username.required' => 'Error: Username is required.',
-            'password.required' => 'Error: The password field is empty.',
-        ]);
+        try {
+            $request->validate([
+                'username' => ['required', 'string', 'max:190'],
+                'password' => ['required', 'string', 'max:4096'],
+            ], [
+                'username.required' => 'Error: Username is required.',
+                'password.required' => 'Error: The password field is empty.',
+            ]);
+        } catch (ValidationException $e) {
+            throw $e->redirectTo($this->back($request)); // always back to the sign-in form, wherever the POST came from
+        }
 
         $login = trim((string) $request->input('username'));
         $key = 'storefront-login:'.sha1(mb_strtolower($login).'|'.$request->ip());
@@ -82,32 +86,54 @@ class AuthController extends Controller
         return redirect()->to($this->redirectTarget($request));
     }
 
+    /** GET /my-account/register/ – the "Create an account" page (guests only; feature "registration"). */
+    public function showRegister(Request $request)
+    {
+        if (! static::registrationEnabled()) {
+            abort(404);
+        }
+        $redirect = static::safeRedirect(is_string($request->query('redirect')) ? $request->query('redirect') : '');
+        if (Auth::check()) {
+            return redirect()->to($redirect !== '' && ! str_starts_with($redirect, '/admin') ? url($redirect) : route('account'));
+        }
+
+        return response(theme_view('auth.register', [
+            'registration' => true,
+            'redirect' => $redirect,
+        ]))->header('Cache-Control', 'no-store, private');
+    }
+
     public function register(Request $request)
     {
         if (! static::registrationEnabled()) {
             abort(404);
         }
+        $back = $this->registerBack($request);
         $key = 'storefront-register:'.$request->ip();
         if (RateLimiter::tooManyAttempts($key, 5)) {
-            throw ValidationException::withMessages(['email' => 'Too many registration attempts. Please try again later.'])->redirectTo(route('account'));
+            throw ValidationException::withMessages(['email' => 'Too many registration attempts. Please try again later.'])->redirectTo($back);
         }
         RateLimiter::hit($key, 3600);
 
-        $data = $request->validate([
-            'email' => ['required', 'string', 'email:rfc', 'max:190'],
-            'password' => ['required', 'string', 'min:8', 'max:255'],
-            'first_name' => ['nullable', 'string', 'max:100'],
-            'last_name' => ['nullable', 'string', 'max:100'],
-        ], [
-            'email.required' => 'Error: Please provide a valid email address.',
-            'email.email' => 'Error: Please provide a valid email address.',
-            'password.required' => 'Error: Please enter an account password.',
-            'password.min' => 'Error: Please enter a password of at least 8 characters.',
-        ]);
+        try {
+            $data = $request->validate([
+                'email' => ['required', 'string', 'email:rfc', 'max:190'],
+                'password' => ['required', 'string', 'min:8', 'max:255'],
+                'first_name' => ['nullable', 'string', 'max:100'],
+                'last_name' => ['nullable', 'string', 'max:100'],
+            ], [
+                'email.required' => 'Error: Please provide a valid email address.',
+                'email.email' => 'Error: Please provide a valid email address.',
+                'password.required' => 'Error: Please enter an account password.',
+                'password.min' => 'Error: Please enter a password of at least 8 characters.',
+            ]);
+        } catch (ValidationException $e) {
+            throw $e->redirectTo($back); // the register page (with old input), never the sign-in page
+        }
         if (User::whereRaw('LOWER(email) = ?', [mb_strtolower($data['email'])])->exists()) {
             throw ValidationException::withMessages([
                 'email' => 'Error: An account is already registered with your email address. Please log in.',
-            ])->redirectTo(route('account'));
+            ])->redirectTo($back);
         }
 
         $user = new User;
@@ -241,6 +267,20 @@ class AuthController extends Controller
     }
 
     // ------------------------------------------------------------------ helpers
+
+    /** Site-relative path or '' (no //host, /\\host, whitespace or control characters). */
+    public static function safeRedirect(string $target): string
+    {
+        return preg_match('#^/(?![/\\\\])[^\\\\\s\x00-\x1f]*$#', $target) ? $target : '';
+    }
+
+    /** Where failed registrations go: the register page, keeping a safe ?redirect= (e.g. back to the checkout). */
+    protected function registerBack(Request $request): string
+    {
+        $target = static::safeRedirect(is_string($request->input('redirect')) ? $request->input('redirect') : '');
+
+        return route('register.show', $target !== '' ? ['redirect' => $target] : []);
+    }
 
     protected function findUser(string $login): ?User
     {

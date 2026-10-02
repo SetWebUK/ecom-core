@@ -451,7 +451,8 @@ theme's own `partials.seo`).
 | `checkout.thankyou` | `checkout.thankyou` | `CheckoutController@thankYou` | `order: Order` (loaded items.product.images, items.variation, customer notes), `bacs: ?BacsGateway`, `error: ?string`, `canPay: bool` |
 | `checkout.pay` | `checkout.pay` | `CheckoutController@pay` | `order: Order`, `gateways: array<string,Gateway>`, `problem: ?string`, `error: ?string`, `termsUrl: ?string`, `stripe: ?array`, `noGatewaysMessage: string` |
 | `checkout.verify-email` (1.1) | `checkout.verify-email` | `CheckoutController@thankYou` when the viewer may not see the order yet | `order: Order` (show its number only), `action: string` (POST URL), `key: string` (hidden field), `error: ?string`; the form posts `key` + `email` |
-| `auth.login` | `auth.login` | `AccountController@dashboard` (guest) | `registration: bool`, `redirect: string` |
+| `auth.login` | `auth.login` | `AccountController@dashboard` (guest) | `registration: bool` (link to `route('register.show')` when true; 1.4: sign-in only, no register form), `redirect: string` |
+| `auth.register` (1.4) | `auth.register` (falls back to the default theme's) | `AuthController@showRegister` (guest, feature `registration`) | `registration: true`, `redirect: string`; POST `route('register')`: `email`, `password`, `first_name?`, `last_name?`, `redirect?` |
 | `auth.lost-password` | `auth.lost-password` | `AuthController@showForgot` | `sent: bool` |
 | `auth.reset-password` | `auth.reset-password` | `AuthController@showReset` | `token: string`, `email: string` |
 | `account.logout-confirm` | `account.logout-confirm` | `AuthController@logout` (GET without token) | – |

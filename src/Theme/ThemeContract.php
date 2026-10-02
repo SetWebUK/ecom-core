@@ -29,6 +29,7 @@ class ThemeContract
         'checkout.pay' => ['checkout.pay'],
         'checkout.verify-email' => ['checkout.verify-email'],
         'auth.login' => ['auth.login'],
+        'auth.register' => ['auth.register'],
         'auth.lost-password' => ['auth.lost-password'],
         'auth.reset-password' => ['auth.reset-password'],
         'account.logout-confirm' => ['account.logout-confirm'],

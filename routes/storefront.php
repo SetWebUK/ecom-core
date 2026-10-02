@@ -82,6 +82,7 @@ Route::post('webhooks/{gateway}', [PaymentWebhookController::class, 'handle'])->
 // Customer account (WooCommerce "my-account" endpoints)
 Route::get('my-account', [AccountController::class, 'dashboard'])->name('account');
 Route::post('my-account/login', [AuthController::class, 'login'])->name('login.attempt');
+Route::get('my-account/register', [AuthController::class, 'showRegister'])->middleware(RequireFeature::for('registration'))->name('register.show'); // guests only
 Route::post('my-account/register', [AuthController::class, 'register'])->middleware(RequireFeature::for('registration'))->name('register');
 Route::post('my-account/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('my-account/customer-logout', [AuthController::class, 'logout'])->name('logout.get');

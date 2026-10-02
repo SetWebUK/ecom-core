@@ -79,6 +79,31 @@ files keep their mtime so `?v=` cache-busting only changes for edited files. Run
 - JSON-LD: Laravel 13 has a `@context` Blade directive, so `'@context'` inside `{!! json_encode([...]) !!}` is compiled
   to PHP. Write `'@@context'` there (Blade prints `@context`), or build the array inside `@php … @endphp`.
 
+## Sign-in and registration pages (1.4)
+
+| URL | Route name | View | Variables |
+|---|---|---|---|
+| `GET /my-account/` (guests) | `account` | `auth.login` | `registration: bool`, `redirect: string` (safe site-relative path or `''`) |
+| `GET /my-account/register/` (guests; feature `registration`, else 404; signed-in customers are redirected to `/my-account/`) | `register.show` | `auth.register` | `registration: true`, `redirect: string` |
+| `GET /my-account/lost-password/` | `password.request` | `auth.lost-password` | `sent: bool` |
+| `GET /my-account/reset-password/{token}` | `password.reset` | `auth.reset-password` | `token: string`, `email: string` |
+
+- `auth.login` is the sign-in form only: POST `route('login.attempt')` with `username` (email or username), `password`,
+  `rememberme`, `redirect`. When `$registration` is true, link to `route('register.show', ['redirect' => $redirect])`.
+  Failed sign-ins return to `/my-account/` (or the checkout when `redirect` starts with `/checkout`) with the
+  message on the `username` error key (wrong password, unknown user, rate limit, "set a new password" for customers
+  imported without one).
+- `auth.register` posts to `route('register')`: `email`, `password` (min 8), optional `first_name`, `last_name`,
+  `redirect`. **Every** registration error (validation, email already registered, rate limit) returns to the register
+  page with old input (except the password) and errors on `email` / `password` / `first_name` / `last_name`.
+- A theme without `auth/register.blade.php` gets the default theme's view (the chain always ends with `default`).
+  Themes that override `auth.login` with the pre-1.4 combined form keep working, but should drop the register form and
+  link to the register page instead.
+- Default theme building blocks you can reuse in a fork: `auth/partials/shell` (centred card, notices,
+  optional `@section('auth_aside')`), `auth/partials/password` (labelled password input with show/hide button, strength
+  meter, confirm-match hint) and `js/auth.js` (vanilla, markup hooks `data-password-toggle`, `data-password-strength`,
+  `data-password-match`, `data-auth-form`, documented at the top of the file). Everything works without JavaScript.
+
 ## Images
 
 Uploads (admin media library, product photos, category / post / theme images) are stored on the public disk

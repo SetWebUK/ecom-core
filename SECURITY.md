@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Security fixes are released for the latest minor version of `pine/commerce` (currently 1.3.x). Please keep client
+Security fixes are released for the latest minor version of `pine/commerce` (currently 1.4.x). Please keep client
 projects on the latest release – Admin › Updates shows when one is available.
 
 ## Reporting a vulnerability

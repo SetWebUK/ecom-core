@@ -81,7 +81,7 @@ To work on the package against a real client, point the client at your clone wit
 ## Versioning and releases
 
 Semantic Versioning, tags `vMAJOR.MINOR.PATCH`. There is deliberately **no `version` key in composer.json** – composer
-reads versions from the git tags; `dev-main` is aliased to `1.3.x-dev` (`extra.branch-alias`). The public API
+reads versions from the git tags; `dev-main` is aliased to `1.4.x-dev` (`extra.branch-alias`). The public API
 (theme contract, config keys, `Commerce::` extension API, events, importer interfaces, route names, schema) is listed
 in [docs/UPGRADING.md](docs/UPGRADING.md).
 

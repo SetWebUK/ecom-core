@@ -9,6 +9,41 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-02
+
+Separate sign-in and registration pages, and a new look for the default theme's account forms. No migrations, no
+config changes.
+
+### Added
+- **Registration page** `GET /my-account/register/` (route `register.show`, theme view `auth.register`): only when
+  registration is enabled (feature `registration` + Settings › "Customers can create an account", else 404); signed-in
+  customers are redirected to `/my-account/` (or a safe `?redirect=`). `POST /my-account/register` (route `register`)
+  is unchanged.
+- Theme contract: `auth.register` (variables `registration: true`, `redirect: string`). A theme without it gets the
+  default theme's view. Documented in THEMES.md ("Sign-in and registration pages") and ARCHITECTURE.md §8.
+- Default theme: `auth/partials/shell` (centred card + notices, optional aside), `auth/partials/password` (show/hide
+  button, strength meter with requirements, confirm-match hint) and `js/auth.js` (vanilla, data-attribute hooks,
+  loaded only on these pages; everything works without JavaScript).
+
+### Changed
+- `/my-account/` for guests (`auth.login`) is a **sign-in page only** with a “Create an account” link to the register
+  page (when registration is enabled). The URL, route names and form fields are unchanged.
+- Every registration error (validation, email already registered, rate limit) now returns to the **register page**
+  with old input (was `/my-account/`); a safe `redirect` (e.g. back to the checkout) is kept. Sign-in validation errors
+  always return to `/my-account/` (or the checkout) instead of the previous URL.
+- Default theme: new sign-in, register, lost-password and reset-password design (centred card, clear labels, inline
+  errors with `aria-invalid`/`aria-describedby`, show/hide password, strength hint, success state).
+
+### Fixed
+- Default theme: the footer newsletter field no longer shows the email typed into another form after a validation
+  error (it only refills from its own error bag).
+
+### Client actions required
+- Themes that override `auth/login.blade.php` should drop its register form, link to
+  `route('register.show', ['redirect' => $redirect])` instead, and may add `auth/register.blade.php`. Without one the
+  default theme's register view is used. Run `php artisan commerce:theme:publish` (new `js/auth.js`) and
+  `php artisan commerce:theme:check`.
+
 ## [1.3.2] - 2026-10-02
 
 ### Fixed
@@ -519,7 +554,8 @@ like-for-like), with every client-specific value moved out to client config, the
 ### Requirements
 - PHP 8.3+, Laravel 13, MySQL 8 / MariaDB 10.6+ (SQLite for tests), `stripe/stripe-php` ^21.
 
-[Unreleased]: https://github.com/SetWebUK/ecom-core/compare/v1.3.1...HEAD
+[Unreleased]: https://github.com/SetWebUK/ecom-core/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/SetWebUK/ecom-core/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/SetWebUK/ecom-core/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/SetWebUK/ecom-core/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/SetWebUK/ecom-core/compare/v1.2.1...v1.3.0
