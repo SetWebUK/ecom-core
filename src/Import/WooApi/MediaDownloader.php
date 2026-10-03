@@ -125,15 +125,30 @@ class MediaDownloader
         $response = null;
         for ($hop = 0; $hop < 4; $hop++) {
             $target = UrlGuard::check($url, $allowPrivate);
-            $options = ['allow_redirects' => false, 'verify' => $this->connection->verifyTls];
+            $options = ['allow_redirects' => false, 'verify' => $this->connection->verifyTls,
+                // stop a download as soon as it passes the size limit (not only after it arrived)
+                'progress' => function ($total, $downloaded) use ($maxBytes) {
+                    if ($downloaded > $maxBytes || $total > $maxBytes) {
+                        throw new WooApiException('larger than '.self::size($maxBytes), 'invalid');
+                    }
+                }];
             if ($target['ip'] && defined('CURLOPT_RESOLVE')) {
                 $ip = str_contains($target['ip'], ':') ? '['.$target['ip'].']' : $target['ip'];
                 $options['curl'] = [CURLOPT_RESOLVE => [$target['host'].':'.$target['port'].':'.$ip]];
             }
-            $response = Http::timeout(max(1, (int) config('commerce.woo_api.image_timeout', 30)))
-                ->withOptions($options)
-                ->withHeaders(['User-Agent' => (string) config('commerce.woo_api.user_agent', 'PineCommerce-WooImport/1.0'), 'Accept' => 'image/*'])
-                ->get($url);
+            try {
+                $response = Http::timeout(max(1, (int) config('commerce.woo_api.image_timeout', 30)))
+                    ->withOptions($options)
+                    ->withHeaders(['User-Agent' => (string) config('commerce.woo_api.user_agent', 'PineCommerce-WooImport/1.0'), 'Accept' => 'image/*'])
+                    ->get($url);
+            } catch (Throwable $e) {
+                for ($cause = $e; $cause; $cause = $cause->getPrevious()) {
+                    if ($cause instanceof WooApiException) {
+                        throw $cause; // our own size-limit abort, wrapped by Guzzle
+                    }
+                }
+                throw new WooApiException('download failed ('.mb_substr(preg_replace('#https?://\S+#', '(url)', $e->getMessage()) ?? '', 0, 200).')', 'network');
+            }
             if ($response->redirect() && ($location = $response->header('Location'))) {
                 $url = str_starts_with($location, 'http') ? $location
                     : (string) \GuzzleHttp\Psr7\UriResolver::resolve(new \GuzzleHttp\Psr7\Uri($url), new \GuzzleHttp\Psr7\Uri($location));
@@ -147,11 +162,11 @@ class MediaDownloader
         }
         $length = $response->header('Content-Length');
         if (is_numeric($length) && (int) $length > $maxBytes) {
-            throw new WooApiException('larger than '.round($maxBytes / 1048576, 1).' MB', 'invalid');
+            throw new WooApiException('larger than '.self::size($maxBytes), 'invalid');
         }
         $body = $response->body();
         if (strlen($body) > $maxBytes) {
-            throw new WooApiException('larger than '.round($maxBytes / 1048576, 1).' MB', 'invalid');
+            throw new WooApiException('larger than '.self::size($maxBytes), 'invalid');
         }
         $size = @getimagesizefromstring($body);
         $mime = $size['mime'] ?? null;
@@ -192,5 +207,10 @@ class MediaDownloader
             }
         }
         DB::table('media')->insert($row);
+    }
+
+    private static function size(int $bytes): string
+    {
+        return $bytes >= 1048576 ? round($bytes / 1048576, 1).' MB' : max(1, (int) round($bytes / 1024)).' KB';
     }
 }
