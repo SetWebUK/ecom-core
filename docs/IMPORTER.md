@@ -422,7 +422,8 @@ The command prints the per-entity table and the log path; it exits 0 only when t
 
 Config (`config/commerce.php` → `woo_api`): `allow_private_hosts` (false), `per_page` (100), `timeout` (30),
 `connect_timeout` (10), `delay_ms` (250), `retries` (4), `max_backoff` (60), `max_image_kb` (10240), `image_timeout`
-(30), `path` (null), `user_agent`. Feature switch `features.woo_api_import` (true).
+(30), `path` (null), `user_agent`, `credentials.*` (the CLI's `WOO_API_URL` / `WOO_API_KEY` / `WOO_API_SECRET` /
+`WOO_API_WP_USER` / `WOO_API_WP_PASSWORD`). Feature switch `features.woo_api_import` (true).
 
 ### 12.5 How records are matched (import sources)
 

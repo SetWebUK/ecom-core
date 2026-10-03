@@ -272,6 +272,14 @@ return [
         'image_timeout' => 30,               // seconds per image download
         'path' => null,                      // working directory (lock, run logs); null = storage/app/private/woo-api-import
         'user_agent' => 'PineCommerce-WooImport/1.0',
+        // commerce:import-woo-api without --url/--key/--secret reads these (.env), then the connection saved in the admin
+        'credentials' => [
+            'url' => env('WOO_API_URL'),
+            'key' => env('WOO_API_KEY'),
+            'secret' => env('WOO_API_SECRET'),
+            'wp_user' => env('WOO_API_WP_USER'),
+            'wp_password' => env('WOO_API_WP_PASSWORD'),
+        ],
     ],
 
     'payments' => [

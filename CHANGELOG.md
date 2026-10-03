@@ -65,7 +65,8 @@ additive migration.
 - `commerce.features.woo_api_import` (`true`).
 - `commerce.woo_api`: `allow_private_hosts` (`env WOO_API_ALLOW_PRIVATE_HOSTS`, false), `per_page` (100), `timeout`
   (30), `connect_timeout` (10), `delay_ms` (250), `retries` (4), `max_backoff` (60), `max_image_kb` (10240),
-  `image_timeout` (30), `path` (null = `storage/app/private/woo-api-import`), `user_agent`.
+  `image_timeout` (30), `path` (null = `storage/app/private/woo-api-import`), `user_agent`, `credentials.url|key|secret|
+  wp_user|wp_password` (`env WOO_API_URL` …, read by the command).
 
 ### Client actions required
 - None beyond the usual update (`migrate` runs automatically in Admin › Updates). To use the API import: create a

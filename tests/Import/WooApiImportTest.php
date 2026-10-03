@@ -440,6 +440,16 @@ class WooApiImportTest extends TestCase
         $this->assertSame(3, DB::table('products')->count());
     }
 
+    public function test_the_command_takes_the_key_from_the_environment(): void
+    {
+        FakeWooShop::fake();
+        config(['commerce.woo_api.credentials' => ['url' => FakeWooShop::BASE, 'key' => FakeWooShop::KEY, 'secret' => FakeWooShop::SECRET]]); // WOO_API_URL / KEY / SECRET
+        $this->assertSame(0, \Illuminate\Support\Facades\Artisan::call('commerce:import-woo-api', ['--test' => true]), \Illuminate\Support\Facades\Artisan::output());
+        $output = \Illuminate\Support\Facades\Artisan::output();
+        $this->assertStringContainsString('Connection OK', $output);
+        $this->assertStringNotContainsString(FakeWooShop::SECRET, $output);
+    }
+
     /** Row counts + key columns of the tables the importer writes. */
     private function snapshot(): array
     {

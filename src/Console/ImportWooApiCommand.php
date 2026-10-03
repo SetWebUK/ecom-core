@@ -183,16 +183,18 @@ class ImportWooApiCommand extends Command
     protected function connection(): Connection
     {
         $saved = StoredConnection::values();
-        $pick = fn (string $option, string $env, string $savedKey) => ($this->option($option) ?: env($env)) ?: ($saved[$savedKey] ?? '');
-        $url = $pick('url', 'WOO_API_URL', 'url');
-        $fromSaved = ! $this->option('url') && ! env('WOO_API_URL');
+        // .env values through config (they survive `php artisan config:cache`)
+        $env = fn (string $key) => (string) (config('commerce.woo_api.credentials.'.$key) ?: '');
+        $pick = fn (string $option, string $key) => ($this->option($option) ?: $env($key)) ?: ($saved[$key] ?? '');
+        $url = $pick('url', 'url');
+        $fromSaved = ! $this->option('url') && $env('url') === '';
 
         return Connection::make([
             'url' => $url,
-            'key' => $pick('key', 'WOO_API_KEY', 'key'),
-            'secret' => $pick('secret', 'WOO_API_SECRET', 'secret'),
-            'wp_user' => $this->option('wp-user') ?: ($fromSaved ? $saved['wp_user'] : (env('WOO_API_WP_USER') ?: '')),
-            'wp_password' => $this->option('wp-password') ?: (env('WOO_API_WP_PASSWORD') ?: ($fromSaved ? $saved['wp_password'] : '')),
+            'key' => $pick('key', 'key'),
+            'secret' => $pick('secret', 'secret'),
+            'wp_user' => $this->option('wp-user') ?: ($fromSaved ? $saved['wp_user'] : $env('wp_user')),
+            'wp_password' => $this->option('wp-password') ?: ($env('wp_password') ?: ($fromSaved ? $saved['wp_password'] : '')),
             'verify_tls' => $this->option('insecure') ? false : ($fromSaved ? $saved['verify_tls'] : true),
             'auth' => $this->option('auth') !== 'auto' ? $this->option('auth') : ($fromSaved ? $saved['auth'] : 'auto'),
             'store' => $this->option('store') || ($fromSaved && $saved['store']),
@@ -202,7 +204,7 @@ class ImportWooApiCommand extends Command
     /** The connection of a stored run: --url/--key… or WOO_API_* when given, else the admin's saved connection; it must point at the run's shop. */
     protected function runConnection(WooApiImport $run): Connection
     {
-        $connection = $this->option('url') || env('WOO_API_URL')
+        $connection = $this->option('url') || config('commerce.woo_api.credentials.url')
             ? $this->connection()
             : Connection::make(['store' => $run->mode === 'store'] + StoredConnection::values());
         if ($connection->url !== $run->site_url) {
