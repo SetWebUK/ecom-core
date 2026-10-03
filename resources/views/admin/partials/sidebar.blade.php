@@ -39,6 +39,14 @@
     </nav>
     <div class="sidebar__footer">
         <ul class="nav">
+            @if (! empty($import))
+                <li>
+                    <a href="{{ $import['url'] }}" @class(['nav__link', 'is-active' => $import['active']]) @if ($import['active']) aria-current="page" @endif>
+                        <x-admin.icon :name="$import['icon']" />
+                        <span>{{ $import['label'] }}</span>
+                    </a>
+                </li>
+            @endif
             @if (! empty($updates))
                 <li>
                     <a href="{{ $updates['url'] }}" @class(['nav__link', 'is-active' => $updates['active']]) @if ($updates['active']) aria-current="page" @endif>

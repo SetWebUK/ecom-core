@@ -65,7 +65,8 @@ class Sidebar extends Component
 
         $settings = $this->item('Settings', 'cog-6-tooth', 'admin.settings.index', ['admin.settings.*', 'admin.staff.*', 'admin.shipping.*', 'admin.payments.*']);
 
-        return view('commerce::admin.partials.sidebar', ['sections' => $sections, 'settings' => $settings, 'updates' => $this->updates()]);
+        return view('commerce::admin.partials.sidebar', ['sections' => $sections, 'settings' => $settings, 'updates' => $this->updates(),
+            'import' => $this->import()]);
     }
 
     /** Admin › Updates (administrators, feature "updater"), with a badge while a newer release is available. */
@@ -83,6 +84,18 @@ class Sidebar extends Component
         }
 
         return $this->item('Updates', 'arrow-path', 'admin.updates.index', ['admin.updates.*'], $available, 'Platform update available');
+    }
+
+    /** Admin › Import › WooCommerce API (administrators, feature "woo_api_import"). */
+    protected function import(): ?array
+    {
+        $user = request()->user();
+        if (! Features::enabled('woo_api_import', false) || ! $user || ! method_exists($user, 'isAdmin') || ! $user->isAdmin()
+            || ! Route::has('admin.import.woo.index')) {
+            return null;
+        }
+
+        return $this->item('Import', 'arrow-down-on-square-stack', 'admin.import.woo.index', ['admin.import.*']);
     }
 
     /** Merge client entries (Commerce::adminMenu(), config commerce.admin.menu) into the core menu. */

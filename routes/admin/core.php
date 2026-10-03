@@ -6,6 +6,7 @@ use Pine\Commerce\Http\Controllers\Admin\MediaUploadController;
 use Pine\Commerce\Http\Controllers\Admin\ProfileController;
 use Pine\Commerce\Http\Controllers\Admin\SearchController;
 use Pine\Commerce\Http\Controllers\Admin\UpdateController;
+use Pine\Commerce\Http\Controllers\Admin\WooApiImportController;
 use Illuminate\Support\Facades\Route;
 use Pine\Commerce\Http\Middleware\RequireFeature;
 
@@ -53,6 +54,19 @@ Route::middleware(['admin:admin', RequireFeature::for('updater')])->prefix('upda
     Route::post('skeleton/{update}/apply', [UpdateController::class, 'applySkeleton'])->whereNumber('update')->middleware('throttle:6,1')->name('skeleton.apply');
     Route::get('{update}', [UpdateController::class, 'show'])->whereNumber('update')->name('show');
     Route::get('{update}/status', [UpdateController::class, 'status'])->whereNumber('update')->middleware('throttle:120,1')->name('status');
+});
+
+// Import › WooCommerce API (administrators only, feature switch "woo_api_import"): saved connection (encrypted secrets),
+// connection test, background import runs with a live progress page (polls status), cancel / resume, history, logs.
+Route::middleware(['admin:admin', RequireFeature::for('woo_api_import')])->prefix('import/woocommerce')->name('import.woo.')->group(function () {
+    Route::get('/', [WooApiImportController::class, 'index'])->name('index');
+    Route::post('connection', [WooApiImportController::class, 'saveConnection'])->middleware('throttle:20,1')->name('connection');
+    Route::post('start', [WooApiImportController::class, 'start'])->middleware('throttle:6,1')->name('start');
+    Route::get('{import}', [WooApiImportController::class, 'show'])->whereNumber('import')->name('show');
+    Route::get('{import}/status', [WooApiImportController::class, 'status'])->whereNumber('import')->middleware('throttle:120,1')->name('status');
+    Route::post('{import}/cancel', [WooApiImportController::class, 'cancel'])->whereNumber('import')->name('cancel');
+    Route::post('{import}/resume', [WooApiImportController::class, 'resume'])->whereNumber('import')->middleware('throttle:6,1')->name('resume');
+    Route::get('{import}/log', [WooApiImportController::class, 'log'])->whereNumber('import')->name('log');
 });
 
 // Living style guide of every admin component (linked from docs/ADMIN_UI.md, not from the menu)
