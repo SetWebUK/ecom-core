@@ -444,8 +444,9 @@ class WooApiImportTest extends TestCase
     {
         FakeWooShop::fake();
         config(['commerce.woo_api.credentials' => ['url' => FakeWooShop::BASE, 'key' => FakeWooShop::KEY, 'secret' => FakeWooShop::SECRET]]); // WOO_API_URL / KEY / SECRET
-        $this->assertSame(0, \Illuminate\Support\Facades\Artisan::call('commerce:import-woo-api', ['--test' => true]), \Illuminate\Support\Facades\Artisan::output());
+        $code = \Illuminate\Support\Facades\Artisan::call('commerce:import-woo-api', ['--test' => true]);
         $output = \Illuminate\Support\Facades\Artisan::output();
+        $this->assertSame(0, $code, $output);
         $this->assertStringContainsString('Connection OK', $output);
         $this->assertStringNotContainsString(FakeWooShop::SECRET, $output);
     }
