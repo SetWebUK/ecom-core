@@ -4,7 +4,7 @@
         "site_url": "https://old-shop.example.test",
         "store_id": "c5a1e7e2-0b1c-4d2e-9f00-0a1b2c3d4e5f",
         "version": "9.9.0",
-        "log_directory": "/var/www/wp-content/uploads/wc-logs/",
+        "log_directory": "/srv/shop/wp-content/uploads/wc-logs/",
         "log_directory_writable": true,
         "wp_version": "6.8.1",
         "wp_multisite": false,
