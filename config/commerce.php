@@ -76,6 +76,7 @@ return [
         'add_to_cart_query' => true,  // old ?add-to-cart={id} links keep adding to the basket (HandleAddToCartQuery middleware)
         'product_csv' => true,        // admin Products › Import / Export: full product CSV export + import (mapping, dry run, batches), commerce:products:* commands
         'updater' => true,            // admin Updates (administrators): update check, approved pine/commerce updates, skeleton file updates; commerce:update:* / commerce:skeleton:*
+        'woo_api_import' => true,     // admin Import › WooCommerce API (administrators): import from a WooCommerce shop's REST API with API keys; commerce:import-woo-api
     ],
 
     'catalog' => [
@@ -252,6 +253,25 @@ return [
         'http_timeout' => 10,                // seconds per GitHub API / raw file request
         'git_timeout' => 120,                // seconds per git ls-remote / fetch
         'project_path' => null,              // the project root (null = base_path(); tests only)
+    ],
+
+    /*
+    | Admin › Import › WooCommerce API (feature switch "woo_api_import", administrators only; docs/IMPORTER.md
+    | "Importing via the WooCommerce REST API"): products, categories, customers, orders … pulled from a live
+    | WooCommerce shop with a (read-only) REST API key. Runs in the background like the updater; no queue, no cron.
+    */
+    'woo_api' => [
+        'allow_private_hosts' => (bool) env('WOO_API_ALLOW_PRIVATE_HOSTS', false), // allow localhost / private-network shops (local testing only)
+        'per_page' => 100,                   // items per API page (WooCommerce's maximum)
+        'timeout' => 30,                     // seconds per API request
+        'connect_timeout' => 10,
+        'delay_ms' => 250,                   // pause between requests (be polite to the shop's server)
+        'retries' => 4,                      // retries on 429 / 5xx / network errors, with exponential backoff (Retry-After honoured)
+        'max_backoff' => 60,                 // longest single wait between retries (seconds)
+        'max_image_kb' => 10240,             // largest image downloaded
+        'image_timeout' => 30,               // seconds per image download
+        'path' => null,                      // working directory (lock, run logs); null = storage/app/private/woo-api-import
+        'user_agent' => 'PineCommerce-WooImport/1.0',
     ],
 
     'payments' => [

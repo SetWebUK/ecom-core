@@ -25,6 +25,11 @@ class Upserter
     /** @var array<string,bool> table => has import_source */
     private static array $columns = [];
 
+    /** Rows inserted / updated by the last save(). */
+    public int $created = 0;
+
+    public int $updated = 0;
+
     public function __construct(public readonly ?string $source = null) {}
 
     /** Does $table carry the import_source column? (cached per table) */
@@ -116,6 +121,8 @@ class Upserter
             }
         }
 
+        $this->created = count($inserts);
+        $this->updated = count($updates);
         foreach ($this->sameColumns($inserts) as $group) {
             foreach (array_chunk($group, 250) as $chunk) {
                 DB::table($table)->insert($chunk);
@@ -129,6 +136,27 @@ class Upserter
         }
 
         return $lookup(array_column($rows, $key));
+    }
+
+    /**
+     * What save() would do, without writing: [key => id of the existing row] plus how many rows would be created and
+     * updated (dry runs).
+     *
+     * @return array{0: array<int|string,int>, 1:int, 2:int}
+     */
+    public function plan(string $table, array $rows, string $key = 'wp_id'): array
+    {
+        $keys = array_values(array_unique(array_column($rows, $key)));
+        $existing = [];
+        foreach (array_chunk($keys, 1000) as $chunk) {
+            $query = DB::table($table)->whereIn($key, $chunk);
+            if ($key === 'wp_id') {
+                $this->scope($query, $table);
+            }
+            $existing += $query->pluck('id', $key)->all();
+        }
+
+        return [$existing, count($keys) - count($existing), count($existing)];
     }
 
     /**

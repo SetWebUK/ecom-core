@@ -17,18 +17,25 @@ final class ProductChildren
     /**
      * Replace the children of the given products.
      *
-     * @param  array<int|string, array{categories:list<int>, images:list<array{path:string, alt:?string, exists?:bool}>,
+     * @param  array<int|string, array{categories:list<int>, images:?list<array{path:string, alt:?string, exists?:bool}>,
      *               attributes:list<array{attribute_id:int, position:int, is_visible:bool, is_variation:bool}>,
-     *               values:list<int>, specs:list<array{key:?string, label:string, value:?string, description:?string}>}>  $children
-     *               remote id => resolved children
+     *               values:list<int>, specs:?list<array{key:?string, label:string, value:?string, description:?string}>}>  $children
+     *               remote id => resolved children (images / specs null = keep the product's current ones)
      * @param  array<int|string,int>  $productIds  remote id => products.id
      * @return array{categories:int, images:int, missing_images:int, values:int, specs:int}
      */
     public static function write(array $children, array $productIds, string $now, Upserter $upserter): array
     {
         $ids = array_values(array_filter(array_map(fn ($k) => $productIds[$k] ?? null, array_keys($children))));
-        foreach (['category_product', 'product_images', 'product_attributes', 'attribute_value_product', 'product_specs'] as $table) {
+        foreach (['category_product', 'product_attributes', 'attribute_value_product'] as $table) {
             foreach (array_chunk($ids, 500) as $chunk) {
+                DB::table($table)->whereIn('product_id', $chunk)->delete();
+            }
+        }
+        // images / spec rows: null = leave this product's rows as they are (images not downloaded, no spec source)
+        foreach (['images' => 'product_images', 'specs' => 'product_specs'] as $key => $table) {
+            $owners = array_values(array_filter(array_map(fn ($k) => ($children[$k][$key] ?? null) !== null ? ($productIds[$k] ?? null) : null, array_keys($children))));
+            foreach (array_chunk($owners, 500) as $chunk) {
                 DB::table($table)->whereIn('product_id', $chunk)->delete();
             }
         }
@@ -43,7 +50,7 @@ final class ProductChildren
             foreach (array_unique($c['categories']) as $categoryId) {
                 $cats[$pid.'|'.$categoryId] = ['category_id' => $categoryId, 'product_id' => $pid];
             }
-            foreach (array_values($c['images']) as $pos => $image) {
+            foreach (array_values($c['images'] ?? []) as $pos => $image) {
                 if (! ($image['exists'] ?? true)) {
                     $missing++;
                 }
@@ -56,7 +63,7 @@ final class ProductChildren
             foreach (array_unique($c['values']) as $valueId) {
                 $values[$pid.'|'.$valueId] = ['attribute_value_id' => $valueId, 'product_id' => $pid];
             }
-            foreach ($c['specs'] as $i => $s) {
+            foreach ($c['specs'] ?? [] as $i => $s) {
                 $specs[] = ['product_id' => $pid, 'key' => $s['key'], 'label' => $s['label'], 'value' => $s['value'], 'description' => $s['description'], 'sort_order' => $i];
             }
         }
