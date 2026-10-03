@@ -38,7 +38,7 @@ data safety, troubleshooting and a reference of every command, config key and sw
 | [PLAYBOOK.md](PLAYBOOK.md) | **Operations**: repositories + private composer access, new client → import → theme → payments/mail → QA → go-live → rollback, releases/hotfixes, data safety, troubleshooting, reference |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Binding design contract (layers, theme contract, config keys, extension API, importer, regression check, implementation notes §18) |
 | [THEMES.md](THEMES.md) | Writing and forking themes (theme.json, view chain, assets, theme contract) |
-| [IMPORTER.md](IMPORTER.md) | WordPress/WooCommerce importer, adapters, scratch testing |
+| [IMPORTER.md](IMPORTER.md) | WordPress/WooCommerce importer (database, and since 1.5 the WooCommerce REST API), adapters, scratch testing |
 | [EXTENDING.md](EXTENDING.md) | Client code on top of the platform: feature switches, the `Commerce::` extension API (gateways, shipping, admin pages/menu/settings/widgets, page templates, shortcodes, presenter, order hooks, importer), events, views |
 | [UPGRADING.md](UPGRADING.md) | Versioning (SemVer), what counts as a breaking change, upgrading clients |
 | [INVOICES.md](INVOICES.md) | PDF invoices and packing slips, invoice numbering, Settings › Invoices, customer downloads, email attachments, template overrides |

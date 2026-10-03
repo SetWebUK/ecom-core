@@ -7,8 +7,16 @@ redirects. It is **generic** (detects the site and its plugins) and **extensible
 
 - The source is opened **read-only** (MySQL session `READ ONLY`; nothing in the importer writes to it).
 - Every row is matched on its WordPress id (or a natural key) and **updated in place** – run it as often as you like
-  before go-live; the final run brings the delta.
+  before go-live; the final run brings the delta. Since 1.5 the id lookups only see rows without an import source, so
+  rows from a REST API import of another shop are never touched (§12.5); a real import records the site in the setting
+  `import.wordpress.site_url`.
 - `--dry-run` runs everything and rolls it back; `--target=scratch` imports into `zz_` tables of the same database.
+
+**No access to the old database?** Since 1.5 the shop can also be pulled over HTTP from WooCommerce's REST API with
+an API key (Admin › Import › WooCommerce API or `commerce:import-woo-api`) – see
+[§12 Importing via the WooCommerce REST API](#12-importing-via-the-woocommerce-rest-api). It writes the same tables
+through the same mappers (`Import\Mapping`); the database import remains the most complete route (passwords, plugin
+data, menus, redirects).
 
 Code (in the package): `src/Import` (namespace `Pine\Commerce\Import`), command
 `src/Console/ImportWordPressCommand.php`, package defaults `config/commerce-import.php`; the client overrides keys in
@@ -84,7 +92,7 @@ content.pages → content.posts → menus → redirects
 | `catalog.variations` | `product_variation` → `product_variations`; `sort_order` = position per product by `menu_order`, then post ID (WooCommerce's order, 0, 1, 2 …); variable price = cheapest active variation. |
 | `catalog.tags` | `product_tag` (no tag table in the schema) → non-filterable attribute `tags`. |
 | `catalog.brands` | `product_brand` / `pwb-brand` / `yith_product_brand` → attribute `brand` (+ `products.brand` via the ProductBrands mapper). |
-| `orders` | via `OrderSource` (HPOS or posts), in chunks: totals, addresses, payment, attribution meta, line items (+ variation options), shipping line, coupon codes, **fee and coupon lines in `orders.meta`** (no columns), refunds (+ refunded quantities), notes (`order_note` comments), a payment row per paid order. Numbers from the OrderNumberProvider, else the order id. |
+| `orders` | via `OrderSource` (HPOS or posts), in chunks: totals, addresses, payment, attribution meta, line items (+ variation options), shipping line, coupon codes, **fee and coupon lines in `orders.meta`** (no columns), tax lines → `order_tax_lines` (1.5), refunds (+ refunded quantities), notes (`order_note` comments), a payment row per paid order. Numbers from the OrderNumberProvider, else the order id. |
 | `extras.reviews` / `coupons` / `shipping` | rated product comments; `shop_coupon`; shipping zones (countries, states, continents – AF, AN, AS, EU, NA, OC, SA as WooCommerce's country lists, `Import\Support\WooCommerceContinents` – postcodes, rest of the world), methods by type (flat rate with formulas/class costs, free shipping rules, local pickup; plugin methods switched off + warning) and shipping classes on products/variations – with `commerce-import.shipping.zones` false the pre-v1.1 flat, country-limited list (formulas → 0 + warning). |
 | `extras.tax` | WooCommerce tax classes and rates (+ postcode/city locations) → Settings › Tax, when `settings.woocommerce` is null or lists `tax.rates`. [TAX-AND-SHIPPING.md](TAX-AND-SHIPPING.md) §4. |
 | `extras.stock-alerts` / `wishlists` / `forms` | back-in-stock plugins; YITH/TI wishlists; CFDB7 submissions. |
@@ -302,3 +310,183 @@ data unchanged. `--core-only` (no client adapters/config) shows exactly what the
 | Wrong order numbers | check `--detect` for `sequential-order-numbers`; add an OrderNumberProvider for other plugins. |
 | A step failed | only that step was rolled back; fix and rerun `--only=<step>`. The log file has the exception. |
 | Memory | products/orders are chunked; `memory_limit` is raised to 1 GB for the run. |
+
+---
+
+## 12. Importing via the WooCommerce REST API
+
+Since 1.5. For a shop whose database you cannot reach (another host, managed WordPress, no SSH): the platform reads
+the live shop over HTTPS with a WooCommerce REST API key, page by page, and writes the same products, categories,
+customers, orders … as the database importer – through the same mappers (`src/Import/Mapping`: `ProductRows`,
+`ProductChildren`, `OrderRows`/`OrderWriter`, `CustomerRows`, `CatalogRows`, `ShippingTaxRows`). Code:
+`src/Import/WooApi` (`Client`, `Importer`, `ApiMap`, `StoreApi`, `MediaDownloader`, `RunManager`), command
+`src/Console/ImportWooApiCommand.php`, admin `Admin\WooApiImportController`. Nothing on the old shop is changed.
+
+### 12.1 Create the API key (on the old shop)
+
+1. WordPress admin › **WooCommerce › Settings › Advanced › REST API › Add key**.
+2. Description "Pine Commerce import", **User**: an administrator (or shop manager), **Permissions: Read**.
+3. **Generate API key** and copy the **Consumer key** (`ck_…`) and **Consumer secret** (`cs_…`) – WooCommerce shows the
+   secret only once. Revoke the key in the same screen when the migration is finished.
+4. Optional, for draft/private pages and posts: the same user's **Users › Profile › Application Passwords** → add one
+   ("Pine import") and copy it. Without it only published pages and posts are read.
+
+"Read" is enough for everything the importer does. The shop must be reachable over HTTPS (plain HTTP works with
+OAuth 1.0a signatures, see 12.4) and its REST API must not be blocked by a security plugin or firewall
+(Wordfence/Cloudflare rules for `/wp-json/`).
+
+### 12.2 Run it from the admin
+
+**Admin › Import** (sidebar footer; administrators only, feature switch `woo_api_import`):
+
+1. **Connect** – shop address, consumer key and secret (stored encrypted with the app key – `Crypt` – and never shown
+   again; an empty box keeps the saved value), authentication (automatic is right for almost every shop), TLS
+   verification (switch off only for a staging shop with a self-signed certificate), optional WordPress user +
+   application password. Or choose **Public catalogue only**: no key at all, the public Store API (12.6).
+2. **Save & test connection** – shows the shop's name, WooCommerce/WordPress version and currency, how many products,
+   categories, customers, orders, coupons, reviews, tax rates, shipping zones, pages, posts and images there are, and
+   every permission problem per entity (e.g. a key without access to customers).
+3. **Choose what to import** – categories, attributes & terms, products (variations, tags, images), customers
+   (+ guests from orders), coupons, orders (refunds, notes, tax lines), reviews, shipping zones & tax rates, pages &
+   blog posts, media library. Options: **download images**, **items imported before: update / leave alone**, **only
+   orders placed from** a date, **only items changed since** (incremental re-sync, `modified_after`), **order notes**
+   (one request per order), **same site as the database import** (12.5), **dry run** (reads and maps everything,
+   counts what would be created/updated, writes nothing, downloads nothing).
+4. **Start import** – the run starts in the background (a detached `php artisan commerce:import-woo-api {id}`, like
+   Admin › Updates: no queue worker or cron needed) and the page follows it live: per entity read / created / updated /
+   skipped / failed with a progress bar, warnings and errors with the shop's id of the item, and the log. You can
+   leave the page. **Cancel** stops after the current page; **Resume** continues an interrupted, failed or cancelled run
+   from its checkpoint (finished entities and pages are not read again). **History** lists every run with who started
+   it; each run's log can be downloaded.
+
+If the web server cannot start background processes (`proc_open` disabled), the page shows the command to run instead:
+`php artisan commerce:import-woo-api {id}`.
+
+### 12.3 Run it from the command line
+
+```bash
+php artisan commerce:import-woo-api --url=https://shop.example.com --key=ck_… --secret=cs_… --test         # connection test
+php artisan commerce:import-woo-api --url=https://shop.example.com --key=ck_… --secret=cs_… --dry-run
+php artisan commerce:import-woo-api --url=https://shop.example.com --key=ck_… --secret=cs_…
+php artisan commerce:import-woo-api --only=products,orders --since=2026-09-01      # incremental re-sync
+php artisan commerce:import-woo-api 12                                             # run / resume run #12
+php artisan commerce:import-woo-api --store --url=https://shop.example.com         # public catalogue, no key
+```
+
+| Option | Meaning |
+|---|---|
+| `--url= --key= --secret=` | Shop and key. Fallbacks: `WOO_API_URL`, `WOO_API_KEY`, `WOO_API_SECRET` in `.env`, then the connection saved in the admin. |
+| `--wp-user= --wp-password=` | WordPress application password for private pages/posts (`WOO_API_WP_USER` / `WOO_API_WP_PASSWORD`). |
+| `--auth=auto\|basic\|query\|oauth` | 12.4. |
+| `--insecure` | Do not verify the TLS certificate. |
+| `--store` | Public Store API, no key (12.6). |
+| `--only=` | `categories, attributes, products, customers, coupons, orders, reviews, shipping_tax, content, media` (aliases `shipping`, `tax`, `pages`, `posts`, `images`, `variations`, `tags`, `refunds`, `guests`). Default: everything. |
+| `--dry-run` | Read + map, write nothing. |
+| `--since=` | Only products, orders, coupons, pages and posts modified after this date (`modified_after`). |
+| `--orders-after=` | Only orders placed after this date. |
+| `--skip-existing` | Leave items imported before untouched (only new ones are added). |
+| `--no-images` / `--no-notes` | Do not download images / do not read order notes. |
+| `--same-site` | 12.5. |
+| `--test` | Test the connection (store, versions, counts, permission problems) and exit. |
+
+The command prints the per-entity table and the log path; it exits 0 only when the run completed.
+
+### 12.4 Authentication, limits and safety
+
+- **Authentication** (`auto` = Basic over HTTPS, OAuth over HTTP): **Basic** – the key and secret as HTTP Basic auth
+  (HTTPS only); **query** – `consumer_key`/`consumer_secret` in the query string, for hosts (some CGI/FastCGI set-ups)
+  that strip the `Authorization` header – the symptom is "401 … cannot list resources" with a correct key;
+  **OAuth 1.0a** – one-legged HMAC-SHA256 signatures exactly as WooCommerce verifies them, the only mode WooCommerce
+  accepts over plain HTTP. Basic and query auth are never sent over plain HTTP.
+- **Pages** of 100 (WooCommerce's maximum, `commerce.woo_api.per_page`) following `X-WP-TotalPages`; a pause between
+  requests (`delay_ms`, default 250 ms); retries with exponential backoff on 429 and 5xx and on network errors,
+  honouring `Retry-After` (`retries`, `max_backoff`); per-request timeouts (`timeout`, `connect_timeout`). Sites
+  without pretty permalinks are detected and read through `?rest_route=`.
+- **SSRF guard** on every request (API and image downloads, redirects re-checked): only `http`/`https`, no
+  credentials in the URL, and every address the host resolves to must be public – loopback, private, link-local,
+  carrier-grade NAT, multicast and reserved ranges (IPv4, IPv6, IPv4-mapped) are refused unless
+  `commerce.woo_api.allow_private_hosts` (`WOO_API_ALLOW_PRIVATE_HOSTS=true`, local testing only) is set. The
+  connection is pinned to the checked address. API calls never follow redirects (the message names the address to use).
+- **Images**: JPG, PNG, GIF, WebP and AVIF only – checked from the bytes, not the extension (SVG and anything else is
+  skipped with a warning) – at most `max_image_kb` (10 MB), then processed like an admin upload (orientation, maximum
+  size, the core image sizes). WordPress uploads keep their path (`uploads/2025/01/shirt.jpg` – where the database
+  importer's `--copy-uploads` puts them, so links in page content resolve); each file is downloaded once
+  (`media.source_hash` = sha1 of the URL; an identical file already at the path is reused).
+- **Secrets** are encrypted at rest (settings `woo_api.key`, `woo_api.secret`, `woo_api.wp_password`), never sent
+  back to the browser or flashed after a validation error, and masked in every log line and error message (the log
+  shows the key as `ck_…1234`). The admin screens are for administrators only and every form carries the CSRF token.
+- **Resumable**: each page is read completely (variations, refunds, notes, images), then written in one database
+  transaction, then the checkpoint (entity + next page) and the progress are saved on the `woo_api_imports` row. One
+  run at a time (lock file in `commerce.woo_api.path`, default `storage/app/private/woo-api-import`, which also holds
+  the run logs). A run whose process disappeared is shown as *interrupted*.
+
+Config (`config/commerce.php` → `woo_api`): `allow_private_hosts` (false), `per_page` (100), `timeout` (30),
+`connect_timeout` (10), `delay_ms` (250), `retries` (4), `max_backoff` (60), `max_image_kb` (10240), `image_timeout`
+(30), `path` (null), `user_agent`. Feature switch `features.woo_api_import` (true).
+
+### 12.5 How records are matched (import sources)
+
+Every row is matched on the shop's own id **within its import source** (column `import_source`, 1.5 migration):
+rows of a REST API connection carry `woo:{host}`; the database importer's rows (and everything imported before 1.5)
+have none. Product 42 of shop A therefore never overwrites product 42 of shop B, and a re-run updates in place – run
+it as often as you like before go-live. Slugs/paths another shop's rows already use get a `-2` suffix and the old URL
+a 301. Natural keys are shared: customers match on e-mail, coupons on their code, attributes on their slug, shipping
+methods on their code.
+
+**Same site as the database import**: when the shop was first imported with `commerce:import-wordpress` (which since
+1.5 remembers the site in the setting `import.wordpress.site_url`) and you now re-sync it over the API, tick "This is
+the shop this site was imported from" (pre-ticked when the host matches; CLI `--same-site`, also automatic). The API
+import then updates those rows instead of adding a second copy.
+
+### 12.6 What is imported
+
+| Entity | From (wc/v3 unless noted) | Into / notes |
+|---|---|---|
+| Categories | `products/categories` (+ links from public `wp/v2/product_cat`) | hierarchy, image, description, order; path = hierarchical slugs; old category URL → 301 when the storefront serves it elsewhere; Yoast `yoast_head_json` SEO |
+| Attributes | `products/attributes` + `/{id}/terms` | global attributes and terms (order kept); product-level attributes become global ones; tags → non-filterable attribute `tags` (as the database importer) |
+| Products | `products` (`status=any`) + `products/{id}/variations` | simple + variable 1:1, **grouped/external → simple + warning** (grouped children become related products); prices, sale dates, stock, dimensions, tax status/class, featured, GTIN, brand (`brands`), shipping class, images + gallery, categories with the **primary category from the permalink** (URLs stay what they were; otherwise a 301), up-sells/cross-sells, SEO from Yoast (`yoast_head_json`) or Rank Math (`rank_math_*` meta, `%variables%` resolved; its headless `getHead` endpoint when switched on), else the first 30 words of the description. Variations removed on the shop are switched off, never deleted. |
+| Customers | `customers` | accounts (role customer, **no password**), billing/shipping addresses; customers without an account are built from their orders' billing details (latest order wins), as the database importer does. WordPress staff accounts are not imported – create staff in Admin › Staff. |
+| Coupons | `coupons` | as `extras.coupons` (unsupported discount types → fixed basket + warning) |
+| Orders | `orders` (`status=any`) + `orders/{id}/refunds` + `orders/{id}/notes` | number (sequential-number plugins' formatted number), totals, addresses, payment, attribution meta, line items with variation options, shipping, **coupon and fee lines (orders.meta)**, **tax lines → `order_tax_lines`**, refunds with refunded quantities, notes (customer notes flagged), a payment record per paid order |
+| Reviews | `products/reviews` (`status=all`) | approved and on-hold reviews, verified-owner flag |
+| Shipping & tax | `taxes/classes`, `taxes`, `products/shipping_classes`, `shipping/zones` + `/locations` + `/methods` | as `extras.tax` / `extras.shipping` (continents expanded, flat-rate formulas and class costs, free-shipping rules, plugin methods switched off) |
+| Pages, posts | `wp/v2/pages`, `wp/v2/posts` (+ `wp/v2/categories`, featured images via `_embed`) | rendered content cleaned like the database importer's (links to the old site relative, uploads → `/storage/uploads/…`, scripts removed); page paths from the permalinks, front page and posts page from the site settings; posts at `/blog/{slug}/` with a 301 from the old URL |
+| Media | `wp/v2/media?media_type=image` | every image of the media library (for images in page content) |
+
+**Public catalogue only (Store API, no key).** `wc/store/v1` shows what a visitor sees: published products that are
+visible in the catalogue (and in stock, when the shop hides out-of-stock products), their categories and attributes
+(empty categories/terms hidden), variations, prices (converted from minor units) and stock status (no quantities),
+plus the public pages, posts and images. No customers, orders, coupons, reviews, shipping, tax, drafts, SEO fields or
+stock quantities.
+
+### 12.7 Limits compared with the database import
+
+| | Database import (`commerce:import-wordpress`) | REST API import |
+|---|---|---|
+| Customer passwords | WordPress hashes kept – customers sign in as before | **Not available through the API** – customers set a new password with "Forgot password" (tell them before go-live) |
+| Staff accounts | administrators/shop managers with their roles | not imported (create them in Admin › Staff) |
+| Plugin data | adapters read plugin tables/meta (ACF, brands, cost of goods, wishlists, back-in-stock alerts, CFDB7 forms, Redirection rules, Permalink Manager …) | only what the plugin exposes in the REST API (e.g. Yoast `yoast_head_json`, Rank Math meta, WooCommerce brands); client import adapters (`ProductMapper`, `TermMapper` …) do not run |
+| Menus, redirects plugins, settings | imported | not available (rebuild menus in Admin › Content › Menus; Settings by hand) |
+| Page-builder content | rendered snapshots, Elementor CSS | the rendered HTML from `content.rendered` only |
+| Media | `--copy-uploads` copies every upload | images only, downloaded one by one (slower); attachments of non-public post types (sliders, page blocks …) are not listed by WordPress' REST API |
+| Product URLs | real permalinks (wp-cli, permalink plugins) | the permalink the API returns – equally exact |
+| Speed | minutes | one request per 100 items + one per variable product + one per order (notes) + images: a shop with 1,000 orders and images takes roughly 15–30 minutes |
+| Access needed | database (and files) | an HTTPS URL and a Read API key |
+
+Use the database import when you can; use the API import for shops you cannot reach otherwise and for incremental
+re-syncs of a running shop (`--since`, "only items changed since").
+
+### 12.8 Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| "The shop refused the API key" (401) with a correct key | the host strips the `Authorization` header: choose authentication "query string". |
+| 403 on one entity in the connection test | the key's user cannot read it – use an administrator's key with Read permission. |
+| "No WordPress REST API found" / not JSON | wrong address, or a security plugin/firewall blocks `/wp-json/` – allow it for this server's IP. |
+| "points to a private or reserved address" | the guard refused a local/intranet shop; only for local testing set `WOO_API_ALLOW_PRIVATE_HOSTS=true`. |
+| "The shop redirects its API to …" | enter that address (https, www) as the shop address. |
+| TLS / certificate errors | a staging shop with a self-signed certificate: switch "Verify the TLS certificate" off. |
+| The run stays "Waiting to start" | the web server cannot start background processes: run the command shown on the page. |
+| "interrupted" | the process stopped (server restart, time limit): press Resume. |
+| Images "not a JPG, PNG …" | SVG or a broken file – upload it in Admin › Content › Media if needed. |
+| Many 429 warnings in the log | raise `commerce.woo_api.delay_ms`. |

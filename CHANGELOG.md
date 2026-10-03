@@ -9,6 +9,68 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-03
+
+Import a WooCommerce shop over its REST API: no database access needed – a shop URL and a read-only API key. One
+additive migration.
+
+### Added
+- **Admin › Import › WooCommerce API** (sidebar footer, administrators only, feature switch `woo_api_import`): shop
+  address, consumer key + secret (encrypted with `Crypt`, never shown again – like the payment secrets), optional
+  WordPress application password, authentication mode and TLS switch; **Save & test connection** (store name,
+  WooCommerce/WordPress version, currency, items per entity, permission problems per entity); entity checklist
+  (categories, attributes, products, customers, coupons, orders, reviews, shipping & tax, pages & posts, media) with
+  options (download images, update or leave items imported before, orders from a date, only items changed since,
+  order notes, same site as the database import, dry run); runs in the background as a detached
+  `commerce:import-woo-api {id}` (no queue / cron, like Admin › Updates) with a live progress page (per-entity
+  counters, warnings and errors with the shop's ids, log), cancel, resume from the checkpoint, history and log download.
+- `php artisan commerce:import-woo-api [run] --url= --key= --secret= [--only=] [--dry-run] [--since=] [--store] …`
+  (keys also from `WOO_API_URL` / `WOO_API_KEY` / `WOO_API_SECRET`); `--test` checks the connection.
+- `Pine\Commerce\Import\WooApi`: HTTP client (wc/v3, wp/v2, Store API; `X-WP-TotalPages` pagination at 100 per page,
+  polite delay, retries with backoff on 429/5xx honouring `Retry-After`, timeouts, TLS verification on by default,
+  `?rest_route=` fallback), authentication by HTTP Basic (HTTPS), query string (hosts that strip `Authorization`) or
+  OAuth 1.0a one-legged signatures (plain HTTP, as WooCommerce requires); SSRF guard on every request and image
+  download (http/https only, no private/loopback/reserved addresses unless `commerce.woo_api.allow_private_hosts`,
+  connection pinned to the checked address); image downloads into the public disk (images only by content, size
+  limit, deduplicated by URL and content, core image sizes); SEO from Yoast (`yoast_head_json`) or Rank Math (meta,
+  headless `getHead`), else a description excerpt; key-less "public catalogue only" mode via the Store API.
+- Imported entities: categories (hierarchy, images, SEO, old URLs → 301), attributes + terms, tags, products (simple,
+  variable + variations; grouped/external as simple + warning; primary category from the real permalink so URLs are
+  kept), customers + addresses (no passwords) and guests from orders, coupons, orders (line items, shipping, fees,
+  coupons, **tax lines → `order_tax_lines`**, refunds via `orders/{id}/refunds`, notes via `orders/{id}/notes`),
+  reviews, tax classes/rates, shipping classes/zones/methods, pages and posts (wp/v2), the media library.
+- `Pine\Commerce\Import\Mapping` (`ProductRows`, `ProductChildren`, `OrderRows`, `OrderWriter`, `CustomerRows`,
+  `CatalogRows`, `ShippingTaxRows`) and `Import\Support\Upserter`: the row mapping and idempotent upserts of the
+  database importer, now shared by both importers.
+- `WooApiImport` model (table `woo_api_imports`).
+- Docs: IMPORTER.md §12 "Importing via the WooCommerce REST API" (creating the key, admin and CLI, what is imported,
+  limits compared with the database import, troubleshooting), PLAYBOOK step 6, ADMIN_UI.md, ARCHITECTURE.md §12.9.
+
+### Changed
+- Database importer: rows are matched on their WordPress id **within their import source** (`import_source` null),
+  so it never touches rows an API import brought in from another shop (id maps, `--fresh` purges, counts).
+- Database importer: order `tax` items are now written to `order_tax_lines` (per-rate tax in reports and invoices).
+- Database importer: a real run remembers the source site (setting `import.wordpress.site_url`) so a later API
+  re-sync of the same site updates those rows instead of duplicating them.
+
+### Fixed
+- Tests: the tax report test no longer fails between 23:00 and 00:00 UTC.
+
+### Migrations
+- `2026_10_03_000100_add_import_sources_and_woo_api_imports`: nullable indexed `import_source` (varchar 100) on
+  `users, categories, attribute_values, products, product_variations, orders, pages, posts, media, tax_rates,
+  shipping_classes, shipping_zones`; new table `woo_api_imports`. Additive; existing rows unchanged.
+
+### Config keys added
+- `commerce.features.woo_api_import` (`true`).
+- `commerce.woo_api`: `allow_private_hosts` (`env WOO_API_ALLOW_PRIVATE_HOSTS`, false), `per_page` (100), `timeout`
+  (30), `connect_timeout` (10), `delay_ms` (250), `retries` (4), `max_backoff` (60), `max_image_kb` (10240),
+  `image_timeout` (30), `path` (null = `storage/app/private/woo-api-import`), `user_agent`.
+
+### Client actions required
+- None beyond the usual update (`migrate` runs automatically in Admin › Updates). To use the API import: create a
+  Read API key on the old shop (IMPORTER.md §12.1) and open Admin › Import.
+
 ## [1.4.0] - 2026-10-02
 
 Separate sign-in and registration pages, and a new look for the default theme's account forms. No migrations, no
@@ -554,7 +616,8 @@ like-for-like), with every client-specific value moved out to client config, the
 ### Requirements
 - PHP 8.3+, Laravel 13, MySQL 8 / MariaDB 10.6+ (SQLite for tests), `stripe/stripe-php` ^21.
 
-[Unreleased]: https://github.com/SetWebUK/ecom-core/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/SetWebUK/ecom-core/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/SetWebUK/ecom-core/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/SetWebUK/ecom-core/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/SetWebUK/ecom-core/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/SetWebUK/ecom-core/compare/v1.3.0...v1.3.1

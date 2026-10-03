@@ -14,7 +14,11 @@ settings), tax classes and shipping zones, PDF invoices, product CSV import/expo
 abandoned-cart emails, a WordPress/WooCommerce importer, install/health tooling and, since 1.3, **Admin › Updates**:
 a daily check for new releases, the release notes with their client actions, and one-click updates that an
 administrator approves with their password (database backup, maintenance mode, `composer update`, migrations, health
-check, automatic rollback) plus updates of untouched skeleton files ([PLAYBOOK part 3.6](docs/PLAYBOOK.md)).
+check, automatic rollback) plus updates of untouched skeleton files ([PLAYBOOK part 3.6](docs/PLAYBOOK.md)), and since 1.5
+**Admin › Import › WooCommerce API**: pull products, categories, customers, orders, coupons, reviews, shipping/tax,
+pages and images from a live WooCommerce shop with just its URL and a read-only REST API key (or the key-less public
+Store API for the catalogue) – in the background with live progress, resumable, incremental re-syncs
+([IMPORTER.md §12](docs/IMPORTER.md#12-importing-via-the-woocommerce-rest-api)).
 
 - Current version: see [VERSION](VERSION) (= `Pine\Commerce\Commerce::VERSION`), history in [CHANGELOG.md](CHANGELOG.md).
 - Requirements: PHP 8.3+, Laravel 13, MySQL 8 / MariaDB 10.6+ (SQLite for tests).
@@ -81,7 +85,7 @@ To work on the package against a real client, point the client at your clone wit
 ## Versioning and releases
 
 Semantic Versioning, tags `vMAJOR.MINOR.PATCH`. There is deliberately **no `version` key in composer.json** – composer
-reads versions from the git tags; `dev-main` is aliased to `1.4.x-dev` (`extra.branch-alias`). The public API
+reads versions from the git tags; `dev-main` is aliased to `1.5.x-dev` (`extra.branch-alias`). The public API
 (theme contract, config keys, `Commerce::` extension API, events, importer interfaces, route names, schema) is listed
 in [docs/UPGRADING.md](docs/UPGRADING.md).
 
@@ -104,6 +108,7 @@ Release checklist (full version: PLAYBOOK part 3):
 | `commerce:theme:make {slug} [--parent=default] [--name=] [--copy]` | scaffold a theme (child, or full fork with `--copy`) |
 | `commerce:theme:publish [slug] [--all] [--prune]` / `:check [slug]` / `:cache` / `:clear` | theme assets (copies), contract validation, manifest cache |
 | `commerce:import-wordpress` (alias `import:wordpress`) | WordPress/WooCommerce import, read-only source – options in [docs/IMPORTER.md](docs/IMPORTER.md) |
+| `commerce:import-woo-api [run] [--url= --key= --secret=] [--store] [--only=] [--dry-run] [--since=] [--orders-after=] [--skip-existing] [--no-images] [--no-notes] [--same-site] [--test]` | import from a WooCommerce shop's REST API (API key, or `--store` for the public catalogue); keys also from `WOO_API_URL/KEY/SECRET` – [docs/IMPORTER.md §12](docs/IMPORTER.md#12-importing-via-the-woocommerce-rest-api) |
 | `commerce:verify-urls {sitemap-url\|file} [--base=] [--resolve=] [--report=] …` | old URLs must answer 200 or 301→200 on the new site |
 | `commerce:new-client {path} [--name=] [--slug=] [--repo=<git url> \| --path=<dir>] [--constraint=] [--force]` | scaffold a client project from `stubs/client-skeleton` |
 | `commerce:scratch:drop [--connection=scratch] [--force]` | drop `zz_`-prefixed test tables (refuses any other prefix) |

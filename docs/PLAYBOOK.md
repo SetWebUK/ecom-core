@@ -391,6 +391,15 @@ php artisan commerce:import-wordpress --detect
 shows WordPress/WooCommerce versions, the table prefix, the order storage (HPOS or posts), active plugins and which
 adapters will run. Fix credentials until it does ("Cannot open the WordPress database" → Part 5).
 
+**No database access?** (managed WordPress, another host, no SSH) – import over HTTPS with a WooCommerce REST API
+key instead: on the old shop WooCommerce › Settings › Advanced › REST API › Add key (permission **Read**), then in the
+new shop **Admin › Import** → shop address, consumer key + secret → **Save & test connection** → tick what to import →
+**Dry run** first, then **Start import** (runs in the background; resumable). CLI:
+`php artisan commerce:import-woo-api --url=https://oldshop.example --key=ck_… --secret=cs_… [--dry-run]`.
+Customers' passwords cannot come across this way (they use "Forgot password"), and menus, redirects-plugin rules and
+plugin-only data are not in the API – [IMPORTER.md §12](IMPORTER.md#12-importing-via-the-woocommerce-rest-api) has the
+full comparison. Later re-syncs of a running shop: "Only items changed since" / `--since=`.
+
 ### Step 7 – Dry run, import, media, URL check
 
 Before the first import, list every host name the old site used – live, `www`/non-`www`, and any old staging host

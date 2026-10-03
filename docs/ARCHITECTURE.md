@@ -917,6 +917,18 @@ return [
 
 ---
 
+### 12.9 WooCommerce REST API import (1.5)
+
+A second source for the same target tables: `Pine\Commerce\Import\WooApi` reads a live shop over HTTPS (wc/v3 with a
+REST API key, wp/v2, or the key-less Store API `wc/store/v1`), converts the JSON into the importer's DTOs
+(`ApiMap`: `WpProduct` with WordPress meta keys, `WcOrder`, `WcRefund`, `WpTerm`) and writes them through the mappers
+both importers share (`Import\Mapping`: `ProductRows`, `ProductChildren`, `OrderRows`, `OrderWriter`, `CustomerRows`,
+`CatalogRows`, `ShippingTaxRows`) and `Import\Support\Upserter`. Rows are keyed on the remote id **within an import
+source** (`import_source`: null = database importer, `woo:{host}` = API connection). Runs are rows of
+`woo_api_imports` executed by `commerce:import-woo-api {id}`, started detached from Admin › Import
+(`RunManager`, same `ProcessRunner` as the updater), one transaction + checkpoint per page. Client import adapters do
+not run for the API import. Details: [IMPORTER.md §12](IMPORTER.md#12-importing-via-the-woocommerce-rest-api).
+
 ## 13. Commands
 
 | Command | Behaviour |

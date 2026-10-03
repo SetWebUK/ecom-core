@@ -656,3 +656,16 @@ CSS section 21 of `admin.css` (`.update-log`, `.update-steps`, `.changelog`, `.d
 
 Dashboard: a callout for administrators while a release is available (`DashboardController::platformUpdate()`).
 
+## 1.5 additions (Import › WooCommerce API)
+
+Administrators only (`admin:admin`) and feature `woo_api_import` (`RequireFeature`); controller
+`Admin\WooApiImportController`, views `resources/views/admin/import/woo-api/{index,show}.blade.php` (no new CSS: `.kv`,
+`.progress`, `.update-log`). Importer docs: [IMPORTER.md §12](IMPORTER.md#12-importing-via-the-woocommerce-rest-api).
+
+| Screen | Route names | Notes |
+|---|---|---|
+| Import (sidebar footer, above Updates) | `admin.import.woo.index` | connection form, last connection test, entity checklist + options, history |
+| Save / test connection | `admin.import.woo.connection` (POST, `action=save\|test`) | secrets saved with `Crypt::encryptString`, never rendered or flashed back (empty field = keep, `*_clear` = forget); the test result is flashed as `woo_api_probe` |
+| Start | `admin.import.woo.start` (POST) | creates a `WooApiImport` row and launches `commerce:import-woo-api {id}` detached (`RunManager::launch`, like the updater); one run at a time |
+| Run | `admin.import.woo.show`, `admin.import.woo.status` (JSON `?from=N`: status, per-entity progress, issues, new log lines) | Alpine `wooImport` polls every 2 s; cancel `admin.import.woo.cancel`, resume `admin.import.woo.resume` (POST), log download `admin.import.woo.log` |
+

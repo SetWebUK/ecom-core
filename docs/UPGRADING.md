@@ -48,6 +48,19 @@ Read the release notes for:
 - **theme contract** changes (new optional views, new `supports` keys) – run `php artisan commerce:theme:check`;
 - **admin view overrides** in `resources/views/vendor/commerce/…` – diff them against the new package views.
 
+### Upgrading from 1.4 to 1.5
+
+1.5 is additive. One migration (`2026_10_03_000100_add_import_sources_and_woo_api_imports`): a nullable, indexed
+`import_source` column on the tables the importers key on a WordPress id, and the new `woo_api_imports` table. Existing
+rows keep `import_source = null` (= the database importer), so nothing changes for imported shops.
+
+- `composer update pine/commerce`, `php artisan migrate --force` (Admin › Updates does both), then
+  `php artisan optimize:clear && php artisan optimize`.
+- New config block `commerce.woo_api` and feature switch `features.woo_api_import` (default on). A client whose
+  `config/commerce.php` overrides the whole `features` block gets the package default for the new key (merged per key).
+- The database importer now also writes `order_tax_lines` for imported orders, and records the source site in the
+  setting `import.wordpress.site_url` after a real run.
+
 ### Upgrading from 1.1 to 1.2
 
 1.2 is additive: no migrations, no renames. Full list: CHANGELOG `[1.2.0]`.
