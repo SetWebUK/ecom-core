@@ -1,0 +1,6 @@
+[
+    {"id": 61, "author": "Shop Owner", "date_created": "2025-02-01T10:00:00", "date_created_gmt": "2025-02-01T10:00:00", "note": "Packed &amp; ready.", "customer_note": true,
+     "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/orders/200/notes/61"}]}},
+    {"id": 60, "author": "WooCommerce", "date_created": "2025-02-01T09:01:00", "date_created_gmt": "2025-02-01T09:01:00", "note": "Payment received.", "customer_note": false,
+     "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/orders/200/notes/60"}]}}
+]

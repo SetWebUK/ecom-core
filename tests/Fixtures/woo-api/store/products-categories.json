@@ -1,0 +1,7 @@
+[
+    {"id": 10, "name": "Clothing", "slug": "clothing", "description": "All our clothes.", "parent": 0, "count": 2,
+     "image": {"id": 502, "src": "https://old-shop.example.test/wp-content/uploads/2025/01/clothing.jpg", "thumbnail": "", "srcset": "", "sizes": "", "name": "clothing", "alt": "Clothing"},
+     "review_count": 0, "permalink": "https://old-shop.example.test/clothing/"},
+    {"id": 11, "name": "Shirts &amp; Tops", "slug": "shirts", "description": "", "parent": 10, "count": 2, "image": null, "review_count": 1,
+     "permalink": "https://old-shop.example.test/clothing/shirts/"}
+]

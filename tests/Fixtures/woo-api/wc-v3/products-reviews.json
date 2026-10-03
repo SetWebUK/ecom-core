@@ -1,0 +1,16 @@
+[
+    {
+        "id": 50, "date_created": "2025-02-10T10:00:00", "date_created_gmt": "2025-02-10T10:00:00", "product_id": 100, "product_name": "Linen Shirt",
+        "product_permalink": "https://old-shop.example.test/clothing/shirts/linen-shirt/", "status": "approved", "reviewer": "Ann", "reviewer_email": "ann@example.com",
+        "review": "<p>Lovely &amp; cool</p>\n", "rating": 5, "verified": true,
+        "reviewer_avatar_urls": {"24": "https://secure.gravatar.com/avatar/0?s=24&d=mm&r=g"},
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/reviews/50"}], "up": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/100"}]}
+    },
+    {
+        "id": 51, "date_created": "2025-02-11T10:00:00", "date_created_gmt": "2025-02-11T10:00:00", "product_id": 110, "product_name": "Polo",
+        "product_permalink": "https://old-shop.example.test/clothing/shirts/polo/", "status": "hold", "reviewer": "Bo", "reviewer_email": "bo@example.com",
+        "review": "<p>Runs small</p>\n", "rating": 3, "verified": false,
+        "reviewer_avatar_urls": {"24": "https://secure.gravatar.com/avatar/1?s=24&d=mm&r=g"},
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/reviews/51"}]}
+    }
+]

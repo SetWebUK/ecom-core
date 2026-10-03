@@ -1,0 +1,20 @@
+[
+    {
+        "id": 7, "date_created": "2024-12-01T10:00:00", "date_created_gmt": "2024-12-01T10:00:00",
+        "date_modified": "2025-02-01T09:00:00", "date_modified_gmt": "2025-02-01T09:00:00",
+        "email": "Ann@Example.com", "first_name": "Ann", "last_name": "Lee", "role": "customer", "username": "ann",
+        "billing": {"first_name": "Ann", "last_name": "Lee", "company": "", "address_1": "1 High St", "address_2": "", "city": "Leeds", "postcode": "LS1 1AA", "country": "GB", "state": "", "email": "ann@example.com", "phone": "0113 000"},
+        "shipping": {"first_name": "Ann", "last_name": "Lee", "company": "", "address_1": "1 High St", "address_2": "", "city": "Leeds", "postcode": "LS1 1AA", "country": "GB", "state": "", "phone": ""},
+        "is_paying_customer": true, "avatar_url": "https://secure.gravatar.com/avatar/0?s=96&d=mm&r=g", "meta_data": [],
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/customers/7"}], "collection": [{"href": "https://old-shop.example.test/wp-json/wc/v3/customers"}]}
+    },
+    {
+        "id": 8, "date_created": "2025-01-15T08:00:00", "date_created_gmt": "2025-01-15T08:00:00",
+        "date_modified": "2025-01-15T08:00:00", "date_modified_gmt": "2025-01-15T08:00:00",
+        "email": "cy@example.com", "first_name": "", "last_name": "", "role": "customer", "username": "cy",
+        "billing": {"first_name": "", "last_name": "", "company": "", "address_1": "", "address_2": "", "city": "", "postcode": "", "country": "", "state": "", "email": "", "phone": ""},
+        "shipping": {"first_name": "", "last_name": "", "company": "", "address_1": "", "address_2": "", "city": "", "postcode": "", "country": "", "state": "", "phone": ""},
+        "is_paying_customer": false, "avatar_url": "https://secure.gravatar.com/avatar/1?s=96&d=mm&r=g", "meta_data": [],
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/customers/8"}]}
+    }
+]

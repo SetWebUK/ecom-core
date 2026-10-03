@@ -1,0 +1,20 @@
+[
+    {
+        "id": 300, "code": "save10", "amount": "10.00", "status": "publish",
+        "date_created": "2025-01-10T10:00:00", "date_created_gmt": "2025-01-10T10:00:00", "date_modified": "2025-01-10T10:00:00", "date_modified_gmt": "2025-01-10T10:00:00",
+        "discount_type": "percent", "description": "Ten off", "date_expires": "2030-01-01T00:00:00", "date_expires_gmt": "2030-01-01T00:00:00",
+        "usage_count": 3, "individual_use": false, "product_ids": [100], "excluded_product_ids": [], "usage_limit": null, "usage_limit_per_user": 1,
+        "limit_usage_to_x_items": null, "free_shipping": false, "product_categories": [], "excluded_product_categories": [11], "exclude_sale_items": false,
+        "minimum_amount": "20.00", "maximum_amount": "0.00", "email_restrictions": [], "used_by": ["7", "bo@example.com"], "meta_data": [],
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/coupons/300"}]}
+    },
+    {
+        "id": 301, "code": "BOGOF", "amount": "1.00", "status": "draft",
+        "date_created": "2025-01-11T10:00:00", "date_created_gmt": "2025-01-11T10:00:00", "date_modified": "2025-01-11T10:00:00", "date_modified_gmt": "2025-01-11T10:00:00",
+        "discount_type": "buy_x_get_y", "description": "", "date_expires": null, "date_expires_gmt": null,
+        "usage_count": 0, "individual_use": true, "product_ids": [], "excluded_product_ids": [], "usage_limit": 100, "usage_limit_per_user": null,
+        "limit_usage_to_x_items": null, "free_shipping": true, "product_categories": [], "excluded_product_categories": [], "exclude_sale_items": true,
+        "minimum_amount": "0.00", "maximum_amount": "0.00", "email_restrictions": ["vip@example.com"], "used_by": [], "meta_data": [],
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/coupons/301"}]}
+    }
+]

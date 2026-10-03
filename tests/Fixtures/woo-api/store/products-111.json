@@ -1,0 +1,11 @@
+{"id": 111, "name": "Polo", "slug": "product-110-variation-111", "parent": 110, "type": "variation", "variation": "Colour: Red",
+ "permalink": "https://old-shop.example.test/clothing/shirts/polo/?attribute_pa_colour=red", "sku": "POLO-R", "short_description": "", "description": "", "on_sale": false,
+ "prices": {"price": "2000", "regular_price": "2000", "sale_price": "2000", "price_range": null, "currency_code": "GBP", "currency_symbol": "£", "currency_minor_unit": 2,
+            "currency_decimal_separator": ".", "currency_thousand_separator": ",", "currency_prefix": "£", "currency_suffix": ""},
+ "price_html": "", "average_rating": "0", "review_count": 0,
+ "images": [{"id": 503, "src": "https://old-shop.example.test/wp-content/uploads/2025/01/polo-red.jpg", "thumbnail": "", "srcset": "", "sizes": "", "thumbnail_srcset": "", "thumbnail_sizes": "", "name": "polo-red", "alt": "Red polo"}],
+ "categories": [], "tags": [], "brands": [], "attributes": [], "variations": [], "grouped_products": [], "has_options": false, "is_purchasable": true,
+ "is_in_stock": true, "is_on_backorder": false, "low_stock_remaining": 2, "stock_availability": {"text": "Only 2 left in stock", "class": "in-stock"},
+ "sold_individually": false, "weight": "", "dimensions": {"length": "", "width": "", "height": ""}, "formatted_weight": "", "formatted_dimensions": "",
+ "add_to_cart": {"text": "Add to basket", "description": "", "url": "?add-to-cart=111", "single_text": "Add to basket", "minimum": 1, "maximum": 2, "multiple_of": 1},
+ "is_password_protected": false, "extensions": {}}

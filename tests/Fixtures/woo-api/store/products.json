@@ -1,0 +1,40 @@
+[
+    {
+        "id": 100, "name": "Linen Shirt", "slug": "linen-shirt", "parent": 0, "type": "simple", "variation": "",
+        "permalink": "https://old-shop.example.test/clothing/shirts/linen-shirt/", "sku": "LS-1",
+        "short_description": "<p>Light and airy</p>", "description": "<p>A linen shirt.</p>", "on_sale": true,
+        "prices": {"price": "4000", "regular_price": "5000", "sale_price": "4000", "price_range": null, "currency_code": "GBP", "currency_symbol": "£", "currency_minor_unit": 2,
+                   "currency_decimal_separator": ".", "currency_thousand_separator": ",", "currency_prefix": "£", "currency_suffix": ""},
+        "price_html": "", "average_rating": "5.00", "review_count": 1,
+        "images": [{"id": 500, "src": "https://old-shop.example.test/wp-content/uploads/2025/01/shirt.jpg", "thumbnail": "https://old-shop.example.test/wp-content/uploads/2025/01/shirt-300x300.jpg",
+                    "srcset": "", "sizes": "", "thumbnail_srcset": "", "thumbnail_sizes": "", "name": "shirt", "alt": "A linen shirt"}],
+        "categories": [{"id": 11, "name": "Shirts &amp; Tops", "slug": "shirts", "link": "https://old-shop.example.test/clothing/shirts/"}],
+        "tags": [{"id": 30, "name": "Summer", "slug": "summer", "link": "https://old-shop.example.test/product-tag/summer/"}],
+        "brands": [], "attributes": [], "variations": [], "grouped_products": [], "has_options": false, "is_purchasable": true,
+        "is_in_stock": true, "is_on_backorder": false, "low_stock_remaining": null, "stock_availability": {"text": "5 in stock", "class": "in-stock"},
+        "sold_individually": false, "weight": "0.3", "dimensions": {"length": "30", "width": "20", "height": "2"},
+        "formatted_weight": "0.3 kg", "formatted_dimensions": "30 &times; 20 &times; 2 cm",
+        "add_to_cart": {"text": "Add to basket", "description": "Add to basket: &ldquo;Linen Shirt&rdquo;", "url": "?add-to-cart=100", "single_text": "Add to basket", "minimum": 1, "maximum": 5, "multiple_of": 1},
+        "is_password_protected": false, "extensions": {}
+    },
+    {
+        "id": 110, "name": "Polo", "slug": "polo", "parent": 0, "type": "variable", "variation": "",
+        "permalink": "https://old-shop.example.test/clothing/shirts/polo/", "sku": "POLO",
+        "short_description": "", "description": "<p>A classic polo.</p>", "on_sale": false,
+        "prices": {"price": "2000", "regular_price": "2000", "sale_price": "2000", "price_range": {"min_amount": "2000", "max_amount": "2200"}, "currency_code": "GBP", "currency_symbol": "£",
+                   "currency_minor_unit": 2, "currency_decimal_separator": ".", "currency_thousand_separator": ",", "currency_prefix": "£", "currency_suffix": ""},
+        "price_html": "", "average_rating": "0", "review_count": 0,
+        "images": [{"id": 501, "src": "https://old-shop.example.test/wp-content/uploads/2025/01/polo.jpg", "thumbnail": "", "srcset": "", "sizes": "", "thumbnail_srcset": "", "thumbnail_sizes": "", "name": "polo", "alt": "Polo"}],
+        "categories": [{"id": 11, "name": "Shirts &amp; Tops", "slug": "shirts", "link": "https://old-shop.example.test/clothing/shirts/"},
+                       {"id": 10, "name": "Clothing", "slug": "clothing", "link": "https://old-shop.example.test/clothing/"}],
+        "tags": [], "brands": [],
+        "attributes": [{"id": 1, "name": "Colour", "taxonomy": "pa_colour", "has_variations": true,
+                        "terms": [{"id": 20, "name": "Red", "slug": "red", "default": true}, {"id": 21, "name": "Blue", "slug": "blue", "default": false}]}],
+        "variations": [{"id": 111, "attributes": [{"name": "Colour", "value": "red"}]}, {"id": 112, "attributes": [{"name": "Colour", "value": "blue"}]}],
+        "grouped_products": [], "has_options": true, "is_purchasable": true, "is_in_stock": true, "is_on_backorder": false, "low_stock_remaining": null,
+        "stock_availability": {"text": "", "class": ""}, "sold_individually": false, "weight": "", "dimensions": {"length": "", "width": "", "height": ""},
+        "formatted_weight": "", "formatted_dimensions": "",
+        "add_to_cart": {"text": "Select options", "description": "Select options for &ldquo;Polo&rdquo;", "url": "https://old-shop.example.test/clothing/shirts/polo/", "single_text": "Add to basket", "minimum": 1, "maximum": 9999, "multiple_of": 1},
+        "is_password_protected": false, "extensions": {}
+    }
+]

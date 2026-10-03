@@ -141,7 +141,8 @@ final class ApiMap
             $remoteId = (int) ($a['id'] ?? 0);
             $options = array_values(array_map(fn ($o) => html_entity_decode((string) $o, ENT_QUOTES | ENT_HTML5, 'UTF-8'), (array) ($a['options'] ?? [])));
             $common = ['position' => (int) ($a['position'] ?? $i), 'is_visible' => ! empty($a['visible']) ? 1 : 0,
-                'is_variation' => ! empty($a['variation']) ? 1 : 0, 'options' => $options, 'remote_id' => $remoteId];
+                'is_variation' => ! empty($a['variation']) ? 1 : 0, 'options' => $options, 'remote_id' => $remoteId,
+                'label' => html_entity_decode((string) ($a['name'] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8')];
             if ($remoteId > 0) {
                 $slug = self::attributeSlug($a, $attributeSlugs);
                 $out['pa_'.$slug] = ['name' => 'pa_'.$slug, 'value' => '', 'is_taxonomy' => 1] + $common;

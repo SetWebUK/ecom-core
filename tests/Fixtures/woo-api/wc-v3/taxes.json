@@ -1,0 +1,8 @@
+[
+    {"id": 1, "country": "GB", "state": "", "postcode": "", "city": "", "postcodes": [], "cities": [], "rate": "20.0000", "name": "VAT", "priority": 1, "compound": false, "shipping": true, "order": 0, "class": "standard",
+     "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/taxes/1"}]}},
+    {"id": 2, "country": "GB", "state": "", "postcode": "", "city": "", "postcodes": [], "cities": [], "rate": "5.0000", "name": "VAT", "priority": 1, "compound": false, "shipping": true, "order": 1, "class": "reduced-rate",
+     "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/taxes/2"}]}},
+    {"id": 3, "country": "US", "state": "CA", "postcode": "90001;90002", "city": "LOS ANGELES", "postcodes": ["90001", "90002"], "cities": ["LOS ANGELES"], "rate": "7.2500", "name": "CA tax", "priority": 1, "compound": false, "shipping": false, "order": 2, "class": "standard",
+     "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/taxes/3"}]}}
+]

@@ -1,0 +1,20 @@
+[
+    {"id": 1, "instance_id": 1, "title": "Standard", "order": 1, "enabled": true, "method_id": "flat_rate", "method_title": "Flat rate", "method_description": "<p>Lets you charge a fixed rate for shipping.</p>",
+     "settings": {
+        "title": {"id": "title", "label": "Name", "description": "Your customers will see the name of this shipping method during checkout.", "type": "text", "value": "Standard", "default": "Flat rate", "tip": "", "placeholder": ""},
+        "tax_status": {"id": "tax_status", "label": "Tax status", "type": "select", "value": "taxable", "default": "taxable", "options": {"taxable": "Taxable", "none": "None"}},
+        "cost": {"id": "cost", "label": "Cost", "type": "text", "value": "4.99", "default": "0"},
+        "class_cost_40": {"id": "class_cost_40", "label": "\"Bulky\" shipping class cost", "type": "text", "value": "20", "default": ""},
+        "no_class_cost": {"id": "no_class_cost", "label": "No shipping class cost", "type": "text", "value": "", "default": ""},
+        "type": {"id": "type", "label": "Calculation type", "type": "select", "value": "class", "default": "class"}
+     },
+     "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/shipping/zones/1/methods/1"}]}},
+    {"id": 2, "instance_id": 2, "title": "Free over &pound;50", "order": 2, "enabled": true, "method_id": "free_shipping", "method_title": "Free shipping", "method_description": "",
+     "settings": {
+        "title": {"id": "title", "type": "text", "value": "Free over £50", "default": "Free shipping"},
+        "requires": {"id": "requires", "type": "select", "value": "min_amount", "default": ""},
+        "min_amount": {"id": "min_amount", "type": "price", "value": "50", "default": "0"},
+        "ignore_discounts": {"id": "ignore_discounts", "type": "checkbox", "value": "no", "default": "no"}
+     },
+     "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/shipping/zones/1/methods/2"}]}}
+]

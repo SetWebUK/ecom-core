@@ -1,0 +1,17 @@
+{
+    "name": "Old Shop &amp; Co",
+    "description": "Linen clothing",
+    "url": "https://old-shop.example.test",
+    "home": "https://old-shop.example.test",
+    "gmt_offset": 0,
+    "timezone_string": "Europe/London",
+    "page_for_posts": 0,
+    "page_on_front": 40,
+    "show_on_front": "page",
+    "namespaces": ["oembed/1.0", "wc/store/v1", "wc/store", "wc/v3", "wc/v2", "wc-analytics", "wp/v2", "wp-site-health/v1"],
+    "authentication": {"application-passwords": {"endpoints": {"authorization": "https://old-shop.example.test/wp-admin/authorize-application.php"}}},
+    "site_logo": 0,
+    "site_icon": 0,
+    "site_icon_url": "",
+    "_links": {"help": [{"href": "https://developer.wordpress.org/rest-api/"}]}
+}

@@ -1,0 +1,11 @@
+[
+    {"id": 500, "date": "2025-01-01T10:00:00", "date_gmt": "2025-01-01T10:00:00", "slug": "shirt", "status": "inherit", "type": "attachment",
+     "link": "https://old-shop.example.test/shirt/", "title": {"rendered": "Shirt"}, "author": 1, "alt_text": "A linen shirt", "media_type": "image", "mime_type": "image/jpeg",
+     "media_details": {"width": 8, "height": 8, "file": "2025/01/shirt.jpg", "sizes": {}}, "source_url": "https://old-shop.example.test/wp-content/uploads/2025/01/shirt.jpg", "_links": {}},
+    {"id": 506, "date": "2025-02-01T10:00:00", "date_gmt": "2025-02-01T10:00:00", "slug": "banner", "status": "inherit", "type": "attachment",
+     "link": "https://old-shop.example.test/banner/", "title": {"rendered": "Banner"}, "author": 1, "alt_text": "", "media_type": "image", "mime_type": "image/png",
+     "media_details": {"width": 8, "height": 8, "file": "2025/02/banner.png", "sizes": {}}, "source_url": "https://old-shop.example.test/wp-content/uploads/2025/02/banner.png", "_links": {}},
+    {"id": 507, "date": "2025-02-01T10:00:00", "date_gmt": "2025-02-01T10:00:00", "slug": "evil", "status": "inherit", "type": "attachment",
+     "link": "https://old-shop.example.test/evil/", "title": {"rendered": "Not an image"}, "author": 1, "alt_text": "", "media_type": "image", "mime_type": "image/jpeg",
+     "media_details": {}, "source_url": "https://old-shop.example.test/wp-content/uploads/2025/02/evil.jpg", "_links": {}}
+]

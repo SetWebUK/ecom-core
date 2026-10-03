@@ -1,0 +1,4 @@
+[
+    {"code": "GB", "type": "country", "_links": {"collection": [{"href": "https://old-shop.example.test/wp-json/wc/v3/shipping/zones/1/locations"}]}},
+    {"code": "BS*", "type": "postcode", "_links": {"collection": [{"href": "https://old-shop.example.test/wp-json/wc/v3/shipping/zones/1/locations"}]}}
+]

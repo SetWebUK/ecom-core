@@ -1,0 +1,4 @@
+[
+    {"id": 1, "count": 0, "description": "", "link": "https://old-shop.example.test/category/uncategorized/", "name": "Uncategorized", "slug": "uncategorized", "taxonomy": "category", "parent": 0, "meta": [], "_links": {}},
+    {"id": 3, "count": 1, "description": "", "link": "https://old-shop.example.test/category/news/", "name": "News &amp; events", "slug": "news", "taxonomy": "category", "parent": 0, "meta": [], "_links": {}}
+]

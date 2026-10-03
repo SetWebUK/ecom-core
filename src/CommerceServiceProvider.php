@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Pine\Commerce\Console\ImportWooApiCommand;
 use Pine\Commerce\Console\ImportWordPressCommand;
 use Pine\Commerce\Console\PublishCommand;
 use Pine\Commerce\Console\ThemeCacheCommand;
@@ -165,7 +166,7 @@ class CommerceServiceProvider extends ServiceProvider
 
         // Registered for web requests too (commands() only hooks Artisan::starting, so this costs nothing until
         // Artisan runs): Admin › Settings › Theme calls Artisan::call('commerce:theme:publish') from a request.
-        $this->commands([PublishCommand::class, ImportWordPressCommand::class, ThemeMakeCommand::class,
+        $this->commands([PublishCommand::class, ImportWordPressCommand::class, ImportWooApiCommand::class, ThemeMakeCommand::class,
             ThemePublishCommand::class, ThemeCheckCommand::class, ThemeCacheCommand::class, ThemeClearCommand::class]);
         // platform tooling: install / health check / scratch clean-up / new client project / URL parity
         $this->commands([Console\InstallCommand::class, Console\DoctorCommand::class, Console\ScratchDropCommand::class,

@@ -1,0 +1,36 @@
+[
+    {
+        "id": 40, "date": "2024-11-01T10:00:00", "date_gmt": "2024-11-01T10:00:00", "guid": {"rendered": "https://old-shop.example.test/?page_id=40"},
+        "modified": "2025-01-01T10:00:00", "modified_gmt": "2025-01-01T10:00:00", "slug": "home", "status": "publish", "type": "page",
+        "link": "https://old-shop.example.test/", "title": {"rendered": "Home"},
+        "content": {"rendered": "<p>Welcome to <a href=\"https://old-shop.example.test/clothing/\">our clothes</a>.</p>\n<p><img src=\"https://old-shop.example.test/wp-content/uploads/2025/01/shirt.jpg\" alt=\"\"></p>\n<script>alert(1)</script>", "protected": false},
+        "excerpt": {"rendered": "<p>Welcome to our clothes.</p>\n", "protected": false},
+        "author": 1, "featured_media": 0, "parent": 0, "menu_order": 0, "comment_status": "closed", "ping_status": "closed", "template": "", "meta": {"footnotes": ""},
+        "yoast_head_json": {"title": "Old Shop – linen clothing", "description": "Linen shirts and polos.", "robots": {"index": "index", "follow": "follow"}},
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wp/v2/pages/40"}]}
+    },
+    {
+        "id": 41, "date": "2024-11-02T10:00:00", "date_gmt": "2024-11-02T10:00:00", "guid": {"rendered": "https://old-shop.example.test/?page_id=41"},
+        "modified": "2025-01-01T10:00:00", "modified_gmt": "2025-01-01T10:00:00", "slug": "about", "status": "publish", "type": "page",
+        "link": "https://old-shop.example.test/about-us/", "title": {"rendered": "About &amp; contact"},
+        "content": {"rendered": "<p>We sell shirts.</p>\n", "protected": false}, "excerpt": {"rendered": "<p>We sell shirts.</p>\n", "protected": false},
+        "author": 1, "featured_media": 0, "parent": 0, "menu_order": 2, "comment_status": "closed", "ping_status": "closed", "template": "", "meta": {"footnotes": ""},
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wp/v2/pages/41"}]}
+    },
+    {
+        "id": 42, "date": "2024-11-03T10:00:00", "date_gmt": "2024-11-03T10:00:00", "guid": {"rendered": "https://old-shop.example.test/?page_id=42"},
+        "modified": "2025-01-01T10:00:00", "modified_gmt": "2025-01-01T10:00:00", "slug": "team", "status": "publish", "type": "page",
+        "link": "https://old-shop.example.test/about-us/team/", "title": {"rendered": "Our team"},
+        "content": {"rendered": "<p>Ann and Bo.</p>\n", "protected": false}, "excerpt": {"rendered": "", "protected": false},
+        "author": 1, "featured_media": 0, "parent": 41, "menu_order": 0, "comment_status": "closed", "ping_status": "closed", "template": "", "meta": {"footnotes": ""},
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wp/v2/pages/42"}]}
+    },
+    {
+        "id": 43, "date": "2024-11-03T10:00:00", "date_gmt": "2024-11-03T10:00:00", "guid": {"rendered": "https://old-shop.example.test/?page_id=43"},
+        "modified": "2025-01-01T10:00:00", "modified_gmt": "2025-01-01T10:00:00", "slug": "checkout", "status": "publish", "type": "page",
+        "link": "https://old-shop.example.test/checkout/", "title": {"rendered": "Checkout"},
+        "content": {"rendered": "<div class=\"wp-block-woocommerce-checkout\"></div>\n", "protected": false}, "excerpt": {"rendered": "", "protected": false},
+        "author": 1, "featured_media": 0, "parent": 0, "menu_order": 0, "comment_status": "closed", "ping_status": "closed", "template": "", "meta": {"footnotes": ""},
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wp/v2/pages/43"}]}
+    }
+]

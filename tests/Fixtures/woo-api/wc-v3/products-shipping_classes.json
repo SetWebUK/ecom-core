@@ -1,0 +1,3 @@
+[
+    {"id": 40, "name": "Bulky", "slug": "bulky", "description": "Large parcels", "count": 1, "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/shipping_classes/40"}]}}
+]

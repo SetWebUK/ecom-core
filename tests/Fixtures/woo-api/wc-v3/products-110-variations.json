@@ -1,0 +1,34 @@
+[
+    {
+        "id": 111, "type": "variation", "date_created": "2025-01-03T10:00:00", "date_created_gmt": "2025-01-03T10:00:00",
+        "date_modified": "2025-01-04T10:00:00", "date_modified_gmt": "2025-01-04T10:00:00",
+        "description": "", "permalink": "https://old-shop.example.test/clothing/shirts/polo/?attribute_pa_colour=red",
+        "sku": "POLO-R", "global_unique_id": "", "price": "20", "regular_price": "20", "sale_price": "",
+        "date_on_sale_from": null, "date_on_sale_from_gmt": null, "date_on_sale_to": null, "date_on_sale_to_gmt": null,
+        "on_sale": false, "status": "publish", "purchasable": true, "virtual": false, "downloadable": false, "downloads": [],
+        "download_limit": -1, "download_expiry": -1, "tax_status": "taxable", "tax_class": "", "manage_stock": true,
+        "stock_quantity": 2, "stock_status": "instock", "backorders": "no", "backorders_allowed": false, "backordered": false,
+        "low_stock_amount": null, "weight": "", "dimensions": {"length": "", "width": "", "height": ""},
+        "shipping_class": "bulky", "shipping_class_id": 40,
+        "image": {"id": 503, "date_created": "2025-01-03T10:00:00", "date_created_gmt": "2025-01-03T10:00:00", "date_modified": "2025-01-03T10:00:00", "date_modified_gmt": "2025-01-03T10:00:00",
+                  "src": "https://old-shop.example.test/wp-content/uploads/2025/01/polo-red.jpg", "name": "polo-red", "alt": "Red polo"},
+        "attributes": [{"id": 1, "name": "Colour", "slug": "pa_colour", "option": "Red"}],
+        "menu_order": 1, "meta_data": [], "name": "Polo - Red", "parent_id": 110,
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/110/variations/111"}], "up": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/110"}]}
+    },
+    {
+        "id": 112, "type": "variation", "date_created": "2025-01-03T10:00:00", "date_created_gmt": "2025-01-03T10:00:00",
+        "date_modified": "2025-01-04T10:00:00", "date_modified_gmt": "2025-01-04T10:00:00",
+        "description": "", "permalink": "https://old-shop.example.test/clothing/shirts/polo/?attribute_pa_colour=blue",
+        "sku": "POLO-B", "global_unique_id": "", "price": "22", "regular_price": "22", "sale_price": "",
+        "date_on_sale_from": null, "date_on_sale_from_gmt": null, "date_on_sale_to": null, "date_on_sale_to_gmt": null,
+        "on_sale": false, "status": "publish", "purchasable": true, "virtual": false, "downloadable": false, "downloads": [],
+        "download_limit": -1, "download_expiry": -1, "tax_status": "taxable", "tax_class": "", "manage_stock": "parent",
+        "stock_quantity": null, "stock_status": "outofstock", "backorders": "no", "backorders_allowed": false, "backordered": false,
+        "low_stock_amount": null, "weight": "0.25", "dimensions": {"length": "", "width": "", "height": ""},
+        "shipping_class": "", "shipping_class_id": 0, "image": null,
+        "attributes": [{"id": 1, "name": "Colour", "slug": "pa_colour", "option": "Blue"}],
+        "menu_order": 2, "meta_data": [], "name": "Polo - Blue", "parent_id": 110,
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/110/variations/112"}], "up": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/110"}]}
+    }
+]

@@ -1,0 +1,15 @@
+[
+    {
+        "id": 202, "date_created": "2025-03-05T10:00:00", "date_created_gmt": "2025-03-05T10:00:00",
+        "amount": "48.00", "reason": "Too small", "refunded_by": 1, "refunded_payment": false, "meta_data": [],
+        "line_items": [
+            {"id": 1008, "name": "Linen Shirt", "product_id": 100, "variation_id": 0, "quantity": -1, "tax_class": "",
+             "subtotal": "-40.00", "subtotal_tax": "-8.00", "total": "-40.00", "total_tax": "-8.00",
+             "taxes": [{"id": 1, "total": "-8", "subtotal": "-8", "refund_total": 8}],
+             "meta_data": [{"id": 55, "key": "_refunded_item_id", "value": "1007", "display_key": "_refunded_item_id", "display_value": "1007"}],
+             "sku": "LS-1", "global_unique_id": "", "price": -40, "image": {"id": "500", "src": "https://old-shop.example.test/wp-content/uploads/2025/01/shirt.jpg"}, "parent_name": null, "refund_total": 40}
+        ],
+        "shipping_lines": [], "tax_lines": [], "fee_lines": [],
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/orders/201/refunds/202"}], "up": [{"href": "https://old-shop.example.test/wp-json/wc/v3/orders/201"}]}
+    }
+]

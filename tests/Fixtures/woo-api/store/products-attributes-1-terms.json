@@ -1,0 +1,4 @@
+[
+    {"id": 20, "name": "Red", "slug": "red", "description": "", "parent": 0, "count": 1},
+    {"id": 21, "name": "Blue", "slug": "blue", "description": "", "parent": 0, "count": 1}
+]

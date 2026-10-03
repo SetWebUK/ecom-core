@@ -1,0 +1,3 @@
+[
+    {"id": 1, "name": "Colour", "taxonomy": "pa_colour", "type": "select", "order": "menu_order", "has_archives": false, "count": 2}
+]

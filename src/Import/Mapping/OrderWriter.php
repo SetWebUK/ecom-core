@@ -19,10 +19,11 @@ final class OrderWriter
 
     /**
      * @param  list<array{row:array, items:array<int|string,array>, tax_lines:list<array>}>  $mapped
+     * @param  bool  $replaceNotes  false = keep the orders' notes (the caller does not re-import them)
      * @return array{orders:array<int|string,int>, items:array<int|string,int>, payments:int, line_items:int}
      *               remote order id => orders.id, remote item id => order_items.id
      */
-    public function write(array $mapped, string $now): array
+    public function write(array $mapped, string $now, bool $replaceNotes = true): array
     {
         if (! $mapped) {
             return ['orders' => [], 'items' => [], 'payments' => 0, 'line_items' => 0];
@@ -30,7 +31,7 @@ final class OrderWriter
         $rows = array_column($mapped, 'row');
         $orderIds = $this->upserter->save('orders', $rows, 'wp_id', ['created_at']);
         $ids = array_values($orderIds);
-        foreach (['order_items', 'order_notes', 'refunds', 'order_tax_lines'] as $table) {
+        foreach (array_merge(['order_items', 'refunds', 'order_tax_lines'], $replaceNotes ? ['order_notes'] : []) as $table) {
             foreach (array_chunk($ids, 500) as $part) {
                 DB::table($table)->whereIn('order_id', $part)->delete();
             }

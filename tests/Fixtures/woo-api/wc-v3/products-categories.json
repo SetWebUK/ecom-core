@@ -1,0 +1,20 @@
+[
+    {
+        "id": 10, "name": "Clothing", "slug": "clothing", "parent": 0,
+        "description": "All our clothes.", "display": "default",
+        "image": {"id": 502, "date_created": "2025-01-01T10:00:00", "date_created_gmt": "2025-01-01T10:00:00", "date_modified": "2025-01-01T10:00:00", "date_modified_gmt": "2025-01-01T10:00:00", "src": "https://old-shop.example.test/wp-content/uploads/2025/01/clothing.jpg", "name": "clothing", "alt": "Clothing"},
+        "menu_order": 0, "count": 2,
+        "yoast_head_json": {"title": "Clothing Archives - Old Shop", "description": "Linen clothing for summer.", "robots": {"index": "index", "follow": "follow"}},
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/categories/10"}], "collection": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/categories"}]}
+    },
+    {
+        "id": 11, "name": "Shirts &amp; Tops", "slug": "shirts", "parent": 10,
+        "description": "", "display": "default", "image": null, "menu_order": 1, "count": 2,
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/categories/11"}], "up": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/categories/10"}]}
+    },
+    {
+        "id": 15, "name": "Uncategorized", "slug": "uncategorized", "parent": 0,
+        "description": "", "display": "default", "image": null, "menu_order": 2, "count": 0,
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/categories/15"}]}
+    }
+]

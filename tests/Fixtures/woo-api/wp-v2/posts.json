@@ -1,0 +1,16 @@
+[
+    {
+        "id": 60, "date": "2025-06-01T09:00:00", "date_gmt": "2025-06-01T08:00:00", "guid": {"rendered": "https://old-shop.example.test/?p=60"},
+        "modified": "2025-06-02T09:00:00", "modified_gmt": "2025-06-02T08:00:00", "slug": "summer-news", "status": "publish", "type": "post",
+        "link": "https://old-shop.example.test/2025/06/summer-news/", "title": {"rendered": "Summer news"},
+        "content": {"rendered": "<p>New <a href=\"https://old-shop.example.test/clothing/shirts/polo/\">polos</a> are in.</p>\n", "protected": false},
+        "excerpt": {"rendered": "<p>New polos are in.</p>\n", "protected": false},
+        "author": 1, "featured_media": 504, "comment_status": "open", "ping_status": "open", "sticky": false, "template": "", "format": "standard",
+        "meta": {"footnotes": ""}, "categories": [3], "tags": [],
+        "_embedded": {"wp:featuredmedia": [{"id": 504, "date": "2025-06-01T09:00:00", "slug": "news", "type": "attachment", "link": "https://old-shop.example.test/news/",
+            "title": {"rendered": "News banner"}, "author": 1, "caption": {"rendered": ""}, "alt_text": "Summer banner", "media_type": "image", "mime_type": "image/png",
+            "media_details": {"width": 8, "height": 8, "file": "2025/06/news.png", "sizes": {}},
+            "source_url": "https://old-shop.example.test/wp-content/uploads/2025/06/news.png"}]},
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wp/v2/posts/60"}]}
+    }
+]

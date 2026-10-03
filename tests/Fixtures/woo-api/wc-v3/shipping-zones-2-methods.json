@@ -1,0 +1,5 @@
+[
+    {"id": 3, "instance_id": 3, "title": "Collect in store", "order": 1, "enabled": false, "method_id": "local_pickup", "method_title": "Local pickup",
+     "settings": {"title": {"id": "title", "type": "text", "value": "Collect in store"}, "cost": {"id": "cost", "type": "text", "value": "0"}},
+     "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/shipping/zones/2/methods/3"}]}}
+]

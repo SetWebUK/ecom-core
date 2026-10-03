@@ -1,0 +1,4 @@
+[
+    {"id": 1, "name": "Colour", "slug": "pa_colour", "type": "select", "order_by": "menu_order", "has_archives": false,
+     "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/attributes/1"}]}}
+]

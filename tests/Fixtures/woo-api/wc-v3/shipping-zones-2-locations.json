@@ -1,0 +1,3 @@
+[
+    {"code": "EU", "type": "continent", "_links": {"collection": [{"href": "https://old-shop.example.test/wp-json/wc/v3/shipping/zones/2/locations"}]}}
+]

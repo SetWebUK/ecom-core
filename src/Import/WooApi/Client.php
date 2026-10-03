@@ -90,7 +90,8 @@ class Client
             $response = $this->get($route, ['per_page' => $perPage, 'page' => $page] + $query, $namespace);
             $items = $response->items();
             yield [$page, $items, $response->totalPages, $response->total];
-            $last = $response->totalPages !== null ? $page >= $response->totalPages : count($items) < $perPage;
+            // no X-WP-TotalPages header = an endpoint that does not paginate (it returned everything)
+            $last = $response->totalPages === null || $page >= $response->totalPages;
             if ($last || ! $items) {
                 return;
             }

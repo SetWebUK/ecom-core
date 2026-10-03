@@ -1,0 +1,4 @@
+[
+    {"id": 20, "name": "Red", "slug": "red", "description": "", "menu_order": 0, "count": 1, "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/attributes/1/terms/20"}]}},
+    {"id": 21, "name": "Blue", "slug": "blue", "description": "", "menu_order": 1, "count": 1, "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/attributes/1/terms/21"}]}}
+]

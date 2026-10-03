@@ -1,0 +1,100 @@
+[
+    {
+        "id": 100, "name": "Linen Shirt", "slug": "linen-shirt",
+        "permalink": "https://old-shop.example.test/clothing/shirts/linen-shirt/",
+        "date_created": "2025-01-01T10:00:00", "date_created_gmt": "2025-01-01T10:00:00",
+        "date_modified": "2025-01-02T10:00:00", "date_modified_gmt": "2025-01-02T10:00:00",
+        "type": "simple", "status": "publish", "featured": true, "catalog_visibility": "visible",
+        "description": "<p>A <strong>linen</strong> shirt. See <a href=\"https://old-shop.example.test/clothing/\">all clothing</a>.</p>\n",
+        "short_description": "<p>Light and airy</p>\n",
+        "sku": "LS-1", "price": "40", "regular_price": "50", "sale_price": "40",
+        "date_on_sale_from": null, "date_on_sale_from_gmt": null, "date_on_sale_to": null, "date_on_sale_to_gmt": null,
+        "on_sale": true, "purchasable": true, "total_sales": 12, "virtual": false, "downloadable": false,
+        "downloads": [], "download_limit": -1, "download_expiry": -1, "external_url": "", "button_text": "",
+        "tax_status": "taxable", "tax_class": "", "manage_stock": true, "stock_quantity": 5,
+        "backorders": "no", "backorders_allowed": false, "backordered": false, "low_stock_amount": null,
+        "sold_individually": false, "weight": "0.3", "dimensions": {"length": "30", "width": "20", "height": "2"},
+        "shipping_required": true, "shipping_taxable": true, "shipping_class": "bulky", "shipping_class_id": 40,
+        "reviews_allowed": true, "average_rating": "5.00", "rating_count": 1,
+        "upsell_ids": [110], "cross_sell_ids": [], "parent_id": 0, "purchase_note": "",
+        "categories": [{"id": 11, "name": "Shirts &amp; Tops", "slug": "shirts"}],
+        "brands": [{"id": 70, "name": "Linen &amp; Co", "slug": "linen-co"}],
+        "tags": [{"id": 30, "name": "Summer", "slug": "summer"}],
+        "images": [
+            {"id": 500, "date_created": "2025-01-01T10:00:00", "date_created_gmt": "2025-01-01T10:00:00", "date_modified": "2025-01-01T10:00:00", "date_modified_gmt": "2025-01-01T10:00:00",
+             "src": "https://old-shop.example.test/wp-content/uploads/2025/01/shirt.jpg", "name": "shirt", "alt": "A linen shirt"},
+            {"id": 505, "date_created": "2025-01-01T10:00:00", "date_created_gmt": "2025-01-01T10:00:00", "date_modified": "2025-01-01T10:00:00", "date_modified_gmt": "2025-01-01T10:00:00",
+             "src": "https://old-shop.example.test/wp-content/uploads/2025/01/shirt-back.jpg", "name": "shirt-back", "alt": ""}
+        ],
+        "attributes": [
+            {"id": 0, "name": "Material", "slug": "Material", "position": 1, "visible": true, "variation": false, "options": ["Linen", "Cotton"]}
+        ],
+        "default_attributes": [], "variations": [], "grouped_products": [], "menu_order": 3,
+        "price_html": "<del aria-hidden=\"true\"><span class=\"woocommerce-Price-amount amount\"><bdi><span class=\"woocommerce-Price-currencySymbol\">&pound;</span>50.00</bdi></span></del> <ins><span class=\"woocommerce-Price-amount amount\"><bdi><span class=\"woocommerce-Price-currencySymbol\">&pound;</span>40.00</bdi></span></ins>",
+        "related_ids": [110, 120],
+        "meta_data": [
+            {"id": 901, "key": "rank_math_title", "value": "%title% %sep% Linen | %sitename%"},
+            {"id": 902, "key": "rank_math_description", "value": "Breathable linen shirt."},
+            {"id": 903, "key": "rank_math_focus_keyword", "value": "linen shirt,summer shirt"}
+        ],
+        "stock_status": "instock", "has_options": false, "post_password": "", "global_unique_id": "5012345678900",
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/100"}], "collection": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products"}]}
+    },
+    {
+        "id": 110, "name": "Polo", "slug": "polo",
+        "permalink": "https://old-shop.example.test/clothing/shirts/polo/",
+        "date_created": "2025-01-03T10:00:00", "date_created_gmt": "2025-01-03T10:00:00",
+        "date_modified": "2025-01-04T10:00:00", "date_modified_gmt": "2025-01-04T10:00:00",
+        "type": "variable", "status": "publish", "featured": false, "catalog_visibility": "visible",
+        "description": "<p>A classic polo.</p>\n", "short_description": "",
+        "sku": "POLO", "price": "20", "regular_price": "", "sale_price": "",
+        "date_on_sale_from": null, "date_on_sale_from_gmt": null, "date_on_sale_to": null, "date_on_sale_to_gmt": null,
+        "on_sale": false, "purchasable": true, "total_sales": 4, "virtual": false, "downloadable": false,
+        "downloads": [], "download_limit": -1, "download_expiry": -1, "external_url": "", "button_text": "",
+        "tax_status": "taxable", "tax_class": "", "manage_stock": false, "stock_quantity": null,
+        "backorders": "no", "backorders_allowed": false, "backordered": false, "low_stock_amount": null,
+        "sold_individually": false, "weight": "", "dimensions": {"length": "", "width": "", "height": ""},
+        "shipping_required": true, "shipping_taxable": true, "shipping_class": "", "shipping_class_id": 0,
+        "reviews_allowed": true, "average_rating": "0.00", "rating_count": 0,
+        "upsell_ids": [], "cross_sell_ids": [100], "parent_id": 0, "purchase_note": "",
+        "categories": [{"id": 11, "name": "Shirts &amp; Tops", "slug": "shirts"}, {"id": 10, "name": "Clothing", "slug": "clothing"}],
+        "brands": [], "tags": [],
+        "images": [
+            {"id": 501, "date_created": "2025-01-03T10:00:00", "date_created_gmt": "2025-01-03T10:00:00", "date_modified": "2025-01-03T10:00:00", "date_modified_gmt": "2025-01-03T10:00:00",
+             "src": "https://old-shop.example.test/wp-content/uploads/2025/01/polo.jpg", "name": "polo", "alt": "Polo"}
+        ],
+        "attributes": [
+            {"id": 1, "name": "Colour", "slug": "pa_colour", "position": 0, "visible": true, "variation": true, "options": ["Red", "Blue"]}
+        ],
+        "default_attributes": [{"id": 1, "name": "Colour", "option": "Red"}],
+        "variations": [111, 112], "grouped_products": [], "menu_order": 0,
+        "price_html": "<span class=\"woocommerce-Price-amount amount\">&pound;20.00</span> &ndash; <span class=\"woocommerce-Price-amount amount\">&pound;22.00</span>",
+        "related_ids": [100],
+        "yoast_head_json": {"title": "Polo shirts | Old Shop", "description": "A classic polo in two colours.", "robots": {"index": "index", "follow": "follow", "max-snippet": "max-snippet:-1"}, "canonical": "https://old-shop.example.test/clothing/shirts/polo/"},
+        "meta_data": [], "stock_status": "instock", "has_options": true, "post_password": "", "global_unique_id": "",
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/110"}], "collection": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products"}]}
+    },
+    {
+        "id": 120, "name": "Summer Bundle", "slug": "summer-bundle",
+        "permalink": "https://old-shop.example.test/shop/clothing/summer-bundle/",
+        "date_created": "2025-01-05T10:00:00", "date_created_gmt": "2025-01-05T10:00:00",
+        "date_modified": "2025-01-05T10:00:00", "date_modified_gmt": "2025-01-05T10:00:00",
+        "type": "grouped", "status": "draft", "featured": false, "catalog_visibility": "visible",
+        "description": "", "short_description": "<p>Shirt + polo</p>",
+        "sku": "", "price": "", "regular_price": "", "sale_price": "",
+        "date_on_sale_from": null, "date_on_sale_from_gmt": null, "date_on_sale_to": null, "date_on_sale_to_gmt": null,
+        "on_sale": false, "purchasable": false, "total_sales": 0, "virtual": false, "downloadable": false,
+        "downloads": [], "download_limit": -1, "download_expiry": -1, "external_url": "", "button_text": "",
+        "tax_status": "taxable", "tax_class": "", "manage_stock": false, "stock_quantity": null,
+        "backorders": "no", "backorders_allowed": false, "backordered": false, "low_stock_amount": null,
+        "sold_individually": false, "weight": "", "dimensions": {"length": "", "width": "", "height": ""},
+        "shipping_required": true, "shipping_taxable": true, "shipping_class": "", "shipping_class_id": 0,
+        "reviews_allowed": true, "average_rating": "0.00", "rating_count": 0,
+        "upsell_ids": [], "cross_sell_ids": [], "parent_id": 0, "purchase_note": "",
+        "categories": [{"id": 10, "name": "Clothing", "slug": "clothing"}],
+        "brands": [], "tags": [{"id": 30, "name": "Summer", "slug": "summer"}], "images": [], "attributes": [],
+        "default_attributes": [], "variations": [], "grouped_products": [100, 110], "menu_order": 9,
+        "price_html": "", "related_ids": [], "meta_data": [], "stock_status": "instock", "has_options": false, "post_password": "", "global_unique_id": "",
+        "_links": {"self": [{"href": "https://old-shop.example.test/wp-json/wc/v3/products/120"}]}
+    }
+]
