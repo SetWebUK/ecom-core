@@ -206,6 +206,240 @@ class WooApiImportTest extends TestCase
             'only the rejected non-image is fetched again');
     }
 
+    public function test_pages_follow_x_wp_totalpages_at_per_page_100_by_default(): void
+    {
+        $shop = FakeWooShop::fake();
+        $this->assertSame(0, $this->import(['--only' => 'categories,products', '--no-images' => true]), $this->lastOutput);
+        $calls = $shop->calls('wc/v3/products');
+        $this->assertSame([['1', '2'], ['2', '2']], array_map(fn ($c) => [$c['query']['page'], $c['query']['per_page']], $calls), 'two pages of two, then stop');
+        $this->assertSame(['any', 'id', 'asc'], [$calls[0]['query']['status'], $calls[0]['query']['orderby'], $calls[0]['query']['order']]);
+        $this->assertSame(3, DB::table('products')->count());
+
+        config(['commerce.woo_api.per_page' => 100]);
+        $shop->requests = [];
+        $this->assertSame(0, $this->import(['--only' => 'products', '--no-images' => true]), $this->lastOutput);
+        $this->assertSame([['1', '100']], array_map(fn ($c) => [$c['query']['page'], $c['query']['per_page']], $shop->calls('wc/v3/products')));
+    }
+
+    public function test_every_authentication_mode_reaches_woocommerce(): void
+    {
+        $connection = fn (array $c) => Connection::make($c + ['url' => FakeWooShop::BASE, 'key' => FakeWooShop::KEY, 'secret' => FakeWooShop::SECRET]);
+
+        // https: HTTP Basic, nothing secret in the URL
+        $shop = FakeWooShop::fake('basic');
+        $this->assertSame('basic', $connection([])->wcAuth());
+        (new Client($connection([])))->get('system_status');
+        $call = $shop->calls('wc/v3/system_status')[0];
+        $this->assertArrayNotHasKey('consumer_key', $call['query']);
+
+        // hosts that strip the Authorization header: query string
+        $shop = FakeWooShop::fake('query');
+        (new Client($connection(['auth' => 'query'])))->get('system_status');
+        $this->assertSame(FakeWooShop::KEY, $shop->calls('wc/v3/system_status')[0]['query']['consumer_key']);
+
+        // plain http: OAuth 1.0a one-legged signatures (the fake verifies them like WooCommerce)
+        $shop = FakeWooShop::fake('oauth');
+        $http = $connection(['url' => 'http://old-shop.example.test']);
+        $this->assertSame('oauth', $http->wcAuth());
+        $this->assertCount(2, (new Client($http))->get('products', ['per_page' => 2, 'status' => 'any'])->items());
+        $q = $shop->calls('wc/v3/products')[0]['query'];
+        $this->assertSame(['HMAC-SHA256', FakeWooShop::KEY], [$q['oauth_signature_method'], $q['oauth_consumer_key']]);
+        $this->assertArrayNotHasKey('consumer_secret', $q);
+
+        // Basic / query auth never travel over plain http
+        try {
+            (new Client($connection(['url' => 'http://old-shop.example.test', 'auth' => 'basic'])))->get('system_status');
+            $this->fail('Basic auth over http must be refused');
+        } catch (WooApiException $e) {
+            $this->assertSame('blocked', $e->reason);
+        }
+
+        // a wrong secret: 401 with a hint, and the secret is never in the message
+        FakeWooShop::fake('basic');
+        try {
+            (new Client(Connection::make(['url' => FakeWooShop::BASE, 'key' => FakeWooShop::KEY, 'secret' => 'cs_wrong_secret_value'])))->get('system_status');
+            $this->fail('expected a 401');
+        } catch (WooApiException $e) {
+            $this->assertSame(['auth', 401], [$e->reason, $e->status]);
+            $this->assertStringContainsString('query string', $e->getMessage());
+            $this->assertStringNotContainsString('cs_wrong_secret_value', $e->getMessage());
+        }
+    }
+
+    public function test_the_oauth1_signature_matches_a_known_test_vector(): void
+    {
+        $query = ['per_page' => '100', 'page' => '1', 'search' => 'a b+c'];
+        $url = 'http://old-shop.example.test/wp-json/wc/v3/products';
+        $signed = OAuth1::sign('GET', $url, $query, 'ck_test', 'cs_test', 1700000000, 'abcdef0123456789');
+
+        // computed independently (Python hmac/base64) from WooCommerce's check_oauth_signature() rules
+        $this->assertSame('GET&http%3A%2F%2Fold-shop.example.test%2Fwp-json%2Fwc%2Fv3%2Fproducts&oauth_consumer_key%3Dck_test%26oauth_nonce%3Dabcdef0123456789'
+            .'%26oauth_signature_method%3DHMAC-SHA256%26oauth_timestamp%3D1700000000%26page%3D1%26per_page%3D100%26search%3Da%2520b%252Bc',
+            OAuth1::baseString('GET', $url, array_diff_key($signed, ['oauth_signature' => 1])));
+        $this->assertSame('/aPGTG4KyC6b4HNiFzn59GOQ4bJ3d928MV5LqC1dDyg=', $signed['oauth_signature']);
+        $sha1 = OAuth1::sign('GET', $url, $query, 'ck_test', 'cs_test', 1700000000, 'abcdef0123456789', 'HMAC-SHA1');
+        $this->assertSame('mmP8lzML3do9dex7MICi+TB4UnY=', $sha1['oauth_signature']);
+    }
+
+    public function test_rate_limits_and_server_errors_are_retried_with_backoff(): void
+    {
+        config(['commerce.woo_api.max_backoff' => 60, 'commerce.woo_api.retries' => 3]);
+        $shop = FakeWooShop::fake();
+        $shop->failures['wc/v3/products'] = [[429, ['Retry-After' => '3']], [503, []]];
+        $slept = [];
+        $client = new Client(Connection::make(['url' => FakeWooShop::BASE, 'key' => FakeWooShop::KEY, 'secret' => FakeWooShop::SECRET]),
+            function (float $seconds) use (&$slept) { $slept[] = $seconds; });
+        $this->assertCount(2, $client->get('products', ['per_page' => 2])->items());
+        $this->assertSame([3.0, 2.0], $slept, 'Retry-After honoured, then exponential backoff');
+        $this->assertCount(3, $shop->calls('wc/v3/products'));
+
+        $shop->failures['wc/v3/orders'] = array_fill(0, 5, [500, []]);
+        try {
+            $client->get('orders');
+            $this->fail('expected the server error after the retries');
+        } catch (WooApiException $e) {
+            $this->assertSame(['server', 500], [$e->reason, $e->status]);
+        }
+        $this->assertCount(4, $shop->calls('wc/v3/orders'), '1 + 3 retries');
+    }
+
+    public function test_an_incremental_run_only_reads_what_changed_since(): void
+    {
+        $shop = FakeWooShop::fake();
+        $this->assertSame(0, $this->import(['--only' => 'categories,products', '--no-images' => true]), $this->lastOutput);
+        $products = json_decode((string) file_get_contents(dirname(__DIR__).'/Fixtures/woo-api/wc-v3/products.json'), true);
+        $products[1]['name'] = 'Polo (new season)';
+        $products[1]['date_modified_gmt'] = '2025-07-01T10:00:00';
+        $shop->override['wc/v3/products'] = $products;
+        $shop->requests = [];
+
+        $this->assertSame(0, $this->import(['--only' => 'products', '--no-images' => true, '--since' => '2025-06-01']), $this->lastOutput);
+        $this->assertSame('2025-06-01T00:00:00', $shop->calls('wc/v3/products')[0]['query']['modified_after']);
+        $run = WooApiImport::query()->latest('id')->first();
+        $this->assertSame([1, 0, 1], [$run->entityProgress('products')['fetched'], $run->entityProgress('products')['created'], $run->entityProgress('products')['updated']]);
+        $this->assertSame('Polo (new season)', DB::table('products')->where('wp_id', 110)->value('name'));
+        $this->assertSame('Linen Shirt', DB::table('products')->where('wp_id', 100)->value('name'));
+        $this->assertSame([], $shop->calls('wc/v3/products/100/variations'));
+    }
+
+    public function test_the_ssrf_guard_blocks_private_and_reserved_hosts(): void
+    {
+        $shop = FakeWooShop::fake('basic', '10.0.0.5');
+        $this->assertSame(1, $this->import(['--test' => true]));
+        $this->assertStringContainsString('private or reserved address', $this->lastOutput);
+        $this->assertSame([], $shop->requests, 'nothing was sent');
+
+        config(['commerce.woo_api.allow_private_hosts' => true]);
+        $this->assertSame(0, $this->import(['--test' => true]), $this->lastOutput);
+        $this->assertStringContainsString('Old Shop & Co', $this->lastOutput);
+
+        foreach (['127.0.0.1', '10.1.2.3', '172.16.5.4', '192.168.1.1', '169.254.169.254', '100.64.0.1', '0.0.0.0', '::1', 'fd00::1', 'fe80::1', '::ffff:127.0.0.1', '224.0.0.1'] as $ip) {
+            $this->assertFalse(UrlGuard::isPublic($ip), $ip);
+        }
+        foreach (['93.184.216.34', '8.8.8.8', '2606:4700:4700::1111'] as $ip) {
+            $this->assertTrue(UrlGuard::isPublic($ip), $ip);
+        }
+        foreach (['file:///etc/passwd', 'gopher://old-shop.example.test/', 'ftp://old-shop.example.test/', 'https://user:pw@old-shop.example.test/'] as $url) {
+            try {
+                UrlGuard::check($url, true);
+                $this->fail("$url must be refused");
+            } catch (WooApiException $e) {
+                $this->assertSame('blocked', $e->reason);
+            }
+        }
+    }
+
+    public function test_a_dry_run_reads_and_maps_everything_but_writes_nothing(): void
+    {
+        $shop = FakeWooShop::fake();
+        $this->assertSame(0, $this->import(['--dry-run' => true]), $this->lastOutput);
+        $run = WooApiImport::query()->latest('id')->first();
+        $this->assertTrue($run->dry_run);
+        $this->assertSame(['completed', 3, 3], [$run->status, $run->entityProgress('products')['created'], $run->entityProgress('orders')['created']]);
+        foreach (['products', 'product_variations', 'categories', 'orders', 'coupons', 'tax_rates', 'pages', 'posts', 'media', 'redirects'] as $table) {
+            $this->assertSame(0, DB::table($table)->count(), $table);
+        }
+        $this->assertSame([], Storage::disk('public')->allFiles());
+        $this->assertSame([], array_values(array_filter($shop->requests, fn ($r) => str_contains($r['path'], '/wp-content/uploads/'))), 'no downloads');
+    }
+
+    public function test_the_public_store_api_imports_the_catalogue_without_a_key(): void
+    {
+        $shop = FakeWooShop::fake();
+        $code = \Illuminate\Support\Facades\Artisan::call('commerce:import-woo-api', ['--url' => FakeWooShop::BASE, '--store' => true, '--only' => 'categories,attributes,products']);
+        $this->assertSame(0, $code, \Illuminate\Support\Facades\Artisan::output());
+        $this->assertSame([], array_values(array_filter($shop->requests, fn ($r) => str_contains($r['path'], '/wc/v3/'))), 'no keyed API used');
+
+        $shirt = DB::table('products')->where('wp_id', 100)->first();
+        $this->assertEquals([50, 40, 40], [$shirt->regular_price, $shirt->sale_price, $shirt->price], 'minor units converted');
+        $this->assertSame((int) DB::table('categories')->where('path', 'clothing/shirts')->value('id'), (int) $shirt->primary_category_id);
+        $polo = DB::table('products')->where('wp_id', 110)->first();
+        $variations = DB::table('product_variations')->where('product_id', $polo->id)->orderBy('sort_order')->get();
+        $this->assertSame(['{"colour":"red"}', '{"colour":"blue"}'], $variations->pluck('options')->all());
+        $this->assertEquals([20, 22], $variations->pluck('regular_price')->all());
+        $this->assertSame(['instock', 'outofstock'], $variations->pluck('stock_status')->all());
+        $this->assertSame('store', WooApiImport::query()->latest('id')->value('mode'));
+    }
+
+    public function test_remote_ids_of_another_shop_never_collide(): void
+    {
+        // the database importer brought in ANOTHER shop whose product 100 is also "linen-shirt"
+        DB::table('products')->insert(['name' => 'Other shop shirt', 'slug' => 'linen-shirt', 'type' => 'simple', 'status' => 'published', 'wp_id' => 100,
+            'created_at' => now(), 'updated_at' => now()]);
+        FakeWooShop::fake();
+        $this->assertSame(0, $this->import(['--only' => 'categories,products', '--no-images' => true]), $this->lastOutput);
+
+        $this->assertSame('Other shop shirt', DB::table('products')->whereNull('import_source')->where('wp_id', 100)->value('name'), 'left alone');
+        $api = DB::table('products')->where('import_source', 'woo:old-shop.example.test')->where('wp_id', 100)->first();
+        $this->assertSame(['Linen Shirt', 'linen-shirt-2'], [$api->name, $api->slug]);
+        $this->assertSame('/clothing/shirts/linen-shirt-2/', DB::table('redirects')->where('from_path', 'clothing/shirts/linen-shirt')->value('to_url'));
+
+        // the database importer's own maps never see the API rows
+        $this->assertSame([100 => (int) DB::table('products')->whereNull('import_source')->where('wp_id', 100)->value('id')],
+            (new Upserter(null))->map('products'));
+    }
+
+    public function test_the_same_site_as_the_database_import_is_updated_in_place(): void
+    {
+        DB::table('categories')->insert(['name' => 'Shirts', 'slug' => 'shirts', 'path' => 'clothing/shirts', 'wp_id' => 11, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('products')->insert(['name' => 'Linen Shirt (old)', 'slug' => 'linen-shirt', 'type' => 'simple', 'status' => 'published', 'wp_id' => 100,
+            'created_at' => now(), 'updated_at' => now()]);
+        \Pine\Commerce\Models\Setting::set('import.wordpress.site_url', 'https://www.old-shop.example.test', 'import');
+        FakeWooShop::fake();
+        $this->assertSame(0, $this->import(['--only' => 'categories,products', '--no-images' => true]), $this->lastOutput);
+
+        $run = WooApiImport::query()->latest('id')->first();
+        $this->assertNull($run->source, 'recognised as the database-imported site');
+        $this->assertSame(1, DB::table('products')->where('wp_id', 100)->count());
+        $this->assertSame(['Linen Shirt', 'linen-shirt', null], array_values((array) DB::table('products')->where('wp_id', 100)->first(['name', 'slug', 'import_source'])));
+        $this->assertSame(1, DB::table('categories')->where('wp_id', 11)->count());
+    }
+
+    public function test_a_cancelled_run_stops_after_the_page_and_resumes_from_its_checkpoint(): void
+    {
+        $shop = FakeWooShop::fake();
+        \Pine\Commerce\Import\WooApi\StoredConnection::save(['url' => FakeWooShop::BASE, 'key' => FakeWooShop::KEY, 'secret' => FakeWooShop::SECRET]);
+        $shop->onRequest = function (string $route, array $query) {
+            if ($route === 'wc/v3/products' && ($query['page'] ?? '') === '1') {
+                WooApiImport::query()->where('status', 'running')->update(['status' => 'cancelling']);
+            }
+        };
+        $this->assertSame(1, $this->import(['--only' => 'categories,products', '--no-images' => true]));
+        $run = WooApiImport::query()->latest('id')->first();
+        $this->assertSame('cancelled', $run->status);
+        $this->assertSame(['entity' => 'products', 'page' => 2], array_intersect_key($run->checkpoint, ['entity' => 1, 'page' => 1]));
+        $this->assertSame(2, DB::table('products')->count(), 'the first page was kept');
+
+        $shop->onRequest = null;
+        $shop->requests = [];
+        $code = \Illuminate\Support\Facades\Artisan::call('commerce:import-woo-api', ['run' => $run->id]);
+        $this->assertSame(0, $code, \Illuminate\Support\Facades\Artisan::output());
+        $this->assertSame('completed', $run->fresh()->status);
+        $this->assertSame(['2'], array_map(fn ($c) => $c['query']['page'], $shop->calls('wc/v3/products')), 'page 1 is not read again');
+        $this->assertSame([], $shop->calls('wc/v3/products/categories'), 'finished entities are skipped');
+        $this->assertSame(3, DB::table('products')->count());
+    }
+
     /** Row counts + key columns of the tables the importer writes. */
     private function snapshot(): array
     {

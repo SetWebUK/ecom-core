@@ -58,7 +58,8 @@ final class StoredConnection
     {
         Setting::set('woo_api.url', Connection::normaliseUrl((string) ($input['url'] ?? '')), 'woo_api');
         Setting::set('woo_api.wp_user', trim((string) ($input['wp_user'] ?? '')), 'woo_api');
-        Setting::set('woo_api.auth', in_array($input['auth'] ?? 'auto', Connection::AUTH_MODES, true) ? (string) $input['auth'] : 'auto', 'woo_api');
+        $auth = (string) ($input['auth'] ?? 'auto');
+        Setting::set('woo_api.auth', in_array($auth, Connection::AUTH_MODES, true) ? $auth : 'auto', 'woo_api');
         Setting::set('woo_api.verify_tls', (bool) ($input['verify_tls'] ?? true), 'woo_api');
         Setting::set('woo_api.mode', ($input['mode'] ?? 'rest') === 'store' ? 'store' : 'rest', 'woo_api');
         foreach (self::SECRETS as $field) {

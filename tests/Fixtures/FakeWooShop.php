@@ -38,11 +38,15 @@ class FakeWooShop
     /** expected wc/v3 authentication: basic | query | oauth */
     public string $auth = 'basic';
 
+    /** @var (callable(string $route, array $query):void)|null called before every API answer */
+    public $onRequest = null;
+
     public static function fake(string $auth = 'basic', string $ip = '93.184.216.34'): self
     {
         $shop = new self;
         $shop->auth = $auth;
         UrlGuard::$resolver = fn (string $host) => [$ip];
+        Http::swap(new \Illuminate\Http\Client\Factory(app('events'))); // a fresh fake (stubs registered earlier would answer first)
         Http::fake(fn (Request $request) => $shop->respond($request));
 
         return $shop;
@@ -60,6 +64,9 @@ class FakeWooShop
             return $this->image($path);
         }
         $route = isset($query['rest_route']) ? trim((string) $query['rest_route'], '/') : trim(Str::after($path, '/wp-json'), '/');
+        if ($this->onRequest) {
+            ($this->onRequest)($route, $query);
+        }
         if (! empty($this->failures[$route])) {
             [$status, $headers] = array_shift($this->failures[$route]);
 
