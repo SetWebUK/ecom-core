@@ -9,6 +9,11 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+### Fixed
+- Imports (WooCommerce API and database): a product image alt longer than 255 characters (a whole description pasted
+  into it) no longer stops the import with "Data too long for column 'alt'" on MySQL – it is cut to 250 characters,
+  like the media library's. Regression test added.
+
 ## [1.5.0] - 2026-10-03
 
 Import a WooCommerce shop over its REST API: no database access needed – a shop URL and a read-only API key. One

@@ -322,6 +322,21 @@ class WooApiImportTest extends TestCase
         $this->assertSame([], $shop->calls('wc/v3/products/100/variations'));
     }
 
+    public function test_an_image_alt_longer_than_the_column_is_shortened(): void
+    {
+        // a product description pasted into an image alt (573 characters on a live shop) stopped the import on MySQL
+        $shop = FakeWooShop::fake();
+        $products = json_decode((string) file_get_contents(dirname(__DIR__).'/Fixtures/woo-api/wc-v3/products.json'), true);
+        $products[0]['images'][0]['alt'] = str_repeat('Fully approved by the Institute of Chiropodists and Podiatrists. ', 9);
+        $shop->override['wc/v3/products'] = $products;
+
+        $this->assertSame(0, $this->import(['--only' => 'categories,products']), $this->lastOutput);
+        $alt = (string) DB::table('product_images')->where('path', 'uploads/2025/01/shirt.jpg')->value('alt');
+        $this->assertStringStartsWith('Fully approved by the Institute', $alt);
+        $this->assertLessThanOrEqual(250, mb_strlen($alt));
+        $this->assertSame('Polo', DB::table('product_images')->where('path', 'uploads/2025/01/polo.jpg')->value('alt'), 'short alts untouched');
+    }
+
     public function test_the_ssrf_guard_blocks_private_and_reserved_hosts(): void
     {
         $shop = FakeWooShop::fake('basic', '10.0.0.5');
