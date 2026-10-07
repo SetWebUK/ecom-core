@@ -3,7 +3,7 @@
     $S = \Pine\Commerce\Theme\Storefront::class;
     $store = $S::store();
     $cartCount = $S::cartCount();
-    $mainMenu = menu_tree(theme_config('menus.main', ['main']), theme_config('menus.fallbacks.main', []));
+    $mainMenu = menu_tree(theme_config('menus.main', ['mega', 'main']), theme_config('menus.fallbacks.main', []));
     $topText = trim((string) setting('store.top_bar_text', ''));
     $showTop = filter_var(theme_setting('show_top_bar', true), FILTER_VALIDATE_BOOL) && $topText !== '';
     $topLinkText = trim((string) setting('store.top_bar_link_text', ''));
@@ -88,4 +88,4 @@
         </nav>
     @endif
 </header>
-@include('partials.mobile-menu', ['items' => menu_tree(theme_config('menus.mobile', ['mobile_nav', 'mobile', 'main']), theme_config('menus.fallbacks.mobile', []))])
+@include('partials.mobile-menu', ['items' => menu_tree(theme_config('menus.mobile', ['mobile_nav', 'mobile', 'mega', 'main']), theme_config('menus.fallbacks.mobile', []))])

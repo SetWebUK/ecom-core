@@ -18,6 +18,9 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
   clocks skip in March (e.g. `2025-03-30 01:39:36`) was refused with "Incorrect datetime value" – which stopped a
   WooCommerce import half-way through the customers. Both importers now refuse to start (before writing anything) while
   the session and app time zones differ, with the fix in the message.
+- Default theme: the header now reads the **Header menu** (location `mega`) before **Header menu (backup)** (`main`),
+  as Admin › Menus labels them – a site with both showed the backup and ignored the menu the admin marks "in use". The
+  mobile drawer falls back to the header menu (`mega`, then `main`) when no mobile menu has items. Regression test added.
 
 ### Added
 - `php artisan commerce:db:utc [--dry-run] [--connection=]`: re-stores every TIMESTAMP value written in the server's
