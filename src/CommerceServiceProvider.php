@@ -170,7 +170,7 @@ class CommerceServiceProvider extends ServiceProvider
             ThemePublishCommand::class, ThemeCheckCommand::class, ThemeCacheCommand::class, ThemeClearCommand::class]);
         // platform tooling: install / health check / scratch clean-up / new client project / URL parity
         $this->commands([Console\InstallCommand::class, Console\DoctorCommand::class, Console\ScratchDropCommand::class,
-            Console\NewClientCommand::class, Console\VerifyUrlsCommand::class]);
+            Console\NewClientCommand::class, Console\VerifyUrlsCommand::class, Console\DatabaseUtcCommand::class]);
         // image sizes: (re)build the size variants of existing uploads
         $this->commands([Console\ImagesGenerateCommand::class]);
         // full product CSV (feature switch product_csv – the commands refuse to run while it is off)

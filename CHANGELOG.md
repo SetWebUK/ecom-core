@@ -13,6 +13,29 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 - Imports (WooCommerce API and database): a product image alt longer than 255 characters (a whole description pasted
   into it) no longer stops the import with "Data too long for column 'alt'" on MySQL – it is cut to 250 characters,
   like the media library's. Regression test added.
+- MySQL/MariaDB: the connection's session time zone now follows the app (UTC). Without it MySQL used the server's own
+  clock: on a server set to UK time every summer TIMESTAMP was stored an hour out, and a UTC time inside the hour the
+  clocks skip in March (e.g. `2025-03-30 01:39:36`) was refused with "Incorrect datetime value" – which stopped a
+  WooCommerce import half-way through the customers. Both importers now refuse to start (before writing anything) while
+  the session and app time zones differ, with the fix in the message.
+
+### Added
+- `php artisan commerce:db:utc [--dry-run] [--connection=]`: re-stores every TIMESTAMP value written in the server's
+  clock so it reads the same once the connection runs in UTC. Per table, in a transaction, checksum-verified (rolled
+  back on any difference); only the connection's prefixed tables; refuses a second run (marker setting
+  `database_timestamps_utc`), SQLite, and an app time zone other than UTC.
+- `commerce:doctor` › Database › **Time zone**: fails when the session time zone does not keep the app's times (probed
+  in January and July, so it is caught in winter too).
+
+### Client skeleton (`stubs/client-skeleton`)
+- `config/database.php`: `'timezone' => env('DB_TIMEZONE')` on `mysql` and `scratch` (null = unchanged behaviour, so
+  applying the file can never shift an existing database). `.env.example`: `DB_TIMEZONE=+00:00` for new clients.
+
+### Client actions required
+- Run `php artisan commerce:doctor`. If **Time zone** fails: back up the database, `php artisan down`,
+  `php artisan commerce:db:utc --dry-run`, `php artisan commerce:db:utc`, apply the skeleton's `config/database.php`
+  (or add `'timezone' => env('DB_TIMEZONE')` to the `mysql` connection), add `DB_TIMEZONE=+00:00` to `.env`,
+  `php artisan config:cache`, `php artisan up`. Never set DB_TIMEZONE on an existing database without converting first.
 
 ## [1.5.0] - 2026-10-03
 

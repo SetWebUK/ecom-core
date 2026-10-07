@@ -15,6 +15,7 @@ use Pine\Commerce\Import\RenderedSite\RenderedSource;
 use Pine\Commerce\Import\Source\SiteProfile;
 use Pine\Commerce\Import\Source\SourceConnection;
 use Pine\Commerce\Import\Source\WordPressSource;
+use Pine\Commerce\Support\DatabaseClock;
 
 /**
  * One-way migration of a WordPress/WooCommerce store into this application's database (docs/IMPORTER.md).
@@ -69,6 +70,12 @@ class ImportWordPressCommand extends Command
             // store) keep the old Connection object, and when it reconnects the manager refreshes the PDO of the
             // live connection too – which resets its transaction level and silently commits a --dry-run.
             config(['database.default' => $target]);
+        }
+        if (! $this->option('dry-run') && ($clock = DatabaseClock::problem())) {
+            $this->error('Nothing imported – '.$clock.'.');
+            $this->line(DatabaseClock::fix());
+
+            return self::FAILURE;
         }
 
         // ---------------------------------------------------------------- source
