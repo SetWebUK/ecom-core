@@ -221,6 +221,20 @@ class WooApiImportTest extends TestCase
         $this->assertSame([['1', '100']], array_map(fn ($c) => [$c['query']['page'], $c['query']['per_page']], $shop->calls('wc/v3/products')));
     }
 
+    public function test_an_empty_page_before_the_last_does_not_end_the_list(): void
+    {
+        // WordPress drops media it may not show (attached to a draft/private post) after paging: on a live shop page
+        // 514 of 691 came back empty and the import stopped there, 1,700 images short
+        $shop = FakeWooShop::fake();
+        $shop->hidden['wp/v2/media'] = [500];
+        config(['commerce.woo_api.per_page' => 1]);
+
+        $this->assertSame(0, $this->import(['--only' => 'media']), $this->lastOutput);
+        $this->assertSame(['1', '2', '3'], array_map(fn ($c) => $c['query']['page'], $shop->calls('wp/v2/media')));
+        $this->assertTrue(DB::table('media')->where('path', 'uploads/2025/02/banner.png')->exists(), 'the page after the empty one');
+        $this->assertFalse(DB::table('media')->where('path', 'uploads/2025/01/shirt.jpg')->exists());
+    }
+
     public function test_every_authentication_mode_reaches_woocommerce(): void
     {
         $connection = fn (array $c) => Connection::make($c + ['url' => FakeWooShop::BASE, 'key' => FakeWooShop::KEY, 'secret' => FakeWooShop::SECRET]);

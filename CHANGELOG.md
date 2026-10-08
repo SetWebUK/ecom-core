@@ -21,6 +21,10 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 - Default theme: the header now reads the **Header menu** (location `mega`) before **Header menu (backup)** (`main`),
   as Admin › Menus labels them – a site with both showed the backup and ignored the menu the admin marks "in use". The
   mobile drawer falls back to the header menu (`mega`, then `main`) when no mobile menu has items. Regression test added.
+- WooCommerce API import: a page of results that came back empty no longer ends the list. WordPress drops the items a
+  request may not read *after* paging (media attached to a draft or private post), so a whole page can be empty with
+  more after it: on a live shop the media step stopped at page 514 of 691 and ~1,700 images were never downloaded,
+  with no error. Paging now ends at `X-WP-TotalPages` only. Regression test added (`FakeWooShop::$hidden`).
 
 ### Added
 - `php artisan commerce:db:utc [--dry-run] [--connection=]`: re-stores every TIMESTAMP value written in the server's
@@ -29,6 +33,11 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
   `database_timestamps_utc`), SQLite, and an app time zone other than UTC.
 - `commerce:doctor` › Database › **Time zone**: fails when the session time zone does not keep the app's times (probed
   in January and July, so it is caught in winter too).
+- Missing WordPress image sizes in imported content: `/storage/uploads/…-{W}x{H}.{ext}` that is not on disk 301s to
+  the nearest file that is (a square size for a square request, else the smallest variant of the original's shape that
+  covers the width, else the original or WordPress's `-scaled` original). Imports download originals and the media
+  library makes its own sizes, so `photo-450x206.jpg` in a page, post or category description was a broken image
+  (452 of them on one shop). Route `legacy.image`, `LegacyImageController`, feature switch `legacy_content`.
 
 ### Client skeleton (`stubs/client-skeleton`)
 - `config/database.php`: `'timezone' => env('DB_TIMEZONE')` on `mysql` and `scratch` (null = unchanged behaviour, so

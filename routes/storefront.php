@@ -11,6 +11,7 @@ use Pine\Commerce\Http\Controllers\ContactController;
 use Pine\Commerce\Http\Controllers\FeedController;
 use Pine\Commerce\Http\Controllers\HomeController;
 use Pine\Commerce\Http\Controllers\InvoiceController;
+use Pine\Commerce\Http\Controllers\LegacyImageController;
 use Pine\Commerce\Http\Controllers\PaymentWebhookController;
 use Pine\Commerce\Http\Controllers\ProductController;
 use Pine\Commerce\Http\Controllers\ResolveController;
@@ -116,6 +117,11 @@ Route::get('sitemap_index.xml', [SitemapController::class, 'index']);
 Route::get('robots.txt', [SitemapController::class, 'robots'])->name('robots');
 Route::get('feeds/google-shopping.xml', [FeedController::class, 'google'])->middleware(RequireFeature::for('google_feed'))->name('feed.google');
 Route::get('feed', [BlogController::class, 'feed'])->middleware(RequireFeature::for('blog'))->name('feed.posts'); // legacy WordPress posts RSS feed
+
+// A WordPress image size that is not on disk (imported content links photo-450x206.jpg; imports keep the original):
+// 301 to the nearest file that is. The web server answers every file that exists before Laravel sees the request.
+Route::get('storage/uploads/{path}', [LegacyImageController::class, 'show'])
+    ->where('path', '.+-[0-9]+x[0-9]+\\.[A-Za-z0-9]+')->name('legacy.image');
 
 // Catch-all: pages, product categories (+ /page/N), products, legacy redirects
 // Registered as a *fallback* route, so it always matches after every other route (package, theme or client
