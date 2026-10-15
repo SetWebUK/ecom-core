@@ -9,6 +9,8 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-15
+
 ### Migrations
 - `2026_10_15_000100_add_sale_dates_to_product_variations`: `product_variations.sale_starts_at` / `sale_ends_at`
   (nullable). **Client action:** `php artisan migrate`, then re-run the WooCommerce import's products step (or wait for
@@ -117,8 +119,16 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 ### Client skeleton (`stubs/client-skeleton`)
 - `config/database.php`: `'timezone' => env('DB_TIMEZONE')` on `mysql` and `scratch` (null = unchanged behaviour, so
   applying the file can never shift an existing database). `.env.example`: `DB_TIMEZONE=+00:00` for new clients.
+- `config/commerce.php`: feature switch `loyalty` (off) in the `features` block; a commented `shipping` example
+  (carriers and `default_carrier`).
 
 ### Client actions required
+- `php artisan migrate --force` (four additive migrations, see Migrations), then `php artisan commerce:publish`,
+  `php artisan commerce:theme:publish` (the default theme's `js/app.js`, `js/checkout.js` and `css/app.css` changed) and
+  `php artisan optimize`.
+- A shop that liked "DPD" pre-filled on Ready to send: `'shipping' => [..., 'default_carrier' => 'DPD']`.
+- Optional per shop: `catalog.search = 'precise'`, `features.loyalty = true`, Admin › Settings › Payments › "Debit or
+  credit card (via PayPal)".
 - Run `php artisan commerce:doctor`. If **Time zone** fails: back up the database, `php artisan down`,
   `php artisan commerce:db:utc --dry-run`, `php artisan commerce:db:utc`, apply the skeleton's `config/database.php`
   (or add `'timezone' => env('DB_TIMEZONE')` to the `mysql` connection), add `DB_TIMEZONE=+00:00` to `.env`,

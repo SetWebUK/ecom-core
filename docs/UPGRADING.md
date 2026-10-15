@@ -48,6 +48,23 @@ Read the release notes for:
 - **theme contract** changes (new optional views, new `supports` keys) – run `php artisan commerce:theme:check`;
 - **admin view overrides** in `resources/views/vendor/commerce/…` – diff them against the new package views.
 
+### Upgrading from 1.5 to 1.6
+
+1.6 is additive: everything new is off or unchanged until switched on, except bug fixes. Four migrations, all adding
+nullable columns / a new table: variant sale dates (`product_variations.sale_starts_at/ends_at`), automatic discounts
+(`coupons.auto_apply/label/buy_quantity/show_countdown`), product labels (`products.labels`), loyalty points
+(`loyalty_points`, `carts.loyalty_points`). Full list: CHANGELOG `[1.6.0]`.
+
+- `composer update pine/commerce`, `php artisan migrate --force` (Admin › Updates does both), then
+  `php artisan commerce:publish && php artisan commerce:theme:publish && php artisan optimize:clear && php artisan optimize`
+  – the default theme's scripts changed (order attribution cookie, loyalty points at checkout).
+- Behaviour changes to know about: a variant's sale price now respects sale dates (re-run the WooCommerce import's
+  products step to bring in per-variation dates); Ready to send has no hard-coded "DPD" any more (set
+  `shipping.default_carrier` to keep a default); every order now records its real origin (before: always Direct).
+- New config keys with defaults: `shipping.default_carrier` (null), `catalog.labels` (no automatic labels),
+  `catalog.search` ('broad'), `features.loyalty` (false), `loyalty.*`, `payments.gateways.paypal_card`. A client config
+  with its own `shipping`, `catalog` or `payments` block copies the new keys in to use them (blocks merge shallowly).
+
 ### Upgrading from 1.4 to 1.5
 
 1.5 is additive. One migration (`2026_10_03_000100_add_import_sources_and_woo_api_imports`): a nullable, indexed
