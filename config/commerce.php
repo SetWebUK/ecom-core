@@ -93,6 +93,9 @@ return [
         'spec_attributes' => [],
         'ajax_header' => 'X-Commerce-Catalog',
         'legacy_page_params' => [],
+        // search: 'broad' (name, SKU, descriptions – as WordPress) or 'precise' (name, SKU, brand, category names and
+        // attribute values such as the colour; descriptions only when nothing else matches) – ProductListing::searchMode()
+        'search' => 'broad',
         // automatic product labels (ProductPresenter::labels(), after the ones set in the admin): an attribute value
         // gives a label, e.g. 'attributes' => ['fitting' => ['tall' => 'Available in Tall fitting']]
         'labels' => ['attributes' => []],

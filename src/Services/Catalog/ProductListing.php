@@ -64,6 +64,7 @@ class ProductListing
 
     public function searching(?string $term): static
     {
+        $this->preciseFound = null;
         $term = trim(preg_replace('/\s+/u', ' ', (string) $term));
         $this->search = $term === '' ? null : mb_substr($term, 0, 100);
 
@@ -128,13 +129,67 @@ class ProductListing
                 ->whereIn('category_product.category_id', $ids));
         }
         if ($this->search !== null) {
-            foreach ($this->terms() as $term) {
-                $like = '%'.addcslashes($term, '%_\\').'%';
+            $this->applySearch($query, $this->searchMode());
+        }
+
+        return $query;
+    }
+
+    /**
+     * Search mode (config commerce.catalog.search):
+     *  - broad   (default, WordPress / WooCommerce): every word in the name, SKU, short description or description
+     *  - precise every word in the name, SKU, brand, a category name or an attribute value (e.g. Colour "Black"), so a
+     *            navy product whose description says "also available in black" isn't a result for "black"; when that
+     *            finds nothing at all, the search falls back to broad, so a word only found in descriptions still works
+     */
+    public function searchMode(): string
+    {
+        if ($this->search === null || config('commerce.catalog.search', 'broad') !== 'precise') {
+            return 'broad';
+        }
+        if ($this->preciseFound === null) {
+            $query = Product::query()->published();
+            if (static::hidesOutOfStock()) {
+                $query->inStock();
+            }
+            $this->preciseFound = $this->applySearch($query, 'precise')->exists();
+        }
+
+        return $this->preciseFound ? 'precise' : 'broad';
+    }
+
+    /** Does a precise search for the current term find anything (searchMode(), worked out once per listing)? */
+    protected ?bool $preciseFound = null;
+
+    protected static function hasBrandColumn(): bool
+    {
+        static $has = null;
+
+        return $has ??= \Illuminate\Support\Facades\Schema::hasColumn('products', 'brand');
+    }
+
+    /** Every search word must match one of the mode's fields (see searchMode()). */
+    protected function applySearch(Builder $query, string $mode): Builder
+    {
+        foreach ($this->terms() as $term) {
+            $like = '%'.addcslashes($term, '%_\\').'%';
+            if ($mode !== 'precise') {
                 $query->where(fn ($q) => $q->where('products.name', 'like', $like)
                     ->orWhere('products.short_description', 'like', $like)
                     ->orWhere('products.description', 'like', $like)
                     ->orWhere('products.sku', 'like', $like));
+
+                continue;
             }
+            $query->where(fn ($q) => $q->where('products.name', 'like', $like)
+                ->orWhere('products.sku', 'like', $like)
+                ->when(static::hasBrandColumn(), fn ($b) => $b->orWhere('products.brand', 'like', $like))
+                ->orWhereExists(fn ($e) => $e->selectRaw('1')->from('attribute_value_product as savp')
+                    ->join('attribute_values as sav', 'sav.id', '=', 'savp.attribute_value_id')
+                    ->whereColumn('savp.product_id', 'products.id')->where('sav.value', 'like', $like))
+                ->orWhereExists(fn ($e) => $e->selectRaw('1')->from('category_product as scp')
+                    ->join('categories as sc', 'sc.id', '=', 'scp.category_id')
+                    ->whereColumn('scp.product_id', 'products.id')->where('sc.name', 'like', $like)));
         }
 
         return $query;

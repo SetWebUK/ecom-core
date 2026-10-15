@@ -57,6 +57,12 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
   scheduled price refresh (`RefreshSalePrices`) follow variant dates. Tests: `ScheduledVariantSaleTest`.
 
 ### Added
+- Search mode **precise** (config `commerce.catalog.search` = `precise`; default `broad` = unchanged): every word
+  must be in the name, SKU, brand, a category name or an attribute value (e.g. Colour "Black"); descriptions are only
+  searched when that finds nothing. "black" no longer returns navy products whose description says "also available in
+  black", and finds black products named without the colour. The live suggestions follow the same rule.
+  `ProductListing::searchMode()`. Tests: `PreciseSearchTest`. **Config key added:** `catalog.search` – a client config
+  with its own `catalog` block adds it to switch.
 - **Loyalty points** (feature `loyalty`, default off; `Services\Loyalty\Loyalty`), like WooCommerce Points & Rewards:
   signed-in customers earn points on paid orders (per £1 of items after discounts, VAT included, delivery not), spend
   them at checkout ("Use my points", shown as a discount line "Points (400)"), get a welcome bonus for a new account;
