@@ -66,6 +66,15 @@ class LoyaltyPointsTest extends TestCase
         $this->assertSame('signup', LoyaltyPoint::sole()->type);
     }
 
+    public function test_registering_on_the_storefront_gives_the_welcome_bonus_once(): void
+    {
+        $this->post(route('register'), ['first_name' => 'Amy', 'last_name' => 'Tall', 'email' => 'amy@example.test', 'password' => 'Password12345!'])->assertRedirect();
+
+        $amy = \Pine\Commerce\Commerce::userModel()::where('email', 'amy@example.test')->firstOrFail();
+        $this->assertSame(200, Loyalty::balance($amy->id));
+        $this->assertSame(1, LoyaltyPoint::where('user_id', $amy->id)->where('type', 'signup')->count());
+    }
+
     public function test_a_paid_order_earns_once_and_a_cancelled_one_gives_them_back(): void
     {
         $bob = $this->customer();

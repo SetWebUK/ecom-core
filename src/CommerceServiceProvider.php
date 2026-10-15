@@ -254,12 +254,16 @@ class CommerceServiceProvider extends ServiceProvider
         Event::listen(OrderStatusChanged::class, [SendOrderStatusEmails::class, 'handle']);
         Event::listen(OrderStatusChanged::class, [SyncOrderStock::class, 'handle']);
         Event::listen(OrderStatusChanged::class, [\Pine\Commerce\Listeners\SyncLoyaltyPoints::class, 'handle']);
-        // loyalty welcome bonus: accounts created on the storefront or by staff (imports write rows directly, no event)
-        \Pine\Commerce\Commerce::userModel()::created(function ($user) {
-            if (\Pine\Commerce\Services\Loyalty\Loyalty::enabled() && ($user->role ?? 'customer') === 'customer' && ($points = \Pine\Commerce\Services\Loyalty\Loyalty::signupPoints()) > 0) {
-                \Pine\Commerce\Services\Loyalty\Loyalty::add((int) $user->id, $points, 'signup', null, 'Welcome bonus');
-            }
-        });
+        // loyalty welcome bonus: accounts created on the storefront or by staff (imports write rows directly, no event).
+        // Model events are per class: registration saves the package User, a client app has its own subclass – both.
+        foreach (array_unique([\Pine\Commerce\Models\User::class, \Pine\Commerce\Commerce::userModel()]) as $userClass) {
+            $userClass::created(function ($user) {
+                if (\Pine\Commerce\Services\Loyalty\Loyalty::enabled() && ($user->role ?? 'customer') === 'customer' && ($points = \Pine\Commerce\Services\Loyalty\Loyalty::signupPoints()) > 0
+                    && ! \Pine\Commerce\Models\LoyaltyPoint::query()->where('user_id', $user->id)->where('type', 'signup')->exists()) {
+                    \Pine\Commerce\Services\Loyalty\Loyalty::add((int) $user->id, $points, 'signup', null, 'Welcome bonus');
+                }
+            });
+        }
         // abandoned-cart recovery: an order won back by a reminder (no effect until a reminder was ever sent)
         Event::listen(OrderPlaced::class, [\Pine\Commerce\Listeners\MarkRecoveredCart::class, 'handle']);
     }
