@@ -56,7 +56,7 @@ class ExtensionApiTest extends TestCase
     public function test_built_in_gateways_implement_the_contract_in_config_order(): void
     {
         $gateways = app(PaymentManager::class)->all();
-        $this->assertSame(['stripe', 'paypal', 'bacs'], array_keys($gateways));
+        $this->assertSame(['stripe', 'paypal', 'paypal_card', 'bacs'], array_keys($gateways));
         $this->assertInstanceOf(StripeGateway::class, $gateways['stripe']);
         $this->assertInstanceOf(PaypalGateway::class, $gateways['paypal']);
         $this->assertInstanceOf(BacsGateway::class, $gateways['bacs']);
@@ -69,7 +69,7 @@ class ExtensionApiTest extends TestCase
     public function test_a_client_gateway_gets_its_admin_card_saves_encrypted_secrets_and_shows_at_checkout(): void
     {
         Commerce::gateway('acmepay', Fixtures\AcmePayGateway::class);
-        $this->assertSame(['stripe', 'paypal', 'bacs', 'acmepay'], array_keys(Commerce::payments()->all()));
+        $this->assertSame(['stripe', 'paypal', 'paypal_card', 'bacs', 'acmepay'], array_keys(Commerce::payments()->all()));
 
         $this->actingAs($this->neutralAdmin());
         $html = $this->get(route('admin.payments.edit'))->assertOk()->getContent();
@@ -104,7 +104,7 @@ class ExtensionApiTest extends TestCase
     public function test_gateways_can_be_replaced_or_removed_and_must_implement_the_contract(): void
     {
         Commerce::gateway('bacs', null);
-        $this->assertSame(['stripe', 'paypal'], array_keys(Commerce::payments()->all()));
+        $this->assertSame(['stripe', 'paypal', 'paypal_card'], array_keys(Commerce::payments()->all()));
 
         $this->expectException(InvalidArgumentException::class);
         Commerce::gateway('broken', \stdClass::class);

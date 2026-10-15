@@ -11,6 +11,7 @@ class PaymentMethods
     public const LABELS = [
         'stripe' => 'Card (Stripe)',
         'paypal' => 'PayPal',
+        'paypal_card' => 'Card (PayPal)',
         'bacs' => 'Bank transfer',
         'cheque' => 'Cheque',
         'cod' => 'Cash on delivery',
@@ -60,7 +61,7 @@ class PaymentMethods
         if ($code === 'stripe' && $isStripeId) {
             return ['url' => 'https://dashboard.stripe.com/payments/'.$id, 'label' => 'View in Stripe'];
         }
-        if (in_array($code, ['paypal', 'ppcp-gateway', 'ppcp-credit-card-gateway'], true) && ! $isStripeId && preg_match('/^[A-Z0-9]{12,20}$/', $id)) {
+        if (in_array($code, ['paypal', 'paypal_card', 'ppcp-gateway', 'ppcp-credit-card-gateway'], true) && ! $isStripeId && preg_match('/^[A-Z0-9]{12,20}$/', $id)) {
             return ['url' => 'https://www.paypal.com/activity/payment/'.$id, 'label' => 'View in PayPal'];
         }
 

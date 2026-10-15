@@ -26,6 +26,9 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class PaypalGateway extends Gateway
 {
+    /** Gateways that take payments through this PayPal app (PayPal itself and PaypalCardGateway): one webhook for both. */
+    public const PAYPAL_CODES = ['paypal', 'paypal_card'];
+
     public function code(): string
     {
         return 'paypal';
@@ -153,14 +156,7 @@ class PaypalGateway extends Gateway
             'payment_source' => [
                 'paypal' => [
                     'email_address' => $order->email,
-                    'experience_context' => [
-                        'brand_name' => mb_substr((string) setting('store.name', config('app.name')), 0, 127),
-                        'locale' => 'en-GB',
-                        'shipping_preference' => 'SET_PROVIDED_ADDRESS',
-                        'user_action' => 'PAY_NOW',
-                        'return_url' => route('checkout.payment.return', ['gateway' => $this->code(), 'order' => $order->number, 'key' => $order->order_key]),
-                        'cancel_url' => route('checkout.payment.cancel', ['gateway' => $this->code(), 'order' => $order->number, 'key' => $order->order_key]),
-                    ],
+                    'experience_context' => $this->experienceContext($order),
                 ],
             ],
         ];
@@ -191,6 +187,19 @@ class PaypalGateway extends Gateway
         $order->addNote('PayPal payment started (PayPal Order ID: '.$response->json('id').').');
 
         return PaymentResult::redirect($approve['href']);
+    }
+
+    /** How PayPal's page behaves (Orders v2 payment_source.paypal.experience_context). */
+    protected function experienceContext(Order $order): array
+    {
+        return [
+            'brand_name' => mb_substr((string) setting('store.name', config('app.name')), 0, 127),
+            'locale' => 'en-GB',
+            'shipping_preference' => 'SET_PROVIDED_ADDRESS',
+            'user_action' => 'PAY_NOW',
+            'return_url' => route('checkout.payment.return', ['gateway' => $this->code(), 'order' => $order->number, 'key' => $order->order_key]),
+            'cancel_url' => route('checkout.payment.cancel', ['gateway' => $this->code(), 'order' => $order->number, 'key' => $order->order_key]),
+        ];
     }
 
     public function handleReturn(Order $order, Request $request): PaymentResult
@@ -289,14 +298,16 @@ class PaypalGateway extends Gateway
         }
         $order = Order::find((int) $capture->json('custom_id'));
         $paypalOrderId = $capture->json('supplementary_data.related_ids.order_id');
-        if (! $order || ! $order->payments()->where('gateway', $this->code())->where('reference', $paypalOrderId)->exists()) {
+        // the payment may have been started as PayPal or as a card through PayPal: complete it under its own method
+        $payment = $order?->payments()->whereIn('gateway', static::PAYPAL_CODES)->where('reference', $paypalOrderId)->first();
+        if (! $payment) {
             return response('Order not found.', 200);
         }
 
         if ($capture->json('status') === 'COMPLETED') {
-            PaymentManager::complete($order, $this->code(), $captureId, (float) $capture->json('amount.value'), ['paypal_order_id' => $paypalOrderId], null, $paypalOrderId);
+            PaymentManager::complete($order, $payment->gateway, $captureId, (float) $capture->json('amount.value'), ['paypal_order_id' => $paypalOrderId], null, $paypalOrderId);
         } elseif (in_array($capture->json('status'), ['DECLINED', 'FAILED'], true) && in_array($order->status, ['pending', 'on-hold'], true)) {
-            PaymentManager::fail($order, $this->code(), $paypalOrderId, 'PayPal payment was declined.');
+            PaymentManager::fail($order, $payment->gateway, $paypalOrderId, 'PayPal payment was declined.');
         }
 
         return response('OK', 200);

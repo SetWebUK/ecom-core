@@ -55,6 +55,12 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
   scheduled price refresh (`RefreshSalePrices`) follow variant dates. Tests: `ScheduledVariantSaleTest`.
 
 ### Added
+- Payment method **Debit or credit card (via PayPal)** (`paypal_card`, `PaypalCardGateway`): the PayPal app and keys of
+  Admin › Settings › Payments › PayPal, with PayPal's page opening on its card form (`landing_page: GUEST_CHECKOUT`) –
+  card payments without a separate card provider, as the WooCommerce PayPal Payments plugin's "Debit & Credit Cards".
+  Off until switched on; refunds, the order's transaction link and `/webhooks/paypal` work for it (the PayPal webhook
+  now completes a payment under the method it was started with). **Config:** `payments.gateways` gains `paypal_card`
+  (a client config with its own `gateways` list adds it to offer it). Tests: `PaypalCardGatewayTest`.
 - **Product labels** ("New Season", "Special offer"): `products.labels`, set in the product editor (Organisation),
   in bulk from the Products list (More actions › Add / remove a label…) and in the product CSV (`labels` column).
   Presenter `labels(Product)` adds automatic labels from attribute values, config `commerce.catalog.labels.attributes`

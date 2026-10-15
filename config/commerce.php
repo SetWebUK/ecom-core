@@ -293,6 +293,7 @@ return [
         'gateways' => [
             'stripe' => 'Pine\\Commerce\\Services\\Payments\\Gateways\\StripeGateway',
             'paypal' => 'Pine\\Commerce\\Services\\Payments\\Gateways\\PaypalGateway',
+            'paypal_card' => 'Pine\\Commerce\\Services\\Payments\\Gateways\\PaypalCardGateway', // cards through PayPal (off until switched on)
             'bacs' => 'Pine\\Commerce\\Services\\Payments\\Gateways\\BacsGateway',
         ],
     ],
