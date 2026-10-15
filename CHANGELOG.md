@@ -22,6 +22,9 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
   **Client action:** `php artisan migrate`.
 
 ### Fixed
+- Order emails, the thank-you page and PDF invoices name each discount as customers saw it ("Any 2 tees for £25",
+  "Points (400)") instead of internal codes; checkout stores the names in order meta `coupon_labels`
+  (`Order::discountNames()`). Staff screens keep the codes.
 - Order attribution: every order's Origin was "Direct (typed in / bookmark)" – checkout reads the attribution cookie
   (`commerce.checkout.attribution_cookie`) but nothing wrote it. The default theme's `js/app.js` now records it: the last
   campaign link (`utm_*`, Google Ads `gclid`/`gbraid`/`wbraid` → google / cpc) or other website / search engine, the

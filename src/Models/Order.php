@@ -217,4 +217,23 @@ class Order extends Model
     {
         return route('checkout.thankyou', ['order' => $this->number, 'key' => $this->order_key]);
     }
+
+    /**
+     * The order's discounts as customers know them, e.g. "SUMMER10, Any 2 tees for £25, Points (400)": the names stored
+     * at checkout (meta coupon_labels), else an automatic discount's label, else the code. For emails, the thank-you
+     * page and invoices; staff screens show the codes.
+     */
+    public function discountNames(): string
+    {
+        $codes = array_values(array_filter(array_map('trim', explode(',', (string) $this->coupon_code))));
+        if (! $codes) {
+            return '';
+        }
+        $stored = (array) (($this->meta ?? [])['coupon_labels'] ?? []);
+        $missing = array_diff($codes, array_keys($stored));
+        $labels = $missing ? Coupon::query()->whereIn('code', $missing)->where('auto_apply', true)->whereNotNull('label')->pluck('label', 'code')->all() : [];
+
+        return implode(', ', array_map(fn (string $code) => $stored[$code] ?? $labels[$code]
+            ?? ($code === \Pine\Commerce\Services\Loyalty\Loyalty::CODE ? ucfirst(\Pine\Commerce\Services\Loyalty\Loyalty::label()) : $code), $codes));
+    }
 }

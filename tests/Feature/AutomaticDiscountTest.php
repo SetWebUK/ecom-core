@@ -166,6 +166,9 @@ class AutomaticDiscountTest extends TestCase
         $this->assertSame($auto->code, $order->coupon_code);
         $this->assertSame('25.00', (string) $order->total);
         $this->assertSame(1, (int) $auto->fresh()->usage_count);
+        $this->assertSame('Any 2 tees for £25', $order->discountNames(), 'customers see the offer, not its internal code');
+        $email = view('theme::emails.partials.order-details', ['order' => $order])->render();
+        $this->assertStringContainsString('Discount (Any 2 tees for £25)', html_entity_decode($email));
     }
 
     public function test_admin_creates_an_automatic_multi_buy_without_typing_a_code(): void

@@ -99,6 +99,7 @@ class LoyaltyPointsTest extends TestCase
         $order = Order::latest('id')->first();
         $this->assertSame('20.00', (string) $order->total);
         $this->assertSame(400, $order->meta['loyalty_points_spent']);
+        $this->assertSame('Points (400)', $order->discountNames());
         $this->assertSame(0, Loyalty::balance($bob->id));
 
         $order->updateStatus('processing');

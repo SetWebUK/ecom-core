@@ -343,6 +343,7 @@ class CheckoutService
                 'stock_reduced' => false,
                 'usage_recorded' => false,
                 'coupon_discounts' => $totals['coupons'],
+                'coupon_labels' => $totals['coupon_labels'] ?? [], // what customers saw: an automatic discount's name, Points (400)
                 'tax_rate' => $totals['tax_rate'],
                 'shipping_tax' => $totals['shipping_tax'],
                 'prices_include_tax' => ($totals['prices_include_tax'] ?? false) ? 'yes' : 'no',

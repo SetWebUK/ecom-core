@@ -121,7 +121,7 @@
                     <table class="totals">
                         <tr><td>Subtotal</td><td class="num">{{ money($amounts['subtotal'] ?? $order->subtotal) }}</td></tr>
                         @if ((float) ($amounts['discount'] ?? $order->discount_total) > 0)
-                            <tr><td>Discount{{ $order->coupon_code ? ' ('.str_replace(',', ', ', $order->coupon_code).')' : '' }}</td><td class="num">−{{ money($amounts['discount'] ?? $order->discount_total) }}</td></tr>
+                            <tr><td>Discount{{ $order->coupon_code ? ' ('.$order->discountNames().')' : '' }}</td><td class="num">−{{ money($amounts['discount'] ?? $order->discount_total) }}</td></tr>
                         @endif
                         <tr><td>Shipping</td><td class="num">{{ (float) ($amounts['shipping'] ?? $order->shipping_total) > 0 ? money($amounts['shipping'] ?? $order->shipping_total) : 'Free' }}</td></tr>
                         @if ($taxTotal > 0 && ! $taxIncluded)
