@@ -141,14 +141,18 @@ return [
 
     'shipping' => [
         'install_zones' => true,                  // commerce:install creates a UK zone with free delivery
+        // the Carrier drop-down of Admin › Orders › Ready to send, in this order, and the tracking link in emails and
+        // the account (name => tracking page, {number} = the tracking number)
         'carriers' => [
             'Royal Mail' => 'https://www.royalmail.com/track-your-item#/tracking-results/{number}',
             'DPD' => 'https://track.dpd.co.uk/parcels/{number}',
+            'Parcelforce' => 'https://www.parcelforce.com/track-trace?trackNumber={number}',
             'DHL' => 'https://www.dhl.com/gb-en/home/tracking.html?tracking-id={number}',
             'UPS' => 'https://www.ups.com/track?tracknum={number}',
             'FedEx' => 'https://www.fedex.com/fedextrack/?trknbr={number}',
             'Evri' => 'https://www.evri.com/track/parcel/{number}',
         ],
+        'default_carrier' => null,                // pre-selected on Ready to send (a name from 'carriers'; null = none)
     ],
 
     'feeds' => ['google' => ['default_category' => null, 'default_condition' => 'new', 'condition_map' => ['used' => 'used']]],

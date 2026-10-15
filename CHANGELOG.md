@@ -25,8 +25,18 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
   request may not read *after* paging (media attached to a draft or private post), so a whole page can be empty with
   more after it: on a live shop the media step stopped at page 514 of 691 and ~1,700 images were never downloaded,
   with no error. Paging now ends at `X-WP-TotalPages` only. Regression test added (`FakeWooShop::$hidden`).
+- Admin › Orders › Ready to send (and Edit tracking): **Carrier** is now a drop-down of the store's carriers plus any
+  used before, with "Other…" for a typed name. It was a typed box pre-filled with "DPD" whose browser suggestions only
+  match what is already typed, so staff only ever saw DPD. The carriers come from `commerce.shipping.carriers` (it was
+  only documentation before; the admin used a hard-coded list), and their `{number}` URLs now drive the tracking link
+  in the completed-order email, order tracking and My account ("Royal Mail Tracked 48" matches "Royal Mail"), before the
+  built-in list. Tests: `FulfilmentCarrierTest`.
 
 ### Added
+- Config `commerce.shipping.default_carrier` (default `null`): the carrier pre-selected on Ready to send. Replaces the
+  hard-coded "DPD". `commerce.shipping.carriers` gains Parcelforce. **Client action:** a shop that relied on DPD
+  being pre-filled sets `'default_carrier' => 'DPD'` in its `config/commerce.php`; a shop with its own `shipping` block
+  lists its couriers in `carriers` (the drop-down shows those, in that order).
 - `php artisan commerce:db:utc [--dry-run] [--connection=]`: re-stores every TIMESTAMP value written in the server's
   clock so it reads the same once the connection runs in UTC. Per table, in a transaction, checksum-verified (rolled
   back on any difference); only the connection's prefixed tables; refuses a second run (marker setting
