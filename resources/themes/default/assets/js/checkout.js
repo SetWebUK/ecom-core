@@ -339,5 +339,6 @@
     var initial = $('input[name="payment_method"]:checked');
     if (initial) { selectChoice(initial); if (initial.value === 'stripe') { mountStripe(); } }
     var summaryDetails = $('[data-summary-details]');
-    if (summaryDetails && window.matchMedia('(max-width: 999px)').matches) { summaryDetails.open = false; }
+    // phones: the summary starts closed – unless the customer has loyalty points to use (the button is inside it)
+    if (summaryDetails && window.matchMedia('(max-width: 999px)').matches && !summaryDetails.querySelector('[data-points-apply]')) { summaryDetails.open = false; }
 })();
