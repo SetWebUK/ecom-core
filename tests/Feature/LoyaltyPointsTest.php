@@ -97,6 +97,7 @@ class LoyaltyPointsTest extends TestCase
         $this->post(route('cart.add'), ['product_id' => $this->product(30)->id, 'quantity' => 1], ['Accept' => 'application/json'])->assertOk();
 
         $this->postJson(route('cart.points'), ['context' => 'checkout'])->assertOk()->assertJson(['ok' => true]);
+        $this->assertSame(400, (int) \Pine\Commerce\Models\Cart::where('user_id', $bob->id)->value('loyalty_points'), 'the balance, never PHP_INT_MAX (MySQL INT UNSIGNED)');
         Cart::flush();
         $cart = app(Cart::class);
         $cart->reset();

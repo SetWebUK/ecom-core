@@ -80,7 +80,7 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
   Rewards in the WordPress database (read only; the importer's WP_DB_* settings or `--wp-path`; the REST API doesn't
   expose them) or `commerce:loyalty:import file.csv` (re-runnable: adds only the difference). Exports:
   `php artisan commerce:loyalty:export [file] [--all]` (email, points, worth – importable again) and a Points column in
-  Admin › Customers › Export. On phones the checkout summary stays open when there are points to use. Points are checked under lock at checkout so they can't be spent twice. **Config keys added:**
+  Admin › Customers › Export. The basket stores the points chosen as at most the balance. On phones the checkout summary stays open when there are points to use. Points are checked under lock at checkout so they can't be spent twice. **Config keys added:**
   `features.loyalty` (false), `loyalty.*` defaults. Tests: `LoyaltyPointsTest`.
 - Payment method **Debit or credit card (via PayPal)** (`paypal_card`, `PaypalCardGateway`): the PayPal app and keys of
   Admin › Settings › Payments › PayPal, with PayPal's page opening on its card form (`landing_page: GUEST_CHECKOUT`) –

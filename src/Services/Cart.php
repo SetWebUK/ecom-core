@@ -393,9 +393,13 @@ class Cart
         return Loyalty::enabled() ? (int) ($this->model()?->loyalty_points ?? 0) : 0;
     }
 
-    /** Spend points on this basket (0 = none). Returns the points that will actually be used. */
+    /**
+     * Spend points on this basket (0 = none; more than the balance = all of it). Returns the points that will actually
+     * be used. Stored no higher than the balance (an unsigned INT column: MySQL refuses PHP_INT_MAX).
+     */
     public function setLoyaltyPoints(int $points): int
     {
+        $points = max(0, min($points, Loyalty::balance($this->user()?->id)));
         $this->model()->forceFill(['loyalty_points' => $points > 0 ? $points : null])->save();
         $this->forgetTotals();
 
