@@ -26,8 +26,11 @@ class PreciseSearchTest extends TestCase
         $make('Cotton Tee BLACK T015');
         $make('Cotton Tee NAVY T015', '<p>Also available in black, white and grey.</p>');
         $colourless = $make('Jersey Polo', '<p>Soft jersey.</p>');
-        $colour = Attribute::create(['name' => 'Colour', 'slug' => 'colour']);
+        $colour = Attribute::create(['name' => 'Colour', 'slug' => 'colour', 'is_filterable' => true]);
         $colourless->attributeValues()->attach($colour->values()->create(['value' => 'Black', 'slug' => 'black'])->id);
+        // WooCommerce tags imported as an attribute: search phrases, not facts about the product
+        $tags = Attribute::create(['name' => 'Tags', 'slug' => 'tags', 'is_filterable' => false]);
+        Product::where('name', 'Cotton Tee NAVY T015')->first()->attributeValues()->attach($tags->values()->create(['value' => 'CHEAP BIG BLACK COATS', 'slug' => 'cheap-big-black-coats'])->id);
         $make('Cord Shirt TAN', '<p>Made with a rare herringbone weave.</p>');
     }
 
@@ -51,7 +54,7 @@ class PreciseSearchTest extends TestCase
     {
         config(['commerce.catalog.search' => 'precise']);
 
-        $this->assertSame(['Cotton Tee BLACK T015', 'Jersey Polo'], $this->names('black'), 'the navy tee only mentions black in its description');
+        $this->assertSame(['Cotton Tee BLACK T015', 'Jersey Polo'], $this->names('black'), 'the navy tee only mentions black in its description and its tags');
         $this->assertSame(['Cotton Tee BLACK T015'], $this->names('black t015'), 'every word must match');
         $this->assertSame(['Cord Shirt TAN'], $this->names('herringbone'), 'nothing precise: falls back to descriptions');
         $this->assertSame('precise', ProductListing::make()->searching('black')->searchMode());

@@ -138,7 +138,7 @@ class ProductListing
     /**
      * Search mode (config commerce.catalog.search):
      *  - broad   (default, WordPress / WooCommerce): every word in the name, SKU, short description or description
-     *  - precise every word in the name, SKU, brand, a category name or an attribute value (e.g. Colour "Black"), so a
+     *  - precise every word in the name, SKU, brand, a category name or a filterable attribute's value (e.g. Colour "Black"), so a
      *            navy product whose description says "also available in black" isn't a result for "black"; when that
      *            finds nothing at all, the search falls back to broad, so a word only found in descriptions still works
      */
@@ -184,9 +184,12 @@ class ProductListing
             $query->where(fn ($q) => $q->where('products.name', 'like', $like)
                 ->orWhere('products.sku', 'like', $like)
                 ->when(static::hasBrandColumn(), fn ($b) => $b->orWhere('products.brand', 'like', $like))
+                // only the shop's filter attributes (Colour, Size …): an imported "Tags" attribute full of search
+                // phrases ("CHEAP BIG BLACK COATS" on a navy coat) would bring the noise back
                 ->orWhereExists(fn ($e) => $e->selectRaw('1')->from('attribute_value_product as savp')
                     ->join('attribute_values as sav', 'sav.id', '=', 'savp.attribute_value_id')
-                    ->whereColumn('savp.product_id', 'products.id')->where('sav.value', 'like', $like))
+                    ->join('attributes as sa', 'sa.id', '=', 'sav.attribute_id')
+                    ->whereColumn('savp.product_id', 'products.id')->where('sa.is_filterable', true)->where('sav.value', 'like', $like))
                 ->orWhereExists(fn ($e) => $e->selectRaw('1')->from('category_product as scp')
                     ->join('categories as sc', 'sc.id', '=', 'scp.category_id')
                     ->whereColumn('scp.product_id', 'products.id')->where('sc.name', 'like', $like)));

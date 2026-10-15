@@ -58,7 +58,8 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ### Added
 - Search mode **precise** (config `commerce.catalog.search` = `precise`; default `broad` = unchanged): every word
-  must be in the name, SKU, brand, a category name or an attribute value (e.g. Colour "Black"); descriptions are only
+  must be in the name, SKU, brand, a category name or a filterable attribute's value (e.g. Colour "Black" – not an
+  imported "Tags" attribute of search phrases); descriptions are only
   searched when that finds nothing. "black" no longer returns navy products whose description says "also available in
   black", and finds black products named without the colour. The live suggestions follow the same rule.
   `ProductListing::searchMode()`. Tests: `PreciseSearchTest`. **Config key added:** `catalog.search` – a client config
