@@ -44,9 +44,10 @@ class PaypalCardGateway extends PaypalGateway
         ];
     }
 
+    /** Card marks only (no PayPal / Apple Pay / Google Pay, which this method doesn't offer). */
     public function icons(): string
     {
-        return theme_view('checkout.partials.card-icons')->render();
+        return \Pine\Commerce\Theme\Storefront::paymentIcons(['visa', 'mastercard', 'maestro', 'amex']);
     }
 
     protected function experienceContext(Order $order): array
