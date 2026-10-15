@@ -158,4 +158,22 @@ class CatalogueTools
 
         return $text.'.';
     }
+
+    /**
+     * Labels already on products (for the editor's suggestions), most used first, at most 30.
+     *
+     * @return list<string>
+     */
+    public static function labelsInUse(): array
+    {
+        $counts = [];
+        foreach (\Pine\Commerce\Models\Product::query()->whereNotNull('labels')->limit(5000)->pluck('labels') as $labels) {
+            foreach ((array) (is_string($labels) ? json_decode($labels, true) : $labels) as $label) {
+                $counts[(string) $label] = ($counts[(string) $label] ?? 0) + 1;
+            }
+        }
+        arsort($counts);
+
+        return array_slice(array_keys($counts), 0, 30);
+    }
 }

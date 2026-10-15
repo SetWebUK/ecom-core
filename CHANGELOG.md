@@ -15,6 +15,7 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
   the next sync) so imported variations get their sale dates.
 - `2026_10_15_000200_add_automatic_discounts_to_coupons`: `coupons.auto_apply`, `label`, `buy_quantity`,
   `show_countdown` (additive; existing codes keep `auto_apply = false`). **Client action:** `php artisan migrate`.
+- `2026_10_15_000300_add_labels_to_products`: `products.labels` (JSON, nullable). **Client action:** `php artisan migrate`.
 
 ### Fixed
 - Imports (WooCommerce API and database): a product image alt longer than 255 characters (a whole description pasted
@@ -46,6 +47,12 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
   scheduled price refresh (`RefreshSalePrices`) follow variant dates. Tests: `ScheduledVariantSaleTest`.
 
 ### Added
+- **Product labels** ("New Season", "Special offer"): `products.labels`, set in the product editor (Organisation),
+  in bulk from the Products list (More actions › Add / remove a label…) and in the product CSV (`labels` column).
+  Presenter `labels(Product)` adds automatic labels from attribute values, config `commerce.catalog.labels.attributes`
+  (e.g. `['fitting' => ['tall' => 'Available in Tall fitting']]`, default none). Themes choose where to show them.
+  Tests: `ProductLabelsTest`. **Config key added:** `catalog.labels` – a client config with its own `catalog` block
+  copies it in to use automatic labels.
 - **Automatic discounts** (Admin › Discounts › "How customers get it" › Automatic): the basket applies every running
   automatic discount whose rules match – whole shop, chosen categories or products, exclusions, minimum spend, dates,
   usage limits – with no code. Customers see its **label** ("20% off knitwear") in the basket and checkout (no remove

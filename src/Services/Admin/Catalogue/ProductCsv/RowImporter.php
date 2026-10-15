@@ -261,6 +261,7 @@ class RowImporter
         $set('meta_title', 'meta_title', $text(250));
         $set('meta_description', 'meta_description', $text(1000));
         $set('featured', 'is_featured', [Cells::class, 'bool'], false);
+        $set('labels', 'labels', fn ($v) => Product::normaliseLabels($v) ?: null);
         $set('cost_price', 'cost_price', fn ($v) => Cells::money($v, 'Cost price'));
         $set('tax_status', 'tax_status', fn ($v) => in_array($s = mb_strtolower(trim($v)), ['taxable', 'shipping', 'none'], true) ? $s
             : throw new InvalidArgumentException('Tax status “'.Cells::short($v).'” should be taxable, shipping or none'), false);

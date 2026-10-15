@@ -11,7 +11,7 @@ class ProductBulkRequest extends BulkActionRequest
 {
     protected array $actions = [
         'publish', 'draft', 'outofstock', 'instock', 'feature', 'unfeature',
-        'add_category', 'remove_category', 'adjust_price', 'set_sale', 'end_sale', 'delete', 'restore',
+        'add_category', 'remove_category', 'add_label', 'remove_label', 'adjust_price', 'set_sale', 'end_sale', 'delete', 'restore',
     ];
 
     protected function prepareForValidation(): void
@@ -30,6 +30,7 @@ class ProductBulkRequest extends BulkActionRequest
 
         return array_merge(parent::rules(), [
             'category_id' => [Rule::requiredIf(in_array($action, ['add_category', 'remove_category'], true)), 'nullable', 'integer', Rule::exists('categories', 'id')],
+            'label' => [Rule::requiredIf(in_array($action, ['add_label', 'remove_label'], true)), 'nullable', 'string', 'max:40'],
             'field' => [Rule::requiredIf($action === 'adjust_price'), 'nullable', Rule::in(array_keys(PriceAdjuster::FIELDS))],
             'mode' => [Rule::requiredIf($action === 'adjust_price'), 'nullable', Rule::in(array_keys(PriceAdjuster::MODES))],
             'amount' => [Rule::requiredIf($action === 'adjust_price'), 'nullable', 'numeric', 'min:0', 'max:999999.99',
@@ -45,6 +46,7 @@ class ProductBulkRequest extends BulkActionRequest
     {
         return array_merge(parent::messages(), [
             'category_id.required' => 'Choose a category.',
+            'label.required' => 'Enter the label, e.g. New Season.',
             'amount.required' => 'Enter an amount.',
             'percent.required' => 'Enter the discount percentage.',
             'percent.max' => 'A sale can be at most 95% off.',

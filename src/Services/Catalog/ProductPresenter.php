@@ -298,6 +298,34 @@ class ProductPresenter
     }
 
     /**
+     * The product's labels: the ones set in the admin (products.labels), then automatic ones from config
+     * commerce.catalog.labels.attributes ([attribute slug => [value slug => label]], e.g.
+     * ['fitting' => ['tall' => 'Available in Tall fitting']]) for any value the product (or one of its variants) has.
+     *
+     * @return list<string>
+     */
+    public static function labels(Product $product): array
+    {
+        $labels = (array) ($product->labels ?? []);
+        $rules = (array) config('commerce.catalog.labels.attributes', []);
+        if ($rules) {
+            $values = [];
+            foreach ($product->relationLoaded('attributeValues') ? $product->attributeValues : $product->attributeValues()->with('attribute')->get() as $value) {
+                $values[(string) $value->attribute?->slug][] = (string) $value->slug;
+            }
+            foreach ($rules as $attribute => $map) {
+                foreach ((array) $map as $slug => $label) {
+                    if (in_array((string) $slug, $values[(string) $attribute] ?? [], true)) {
+                        $labels[] = (string) $label;
+                    }
+                }
+            }
+        }
+
+        return Product::normaliseLabels($labels);
+    }
+
+    /**
      * The biggest saving on a product, for "SAVE 20%" / "UP TO 40% OFF" badges: a simple product on sale, or any
      * active variant on sale (upto = the variants' savings differ). Null when nothing is on sale.
      *

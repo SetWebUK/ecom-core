@@ -113,6 +113,7 @@ class ProductRequest extends FormRequest
             'published_at' => ['nullable', 'date'],
             'type' => ['required', Rule::in(['simple', 'variable'])],
             'is_featured' => ['boolean'],
+            'labels' => ['nullable', 'string', 'max:300'],
 
             'category_ids' => ['array', 'max:100'],
             'category_ids.*' => ['integer', Rule::exists('categories', 'id')],
@@ -422,6 +423,7 @@ class ProductRequest extends FormRequest
             'published_at' => $publishedAt,
             'type' => $this->input('type'),
             'is_featured' => $this->boolean('is_featured'),
+            'labels' => Product::normaliseLabels($this->input('labels')) ?: null,
             'regular_price' => $variable ? ($product?->regular_price) : $money('regular_price'),
             'sale_price' => $variable ? null : $money('sale_price'),
             'sale_starts_at' => $scheduled ? LocalTime::fromInput($this->input('sale_starts_at')) : null,
