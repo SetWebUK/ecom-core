@@ -18,6 +18,14 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 - `2026_10_15_000300_add_labels_to_products`: `products.labels` (JSON, nullable). **Client action:** `php artisan migrate`.
 
 ### Fixed
+- Order attribution: every order's Origin was "Direct (typed in / bookmark)" – checkout reads the attribution cookie
+  (`commerce.checkout.attribution_cookie`) but nothing wrote it. The default theme's `js/app.js` now records it: the last
+  campaign link (`utm_*`, Google Ads `gclid`/`gbraid`/`wbraid` → google / cpc) or other website / search engine, the
+  landing page, first-visit time and pages viewed, for 30 days; a typed-in visit keeps the earlier source, and the
+  checkout / basket pages and returns from PayPal / Stripe / Klarna / Clearpay never replace it. Where the cookie banner
+  is shown it waits for statistics consent (and records straight after "Accept all"). The cookie name reaches the
+  script through `#store-config` (`attributionCookie`). Child themes keep it as long as they load `js/app.js`.
+  Tests: `OrderAttributionTest`.
 - Imports (WooCommerce API and database): a product image alt longer than 255 characters (a whole description pasted
   into it) no longer stops the import with "Data too long for column 'alt'" on MySQL – it is cut to 250 characters,
   like the media library's. Regression test added.

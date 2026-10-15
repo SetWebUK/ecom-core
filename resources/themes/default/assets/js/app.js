@@ -555,6 +555,53 @@
                 window.gtag('consent', 'update', { analytics_storage: g, ad_storage: g, ad_user_data: g, ad_personalization: g, personalization_storage: g });
             }
             banner.hidden = true;
+            recordAttribution();
         });
     }
+
+    /* ------------------------------------------------------------------ order attribution */
+    // Where the visitor came from, for the order's "Origin" (Services\Checkout\Attribution reads it at checkout): the
+    // last campaign link (utm_*, Google Ads gclid) or other website / search engine that brought them, the page they
+    // landed on and how many pages they viewed. Kept 30 days; a visit typed in or from a bookmark keeps the earlier
+    // source (WooCommerce's "last non-direct" rule). Never replaced on the checkout pages, so coming back from
+    // PayPal or a card check isn't a "referral from paypal.com". A shop that asks for cookie consent (the banner is on
+    // the page) only records it once the visitor has accepted statistics cookies.
+    function recordAttribution() {
+        var name = config.attributionCookie;
+        if (!name || !navigator.cookieEnabled) { return; }
+        if (banner) {
+            var c = d.cookie.match(/(?:^|; )store_consent=([^;]*)/);
+            if (!c || decodeURIComponent(c[1]).split(',').indexOf('statistics') < 0) { return; }
+        }
+        var current = null;
+        var m = d.cookie.match(new RegExp('(?:^|; )' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
+        try { current = m ? JSON.parse(decodeURIComponent(m[1])) : null; } catch (e) { current = null; }
+        var q = new URLSearchParams(window.location.search);
+        var utm = {};
+        ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(function (k) { var v = q.get(k); if (v) { utm[k] = v.slice(0, 150); } });
+        var gclid = q.get('gclid') || q.get('gbraid') || q.get('wbraid');
+        var refHost = '';
+        try { refHost = d.referrer ? new URL(d.referrer).hostname.replace(/^www\./, '') : ''; } catch (e) { refHost = ''; }
+        var own = window.location.hostname.replace(/^www\./, '');
+        var payment = /(^|\.)(paypal\.com|paypal\.me|stripe\.com|stripe\.network|klarna\.com|clearpay\.co\.uk|afterpay\.com)$/.test(refHost);
+        var external = refHost !== '' && refHost !== own && !payment;
+        var checkout = /^\/(checkout|basket|cart)(\/|$)/.test(window.location.pathname);
+        var data;
+        if (!current || (!checkout && (utm.utm_source || gclid || external))) {
+            data = utm;
+            if (gclid) {
+                data.gclid = '1';
+                if (!data.utm_source) { data.utm_source = 'google'; data.utm_medium = data.utm_medium || 'cpc'; }
+            }
+            if (external) { data.referrer = d.referrer.slice(0, 500); }
+            data.landing = (window.location.pathname + window.location.search).slice(0, 400);
+            data.ts = new Date().toISOString();
+            data.pages = 1;
+        } else {
+            data = current;
+            data.pages = Math.min(9999, (parseInt(data.pages, 10) || 0) + 1);
+        }
+        d.cookie = name + '=' + encodeURIComponent(JSON.stringify(data)) + '; Max-Age=' + (60 * 60 * 24 * 30) + '; path=/; SameSite=Lax' + (window.location.protocol === 'https:' ? '; Secure' : '');
+    }
+    recordAttribution();
 })();
