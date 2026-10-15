@@ -99,7 +99,10 @@
                     </div>
                     <p class="field__help" x-show="parseFloat(percent) > 0" x-text="'e.g. £100.00 becomes ' + Admin.money(100 * (1 - (parseFloat(percent) || 0) / 100))"></p>
                 </div>
-                <x-admin.input type="date" name="sale_ends_at" label="Sale ends" optional help="UK time, end of the day. Leave blank to keep the sale until you end it." />
+                <div class="form-grid">
+                    <x-admin.input type="date" name="sale_starts_at" label="Sale starts" optional help="UK time, start of the day. Blank = now." />
+                    <x-admin.input type="date" name="sale_ends_at" label="Sale ends" optional help="UK time, end of the day. Blank = until you end it." />
+                </div>
             </div>
         </form>
         <x-slot:footer>

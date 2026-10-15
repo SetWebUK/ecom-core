@@ -36,7 +36,8 @@ class ProductBulkRequest extends BulkActionRequest
                 Rule::when(in_array($this->input('mode'), ['increase_percent', 'decrease_percent'], true), ['max:1000'])],
             'round' => ['nullable', Rule::in(array_keys(PriceAdjuster::ROUNDING))],
             'percent' => [Rule::requiredIf($action === 'set_sale'), 'nullable', 'numeric', 'min:1', 'max:95'],
-            'sale_ends_at' => ['nullable', 'date'],
+            'sale_starts_at' => ['nullable', 'date'],
+            'sale_ends_at' => ['nullable', 'date', Rule::when(filled($this->input('sale_starts_at')), ['after_or_equal:sale_starts_at'])],
         ]);
     }
 
@@ -47,6 +48,7 @@ class ProductBulkRequest extends BulkActionRequest
             'amount.required' => 'Enter an amount.',
             'percent.required' => 'Enter the discount percentage.',
             'percent.max' => 'A sale can be at most 95% off.',
+            'sale_ends_at.after_or_equal' => 'The sale must end on or after the day it starts.',
             'amount.max' => 'That amount is too large.',
         ]);
     }

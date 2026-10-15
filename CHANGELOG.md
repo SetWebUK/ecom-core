@@ -9,6 +9,11 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+### Migrations
+- `2026_10_15_000100_add_sale_dates_to_product_variations`: `product_variations.sale_starts_at` / `sale_ends_at`
+  (nullable). **Client action:** `php artisan migrate`, then re-run the WooCommerce import's products step (or wait for
+  the next sync) so imported variations get their sale dates.
+
 ### Fixed
 - Imports (WooCommerce API and database): a product image alt longer than 255 characters (a whole description pasted
   into it) no longer stops the import with "Data too long for column 'alt'" on MySQL – it is cut to 250 characters,
@@ -31,6 +36,12 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
   only documentation before; the admin used a hard-coded list), and their `{number}` URLs now drive the tracking link
   in the completed-order email, order tracking and My account ("Royal Mail Tracked 48" matches "Royal Mail"), before the
   built-in list. Tests: `FulfilmentCarrierTest`.
+- Scheduled sales on products with variants: a variant's sale price now only applies between its sale dates. Variants
+  had no dates – the schedule only covered simple products, and both WooCommerce importers dropped each variation's
+  `date_on_sale_from/to`, so a sale scheduled on the old shop went live the moment it was imported and never ended.
+  The editor's **Schedule the sale** now shows for products with variants (copied onto every variant with a sale
+  price), the bulk **Put on sale** gains **Sale starts** and dates the variants too, the "On sale" filter and the
+  scheduled price refresh (`RefreshSalePrices`) follow variant dates. Tests: `ScheduledVariantSaleTest`.
 
 ### Added
 - Config `commerce.shipping.default_carrier` (default `null`): the carrier pre-selected on Ready to send. Replaces the

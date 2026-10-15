@@ -194,6 +194,10 @@ class ProductSaver
      * order (moved a variant, or added one above existing ones): otherwise existing variants keep their stored
      * sort_order (imported values, ties included) and new ones are appended after them.
      */
+    /**
+     * Create / update / delete the variants of a product from the editor's rows. The product's sale schedule
+     * (sale_starts_at / sale_ends_at) is copied onto every variant that has a sale price.
+     */
     public static function syncVariations(Product $product, array $rows): void
     {
         $existing = $product->variations()->get()->keyBy('id');
@@ -201,6 +205,9 @@ class ProductSaver
         $keep = [];
         foreach ($rows as $row) {
             $data = collect($row)->except('id')->all();
+            $onSale = isset($data['sale_price']) && $data['sale_price'] !== null;
+            $data['sale_starts_at'] = $onSale ? $product->sale_starts_at : null;
+            $data['sale_ends_at'] = $onSale ? $product->sale_ends_at : null;
             $variation = $row['id'] ? $existing->get($row['id']) : null;
             if ($variation) {
                 $variation->fill($data);
@@ -315,7 +322,7 @@ class ProductSaver
                 $backorders = $item instanceof Product ? $item->backorders : 'no';
                 $item->stock_status = $item->stock_quantity > 0 ? 'instock' : ($backorders === 'no' ? 'outofstock' : 'onbackorder');
             }
-            if ($item instanceof Product && $item->sale_price === null) {
+            if ($item->sale_price === null) {
                 $item->sale_starts_at = null;
                 $item->sale_ends_at = null;
             }

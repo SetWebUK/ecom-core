@@ -282,9 +282,11 @@ class ProductController extends Controller
                 break;
 
             case 'set_sale':
+                $starts = LocalTime::fromInput($request->input('sale_starts_at'));
                 $ends = LocalTime::fromInput($request->input('sale_ends_at'), true);
-                $count = PriceAdjuster::setSale($ids, (float) $request->input('percent'), null, $ends);
+                $count = PriceAdjuster::setSale($ids, (float) $request->input('percent'), $starts && $starts->isFuture() ? $starts : null, $ends);
                 $message = $count.' '.Str::plural('item', $count).' put on sale at '.rtrim(rtrim(number_format((float) $request->input('percent'), 2), '0'), '.').'% off'
+                    .($starts && $starts->isFuture() ? ' from '.LocalTime::format($starts, 'j M Y') : '')
                     .($ends ? ' until '.LocalTime::format($ends, 'j M Y') : '').'.';
                 break;
 

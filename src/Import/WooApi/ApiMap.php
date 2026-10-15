@@ -184,6 +184,8 @@ final class ApiMap
             '_sku' => (string) ($v['sku'] ?? ''),
             '_regular_price' => (string) ($v['regular_price'] ?? ''),
             '_sale_price' => (string) ($v['sale_price'] ?? ''),
+            '_sale_price_dates_from' => self::timestamp($v['date_on_sale_from_gmt'] ?? null),
+            '_sale_price_dates_to' => self::timestamp($v['date_on_sale_to_gmt'] ?? null),
             '_manage_stock' => ($v['manage_stock'] ?? false) === true ? 'yes' : 'no', // "parent" = the parent product manages stock
             '_stock' => isset($v['stock_quantity']) && is_numeric($v['stock_quantity']) ? (string) $v['stock_quantity'] : '',
             '_stock_status' => (string) ($v['stock_status'] ?? 'instock'),

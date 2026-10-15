@@ -403,7 +403,8 @@ class ProductRequest extends FormRequest
         if ($manage && $qty !== null) {
             $stockStatus = $qty > 0 ? 'instock' : ($backorders === 'no' ? 'outofstock' : 'onbackorder');
         }
-        $scheduled = $this->boolean('schedule_sale') && $money('sale_price') !== null;
+        // simple: the schedule of its sale price; with variants: of the variants' sale prices (ProductSaver copies it)
+        $scheduled = $this->boolean('schedule_sale') && ($variable || $money('sale_price') !== null);
         $product = $this->product();
         $status = $this->input('status');
         $publishedAt = LocalTime::fromInputKeeping($this->input('published_at'), $product?->published_at);
@@ -423,8 +424,8 @@ class ProductRequest extends FormRequest
             'is_featured' => $this->boolean('is_featured'),
             'regular_price' => $variable ? ($product?->regular_price) : $money('regular_price'),
             'sale_price' => $variable ? null : $money('sale_price'),
-            'sale_starts_at' => $scheduled && ! $variable ? LocalTime::fromInput($this->input('sale_starts_at')) : null,
-            'sale_ends_at' => $scheduled && ! $variable ? LocalTime::fromInput($this->input('sale_ends_at')) : null,
+            'sale_starts_at' => $scheduled ? LocalTime::fromInput($this->input('sale_starts_at')) : null,
+            'sale_ends_at' => $scheduled ? LocalTime::fromInput($this->input('sale_ends_at')) : null,
             'cost_price' => $money('cost_price'),
             'sku' => $text('sku'),
             'gtin' => $text('gtin'),
