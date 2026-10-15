@@ -129,6 +129,30 @@ class CartController extends Controller
         return $this->respond($request, true, 'Coupon has been removed.');
     }
 
+    /** POST /cart/points – spend loyalty points on the basket (as many as can be used). Signed-in customers only. */
+    public function applyPoints(Request $request)
+    {
+        if (! $request->user()) {
+            return $this->respond($request, false, 'Please sign in to use your '.\Pine\Commerce\Services\Loyalty\Loyalty::label().'.', 401);
+        }
+        $points = $this->cart->setLoyaltyPoints(PHP_INT_MAX);
+        if ($points <= 0) {
+            $this->cart->setLoyaltyPoints(0);
+
+            return $this->respond($request, false, 'You don’t have enough '.\Pine\Commerce\Services\Loyalty\Loyalty::label().' to use on this order yet.', 422);
+        }
+
+        return $this->respond($request, true, number_format($points).' '.\Pine\Commerce\Services\Loyalty\Loyalty::label().' used: '.money(\Pine\Commerce\Services\Loyalty\Loyalty::value($points)).' off.');
+    }
+
+    /** DELETE /cart/points – keep the points for later. */
+    public function removePoints(Request $request)
+    {
+        $this->cart->setLoyaltyPoints(0);
+
+        return $this->respond($request, true, 'Your '.\Pine\Commerce\Services\Loyalty\Loyalty::label().' are saved for later.');
+    }
+
     /** GET /cart/fragment - side cart HTML + count (site.js RLSideCart.refresh()). */
     public function fragment(Request $request): JsonResponse
     {

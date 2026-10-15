@@ -12,6 +12,7 @@ use Pine\Commerce\Models\Product;
 use Pine\Commerce\Models\ProductVariation;
 use Pine\Commerce\Models\User;
 use Pine\Commerce\Services\Cart;
+use Pine\Commerce\Services\Loyalty\Loyalty;
 use Pine\Commerce\Scheduling\Scheduler;
 use Pine\Commerce\Scheduling\Tasks\CancelUnpaidOrders;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -434,6 +435,14 @@ class CheckoutService
             OrderStock::reduce($order);
             OrderStock::recordUsage($order);
 
+            // points spent: no more than the discount they actually gave (another discount may have left less to pay)
+            $pointsValue = (float) ($totals['coupons'][Loyalty::CODE] ?? 0);
+            $spent = $pointsValue > 0 ? min($this->spentPoints, (int) ceil(round($pointsValue * Loyalty::redeemRate(), 4))) : 0;
+            Loyalty::redeemFor($order, $spent);
+            if ($spent > 0) {
+                $order->forceFill(['meta' => array_merge((array) $order->meta, ['loyalty_points_spent' => $spent])])->save();
+            }
+
             return $order;
         }), 50, fn ($e) => $e instanceof UniqueConstraintViolationException);
 
@@ -562,7 +571,7 @@ class CheckoutService
     {
         $codes = $this->cart->couponCodes();
         if (! $codes) {
-            return $this->cart->automaticFor([], $lines, $email, $userId, true, $excludeOrderId);
+            return $this->withPoints($this->cart->automaticFor([], $lines, $email, $userId, true, $excludeOrderId), $lines, $userId);
         }
         $rows = Coupon::whereIn(DB::raw('LOWER(code)'), array_map('mb_strtolower', $codes))->lockForUpdate()->get();
         $valid = [];
@@ -577,7 +586,23 @@ class CheckoutService
             $valid[] = $coupon;
         }
 
-        return array_merge($valid, $this->cart->automaticFor($valid, $lines, $email, $userId, true, $excludeOrderId));
+        return $this->withPoints(array_merge($valid, $this->cart->automaticFor($valid, $lines, $email, $userId, true, $excludeOrderId)), $lines, $userId);
+    }
+
+    /** Points the customer is spending on this order (worked out by lockedCoupons(), recorded once the order exists). */
+    protected int $spentPoints = 0;
+
+    /** Add the loyalty points line, with the balance read under lock (two tabs can't spend the same points). */
+    protected function withPoints(array $coupons, Collection $lines, ?int $userId): array
+    {
+        $this->spentPoints = 0;
+        if (! $userId || ! Loyalty::enabled() || $this->cart->chosenPoints() <= 0) {
+            return $coupons;
+        }
+        \Pine\Commerce\Models\LoyaltyPoint::query()->where('user_id', $userId)->lockForUpdate()->get(['id']);
+        $this->spentPoints = $this->cart->pointsToSpend($userId, $lines);
+
+        return $this->spentPoints > 0 ? [...$coupons, Loyalty::coupon($this->spentPoints)] : $coupons;
     }
 
     // ------------------------------------------------------------------ after the order

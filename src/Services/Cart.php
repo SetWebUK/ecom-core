@@ -12,6 +12,7 @@ use Pine\Commerce\Models\User;
 use Pine\Commerce\Services\Checkout\CartException;
 use Pine\Commerce\Services\Checkout\CartLine;
 use Pine\Commerce\Services\Checkout\CouponEngine;
+use Pine\Commerce\Services\Loyalty\Loyalty;
 use Pine\Commerce\Services\Shipping\ShippingRates;
 use Pine\Commerce\Services\Tax\TaxEngine;
 use Pine\Commerce\Services\Tax\TaxLocation;
@@ -358,7 +359,7 @@ class Cart
         }
         $codes = $this->couponCodes();
         if (! $codes) {
-            return $this->validCoupons = $this->automaticFor([], null, $this->email(), $this->user()?->id);
+            return $this->validCoupons = $this->withPoints($this->automaticFor([], null, $this->email(), $this->user()?->id));
         }
 
         $coupons = Coupon::whereIn(DB::raw('LOWER(code)'), array_map('mb_strtolower', $codes))->get();
@@ -381,7 +382,43 @@ class Cart
             $this->model()->forceFill(['coupon_code' => $valid ? implode(',', array_map(fn ($c) => $c->code, $valid)) : null])->save();
         }
 
-        return $this->validCoupons = array_merge($valid, $this->automaticFor($valid, null, $this->email(), $this->user()?->id));
+        return $this->validCoupons = $this->withPoints(array_merge($valid, $this->automaticFor($valid, null, $this->email(), $this->user()?->id)));
+    }
+
+    // ------------------------------------------------------------------ loyalty points
+
+    /** Points the customer chose to spend (Services\Loyalty\Loyalty), before checking them against the basket. */
+    public function chosenPoints(): int
+    {
+        return Loyalty::enabled() ? (int) ($this->model()?->loyalty_points ?? 0) : 0;
+    }
+
+    /** Spend points on this basket (0 = none). Returns the points that will actually be used. */
+    public function setLoyaltyPoints(int $points): int
+    {
+        $this->model()->forceFill(['loyalty_points' => $points > 0 ? $points : null])->save();
+        $this->forgetTotals();
+
+        return $this->pointsToSpend($this->user()?->id, $this->pricedLines($this->items()));
+    }
+
+    /** The chosen points that can be spent on these lines now (balance, minimum, maximum share). */
+    public function pointsToSpend(?int $userId, Collection $lines): int
+    {
+        $chosen = $this->chosenPoints();
+        if ($chosen <= 0 || ! $userId) {
+            return 0;
+        }
+
+        return min($chosen, Loyalty::usable($userId, (float) $lines->sum(fn (CartLine $l) => $l->subtotal())));
+    }
+
+    /** @param  array<int, Coupon>  $coupons */
+    protected function withPoints(array $coupons): array
+    {
+        $points = $this->pointsToSpend($this->user()?->id, $this->pricedLines($this->items()));
+
+        return $points > 0 ? [...$coupons, Loyalty::coupon($points)] : $coupons;
     }
 
     /**

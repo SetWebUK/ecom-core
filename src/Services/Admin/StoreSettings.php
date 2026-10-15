@@ -72,6 +72,8 @@ class StoreSettings
                 'description' => 'Invoice numbers, PDF invoices on order emails, customer downloads and the text on invoices and packing slips.'],
             'abandoned_carts' => ['label' => 'Abandoned carts', 'icon' => 'shopping-bag', 'route' => 'admin.settings.edit', 'feature' => 'abandoned_carts',
                 'description' => 'Reminder emails to shoppers who left items in their basket, with optional discount codes.'],
+            'loyalty' => ['label' => 'Loyalty points', 'icon' => 'star', 'route' => 'admin.settings.edit', 'feature' => 'loyalty',
+                'description' => 'Points customers earn on orders and spend at checkout, the welcome bonus and limits.'],
             'automation' => ['label' => 'Scheduled tasks', 'icon' => 'clock', 'route' => 'admin.settings.edit',
                 'description' => 'Background jobs (cron), the daily low-stock email and how long old baskets are kept.'],
             'seo' => ['label' => 'SEO & tracking', 'icon' => 'magnifying-glass', 'route' => 'admin.settings.edit',
@@ -86,7 +88,7 @@ class StoreSettings
     }
 
     /** Core groups edited with the generic settings form (SettingsController@edit). */
-    public const FORM_GROUPS = ['general', 'checkout', 'tax', 'emails', 'invoices', 'seo', 'abandoned_carts', 'automation'];
+    public const FORM_GROUPS = ['general', 'checkout', 'tax', 'emails', 'invoices', 'seo', 'abandoned_carts', 'loyalty', 'automation'];
 
     /** Every group edited with the generic settings form: the core FORM_GROUPS + client groups (Commerce::settings()). */
     public static function formGroups(): array
@@ -126,6 +128,7 @@ class StoreSettings
             'invoices' => static::invoices(),
             'seo' => static::seo(),
             'abandoned_carts' => static::abandonedCarts(),
+            'loyalty' => static::loyalty(),
             'automation' => static::automation(),
             default => $registry->settingsGroups()[$group]['sections'] ?? [],
         };
@@ -595,6 +598,30 @@ class StoreSettings
     }
 
     /** Settings › Scheduled tasks – Pine\Commerce\Scheduling\Scheduler. */
+    /** Loyalty points (feature "loyalty", Services\Loyalty\Loyalty); defaults from config commerce.loyalty. */
+    protected static function loyalty(): array
+    {
+        $c = fn (string $key, $default) => config('commerce.loyalty.'.$key, $default);
+
+        return [
+            ['title' => 'Earning', 'fields' => [
+                ['key' => 'loyalty.earn_per_pound', 'label' => 'Points per £1 spent', 'type' => 'decimal', 'default' => $c('earn_per_pound', 1), 'min' => 0, 'max' => 1000,
+                    'drives' => 'On the price of the items after discounts (VAT included, delivery not), added when the order is paid. A cancelled or refunded order takes them back.'],
+                ['key' => 'loyalty.signup_points', 'label' => 'Welcome bonus (points)', 'type' => 'int', 'default' => $c('signup_points', 0), 'min' => 0, 'max' => 1000000,
+                    'drives' => 'Given when a customer creates an account (0 = none).'],
+            ]],
+            ['title' => 'Spending', 'fields' => [
+                ['key' => 'loyalty.points_per_pound', 'label' => 'Points for £1 off', 'type' => 'int', 'default' => $c('points_per_pound', 100), 'min' => 1, 'max' => 1000000,
+                    'drives' => 'e.g. 40 = every 40 points take £1 off. Customers choose “Use my points” at checkout.'],
+                ['key' => 'loyalty.min_redeem', 'label' => 'Points needed before they can be used', 'type' => 'int', 'default' => $c('min_redeem', 0), 'min' => 0, 'max' => 1000000],
+                ['key' => 'loyalty.max_discount_percent', 'label' => 'Most of an order points can pay (%)', 'type' => 'int', 'default' => $c('max_discount_percent', 100), 'min' => 1, 'max' => 100,
+                    'drives' => 'Of the items’ price; delivery is always paid.'],
+                ['key' => 'loyalty.label', 'label' => 'What they are called', 'type' => 'text', 'default' => $c('label', 'points'), 'max' => 30,
+                    'drives' => 'Lower case and plural, e.g. points or rewards.'],
+            ]],
+        ];
+    }
+
     protected static function automation(): array
     {
         return [

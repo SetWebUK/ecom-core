@@ -77,6 +77,7 @@ return [
         'product_csv' => true,        // admin Products › Import / Export: full product CSV export + import (mapping, dry run, batches), commerce:products:* commands
         'updater' => true,            // admin Updates (administrators): update check, approved pine/commerce updates, skeleton file updates; commerce:update:* / commerce:skeleton:*
         'woo_api_import' => true,     // admin Import › WooCommerce API (administrators): import from a WooCommerce shop's REST API with API keys; commerce:import-woo-api
+        'loyalty' => false,           // loyalty points: earned on paid orders, spent at checkout, My account › Points, Admin › Settings › Loyalty points, commerce:loyalty:import
     ],
 
     'catalog' => [
@@ -122,6 +123,16 @@ return [
     'orders' => ['reference_prefix' => 'ORD'],
 
     'pay_in_3' => ['min' => 30, 'max' => 2000, 'instalments' => 3],
+
+    // Loyalty points defaults (feature "loyalty"; Admin › Settings › Loyalty points overrides each key)
+    'loyalty' => [
+        'earn_per_pound' => 1,        // points per £1 of items (after discounts, VAT included, delivery not)
+        'points_per_pound' => 100,    // points that make £1 off
+        'signup_points' => 0,         // welcome bonus for a new account
+        'min_redeem' => 0,            // points needed before any can be spent
+        'max_discount_percent' => 100, // most of the items' price that points can pay
+        'label' => 'points',
+    ],
 
     // Tax defaults (Admin › Settings › Tax overrides each key). New stores: UK-style prices including VAT, shown
     // including VAT, rounded per line. A store upgraded from before v1.1 keeps its behaviour: the migration saves

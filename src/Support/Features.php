@@ -46,6 +46,7 @@ class Features
         'product_csv' => [true, 'Admin Products › Import / Export (full product CSV export and import with column mapping, dry run and batches); commerce:products:export / commerce:products:import'],
         'updater' => [true, 'Admin Updates (administrators only): daily update check, dashboard notice + sidebar badge, password-approved pine/commerce updates with backup and rollback, skeleton file updates; commerce:update:* and commerce:skeleton:* commands'],
         'woo_api_import' => [true, 'Admin Import › WooCommerce API (administrators only): import products, categories, customers, orders, coupons, reviews, shipping/tax and pages from a WooCommerce shop\'s REST API with API keys, in the background with live progress; commerce:import-woo-api'],
+        'loyalty' => [false, 'Loyalty points: earned on paid orders, spent at checkout ("Use my points"), My account › Points, a points card on each customer, Admin › Settings › Loyalty points; balances from the old shop with commerce:loyalty:import'],
     ];
 
     /** Feature => theme.json "supports" key the storefront side needs (a theme without it shows no entry points). */

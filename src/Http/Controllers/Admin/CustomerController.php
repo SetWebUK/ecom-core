@@ -169,6 +169,22 @@ class CustomerController extends Controller
             : back()->with('error', 'The password email couldn’t be sent. Try again in a minute.');
     }
 
+    /** POST points (+/-) and note: adjust the customer's loyalty points (a ledger row, never an overwrite). */
+    public function points(Request $request, User $customer): RedirectResponse
+    {
+        $data = $request->validate([
+            'points' => ['required', 'integer', 'between:-1000000,1000000', 'not_in:0'],
+            'note' => ['nullable', 'string', 'max:200'],
+        ], ['points.not_in' => 'Enter the points to add (e.g. 200) or take away (e.g. -200).']);
+        $balance = \Pine\Commerce\Services\Loyalty\Loyalty::balance($customer->id);
+        if ($balance + (int) $data['points'] < 0) {
+            return back()->withErrors(['points' => 'That would take the balance below zero (it is '.number_format($balance).').']);
+        }
+        \Pine\Commerce\Services\Loyalty\Loyalty::add($customer->id, (int) $data['points'], 'adjust', null, $data['note'] ?? null, $request->user()?->id);
+
+        return back()->with('success', 'Points '.((int) $data['points'] > 0 ? 'added' : 'taken away').' – the balance is now '.number_format($balance + (int) $data['points']).'.');
+    }
+
     public function toggleActive(User $customer): RedirectResponse
     {
         $this->authorizeEdit($customer);

@@ -60,6 +60,8 @@ Route::post('cart/update', [CartController::class, 'update'])->name('cart.update
 Route::post('cart/remove', [CartController::class, 'remove'])->name('cart.remove');
 Route::post('cart/coupon', [CartController::class, 'applyCoupon'])->middleware([RequireFeature::for('coupons'), 'throttle:10,1,coupon'])->name('cart.coupon'); // no coupon-code guessing
 Route::delete('cart/coupon', [CartController::class, 'removeCoupon'])->middleware(RequireFeature::for('coupons'))->name('cart.coupon.remove');
+Route::post('cart/points', [CartController::class, 'applyPoints'])->middleware([RequireFeature::for('loyalty'), 'throttle:20,1'])->name('cart.points');
+Route::delete('cart/points', [CartController::class, 'removePoints'])->middleware(RequireFeature::for('loyalty'))->name('cart.points.remove');
 Route::get('cart/fragment', [CartController::class, 'fragment'])->name('cart.fragment'); // side-cart HTML + count JSON
 // Abandoned-cart reminder links (signed; CartRecoveryController). The unsubscribe POST is CSRF-exempt (RFC 8058 one-click).
 Route::get('basket/restore/{cart}', [CartRecoveryController::class, 'restore'])->whereNumber('cart')
@@ -102,6 +104,7 @@ Route::middleware('auth')->group(function () {
     Route::get('my-account/edit-account', [AccountController::class, 'details'])->name('account.details');
     Route::post('my-account/edit-account', [AccountController::class, 'saveDetails'])->name('account.details.save');
     Route::get('my-account/wishlist', [AccountController::class, 'wishlist'])->middleware(RequireFeature::for('wishlist'))->name('account.wishlist');
+    Route::get('my-account/points', [AccountController::class, 'points'])->middleware(RequireFeature::for('loyalty'))->name('account.points');
     Route::get('my-account/downloads', [AccountController::class, 'downloads'])->name('account.downloads');
 });
 Route::post('wishlist/toggle', [AccountController::class, 'toggleWishlist'])->middleware(RequireFeature::for('wishlist'))->name('wishlist.toggle');

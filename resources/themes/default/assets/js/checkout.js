@@ -229,7 +229,19 @@
                 return;
             }
             var remove = e.target.closest('[data-coupon-remove]');
-            if (remove) { e.preventDefault(); coupon('DELETE', remove.getAttribute('data-coupon-remove')); }
+            if (remove) { e.preventDefault(); coupon('DELETE', remove.getAttribute('data-coupon-remove')); return; }
+            // loyalty points: use them / keep them (the URL is on the button), then re-render the summary
+            var points = e.target.closest('[data-points-apply], [data-points-remove]');
+            if (points) {
+                e.preventDefault();
+                points.disabled = true;
+                var use = points.hasAttribute('data-points-apply');
+                request(points.getAttribute(use ? 'data-points-apply' : 'data-points-remove'), use ? 'POST' : 'DELETE', { context: 'checkout' }).then(function (data) {
+                    if (data.checkout) { applyFragments(data.checkout); }
+                    if (data.message) { alerts([data.message], data.ok ? 'success' : 'error'); }
+                    points.disabled = false;
+                });
+            }
         });
         d.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' && e.target.matches && e.target.matches('[data-coupon-input]')) {

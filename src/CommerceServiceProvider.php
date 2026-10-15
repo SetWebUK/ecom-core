@@ -173,6 +173,8 @@ class CommerceServiceProvider extends ServiceProvider
             Console\NewClientCommand::class, Console\VerifyUrlsCommand::class, Console\DatabaseUtcCommand::class]);
         // image sizes: (re)build the size variants of existing uploads
         $this->commands([Console\ImagesGenerateCommand::class]);
+        // loyalty points balances from the old shop
+        $this->commands([Console\LoyaltyImportCommand::class]);
         // full product CSV (feature switch product_csv – the commands refuse to run while it is off)
         $this->commands([Console\ProductsExportCommand::class, Console\ProductsImportCommand::class]);
         // scheduled tasks: status table + run one task by hand
@@ -251,6 +253,13 @@ class CommerceServiceProvider extends ServiceProvider
         Event::listen(OrderStatusChanged::class, [\Pine\Commerce\Listeners\AssignInvoiceNumber::class, 'handle']); // before the emails (invoice attachment)
         Event::listen(OrderStatusChanged::class, [SendOrderStatusEmails::class, 'handle']);
         Event::listen(OrderStatusChanged::class, [SyncOrderStock::class, 'handle']);
+        Event::listen(OrderStatusChanged::class, [\Pine\Commerce\Listeners\SyncLoyaltyPoints::class, 'handle']);
+        // loyalty welcome bonus: accounts created on the storefront or by staff (imports write rows directly, no event)
+        \Pine\Commerce\Commerce::userModel()::created(function ($user) {
+            if (\Pine\Commerce\Services\Loyalty\Loyalty::enabled() && ($user->role ?? 'customer') === 'customer' && ($points = \Pine\Commerce\Services\Loyalty\Loyalty::signupPoints()) > 0) {
+                \Pine\Commerce\Services\Loyalty\Loyalty::add((int) $user->id, $points, 'signup', null, 'Welcome bonus');
+            }
+        });
         // abandoned-cart recovery: an order won back by a reminder (no effect until a reminder was ever sent)
         Event::listen(OrderPlaced::class, [\Pine\Commerce\Listeners\MarkRecoveredCart::class, 'handle']);
     }

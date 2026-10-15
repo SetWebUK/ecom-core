@@ -16,6 +16,8 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 - `2026_10_15_000200_add_automatic_discounts_to_coupons`: `coupons.auto_apply`, `label`, `buy_quantity`,
   `show_countdown` (additive; existing codes keep `auto_apply = false`). **Client action:** `php artisan migrate`.
 - `2026_10_15_000300_add_labels_to_products`: `products.labels` (JSON, nullable). **Client action:** `php artisan migrate`.
+- `2026_10_15_000400_create_loyalty_points`: table `loyalty_points` (the points ledger) and `carts.loyalty_points`.
+  **Client action:** `php artisan migrate`.
 
 ### Fixed
 - Order attribution: every order's Origin was "Direct (typed in / bookmark)" – checkout reads the attribution cookie
@@ -55,6 +57,16 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
   scheduled price refresh (`RefreshSalePrices`) follow variant dates. Tests: `ScheduledVariantSaleTest`.
 
 ### Added
+- **Loyalty points** (feature `loyalty`, default off; `Services\Loyalty\Loyalty`), like WooCommerce Points & Rewards:
+  signed-in customers earn points on paid orders (per £1 of items after discounts, VAT included, delivery not), spend
+  them at checkout ("Use my points", shown as a discount line "Points (400)"), get a welcome bonus for a new account;
+  a cancelled / failed / refunded order takes back what it earned and gives back what it spent. A ledger
+  (`LoyaltyPoint`: signup, earn, redeem, refund, reverse, adjust, import), so every balance is explained. My account ›
+  Points (balance, rules, history), a points card with adjust on each admin customer, Admin › Settings › Loyalty points
+  (points per £1, points for £1 off, welcome bonus, minimum, maximum share of an order, name), and
+  `php artisan commerce:loyalty:import file.csv [--dry-run]` for balances from the old shop (re-runnable: adds only the
+  difference). Points are checked under lock at checkout so they can't be spent twice. **Config keys added:**
+  `features.loyalty` (false), `loyalty.*` defaults. Tests: `LoyaltyPointsTest`.
 - Payment method **Debit or credit card (via PayPal)** (`paypal_card`, `PaypalCardGateway`): the PayPal app and keys of
   Admin › Settings › Payments › PayPal, with PayPal's page opening on its card form (`landing_page: GUEST_CHECKOUT`) –
   card payments without a separate card provider, as the WooCommerce PayPal Payments plugin's "Debit & Credit Cards".
