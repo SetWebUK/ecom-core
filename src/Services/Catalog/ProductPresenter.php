@@ -297,6 +297,75 @@ class ProductPresenter
         return ['regular' => $regular, 'sale' => $sale, 'saving' => round($regular - $sale, 2), 'percent' => (int) round((($regular - $sale) / $regular) * 100)];
     }
 
+    /**
+     * The biggest saving on a product, for "SAVE 20%" / "UP TO 40% OFF" badges: a simple product on sale, or any
+     * active variant on sale (upto = the variants' savings differ). Null when nothing is on sale.
+     *
+     * @return array{percent:int, upto:bool}|null
+     */
+    public static function bestSaving(Product $product): ?array
+    {
+        if ($product->type !== 'variable') {
+            $sale = static::sale($product);
+
+            return $sale ? ['percent' => $sale['percent'], 'upto' => false] : null;
+        }
+        $percents = static::activeVariations($product)
+            ->filter(fn (ProductVariation $v) => $v->isOnSale() && (float) $v->regular_price > 0)
+            ->map(fn (ProductVariation $v) => (int) round((1 - (float) $v->sale_price / (float) $v->regular_price) * 100))
+            ->filter(fn (int $p) => $p > 0)->values();
+        if ($percents->isEmpty()) {
+            return null;
+        }
+
+        return ['percent' => (int) $percents->max(), 'upto' => $percents->unique()->count() > 1 || $percents->count() < static::activeVariations($product)->count()];
+    }
+
+    /**
+     * Automatic discounts (Admin › Discounts › "Apply automatically") running now that cover this product, for the
+     * product page and cards: what customers get before they reach the basket.
+     *  - label    the discount's name, e.g. "Any 2 tees for £25"
+     *  - summary  "20% off", "£5.00 off each item", "Any 2 for £25.00" …
+     *  - price    the product's price after the discount when it needs nothing else (a percentage or amount off each
+     *             item, no minimum spend), else null; for a product with variants, the lowest
+     *  - note     the condition, e.g. "on orders over £50", or "" ; ends_at (UTC) and countdown for an end date
+     *
+     * @return list<array{label:string, type:string, summary:string, price:?float, note:string, ends_at:?\Illuminate\Support\Carbon, countdown:bool}>
+     */
+    public static function offers(Product $product): array
+    {
+        $running = \Pine\Commerce\Models\Coupon::running();
+        if ($running->isEmpty() || ! \Pine\Commerce\Support\Features::enabled('coupons', false)) {
+            return [];
+        }
+        $engine = app(\Pine\Commerce\Services\Checkout\CouponEngine::class);
+        $now = static::price($product);
+        $out = [];
+        foreach ($running as $coupon) {
+            if (! $coupon->label || ! $engine->appliesToProduct($coupon, $product)) {
+                continue; // no customer-facing name: an internal rule, not advertised
+            }
+            $min = (float) $coupon->minimum_spend;
+            $price = null;
+            if ($now !== null && $min <= 0 && in_array($coupon->type, ['percent', 'fixed_product'], true)) {
+                $price = $coupon->type === 'percent'
+                    ? round($now * (1 - min(100.0, (float) $coupon->amount) / 100), 2)
+                    : max(0.0, round($now - (float) $coupon->amount, 2));
+            }
+            $out[] = [
+                'label' => $coupon->displayName(),
+                'type' => $coupon->type,
+                'summary' => \Pine\Commerce\Services\Admin\CouponStatus::summary($coupon),
+                'price' => $price,
+                'note' => $min > 0 ? 'on orders over '.money($min) : '',
+                'ends_at' => $coupon->expires_at,
+                'countdown' => (bool) $coupon->show_countdown && $coupon->expires_at !== null,
+            ];
+        }
+
+        return $out;
+    }
+
     /** CSS block class of cardPriceHtml() ({class}, {class}-now, -sub, -was, -save); a client presenter may rename it. */
     public static function cardPriceClass(): string
     {

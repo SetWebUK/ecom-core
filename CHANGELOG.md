@@ -13,6 +13,8 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 - `2026_10_15_000100_add_sale_dates_to_product_variations`: `product_variations.sale_starts_at` / `sale_ends_at`
   (nullable). **Client action:** `php artisan migrate`, then re-run the WooCommerce import's products step (or wait for
   the next sync) so imported variations get their sale dates.
+- `2026_10_15_000200_add_automatic_discounts_to_coupons`: `coupons.auto_apply`, `label`, `buy_quantity`,
+  `show_countdown` (additive; existing codes keep `auto_apply = false`). **Client action:** `php artisan migrate`.
 
 ### Fixed
 - Imports (WooCommerce API and database): a product image alt longer than 255 characters (a whole description pasted
@@ -44,6 +46,18 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
   scheduled price refresh (`RefreshSalePrices`) follow variant dates. Tests: `ScheduledVariantSaleTest`.
 
 ### Added
+- **Automatic discounts** (Admin › Discounts › "How customers get it" › Automatic): the basket applies every running
+  automatic discount whose rules match – whole shop, chosen categories or products, exclusions, minimum spend, dates,
+  usage limits – with no code. Customers see its **label** ("20% off knitwear") in the basket and checkout (no remove
+  button); the order records its code like a typed one, so usage counts and reports work. It never combines with a
+  code that "can't be combined", and one marked "can't be combined" steps aside for any code. Typing an automatic
+  discount's code is refused. The code is generated from the label when left blank (`AUTO-20-OFF-KNITWEAR`).
+  Cart totals gain `coupon_labels` and `automatic_coupons`.
+- Discount type **Multi-buy** (`multibuy`, "any X for £Y"): eligible items, most expensive first, are grouped into
+  sets of `buy_quantity`; each full set costs `amount`, the rest pay their own price. Works as a code too.
+- Presenter: `offers(Product)` (automatic discounts covering a product, with the price after a simple % / amount off,
+  the condition and the end date / countdown flag) and `bestSaving(Product)` (the biggest % saving, including any
+  variant on sale, for "UP TO 40% OFF" badges). Tests: `AutomaticDiscountTest`.
 - Config `commerce.shipping.default_carrier` (default `null`): the carrier pre-selected on Ready to send. Replaces the
   hard-coded "DPD". `commerce.shipping.carriers` gains Parcelforce. **Client action:** a shop that relied on DPD
   being pre-filled sets `'default_carrier' => 'DPD'` in its `config/commerce.php`; a shop with its own `shipping` block

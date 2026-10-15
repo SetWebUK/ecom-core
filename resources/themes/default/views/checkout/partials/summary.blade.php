@@ -31,7 +31,11 @@
     <dl class="totals">
         <div><dt>Subtotal</dt><dd>{{ money($totals['subtotal_display'] ?? $totals['subtotal']) }}</dd></div>
         @foreach ($totals['coupons_display'] ?? $totals['coupons'] as $code => $amount)
-            <div class="totals__discount"><dt>Discount <span class="chip chip--sm">{{ $code }} <button type="button" class="chip__x" aria-label="Remove discount {{ $code }}" data-coupon-remove="{{ $code }}">×</button></span></dt><dd>−{{ money($amount) }}</dd></div>
+            @if (in_array($code, $totals['automatic_coupons'] ?? [], true))
+                <div class="totals__discount"><dt>{{ $totals['coupon_labels'][$code] ?? $code }}</dt><dd>−{{ money($amount) }}</dd></div>
+            @else
+                <div class="totals__discount"><dt>Discount <span class="chip chip--sm">{{ $code }} <button type="button" class="chip__x" aria-label="Remove discount {{ $code }}" data-coupon-remove="{{ $code }}">×</button></span></dt><dd>−{{ money($amount) }}</dd></div>
+            @endif
         @endforeach
         @if ($totals['shipping_method'])
             <div><dt>Delivery</dt><dd>{{ ($totals['shipping_display'] ?? $totals['shipping']) > 0 ? money($totals['shipping_display'] ?? $totals['shipping']) : 'Free' }}</dd></div>

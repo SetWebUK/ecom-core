@@ -554,12 +554,15 @@ class CheckoutService
         return $lines;
     }
 
-    /** Re-validate the basket's coupons against the locked rows (usage limits can change between page load and order). */
+    /**
+     * Re-validate the basket's coupons against the locked rows (usage limits can change between page load and order),
+     * then add the automatic discounts the order qualifies for.
+     */
     protected function lockedCoupons(Collection $lines, string $email, ?int $userId, ?int $excludeOrderId): array
     {
         $codes = $this->cart->couponCodes();
         if (! $codes) {
-            return [];
+            return $this->cart->automaticFor([], $lines, $email, $userId, true, $excludeOrderId);
         }
         $rows = Coupon::whereIn(DB::raw('LOWER(code)'), array_map('mb_strtolower', $codes))->lockForUpdate()->get();
         $valid = [];
@@ -574,7 +577,7 @@ class CheckoutService
             $valid[] = $coupon;
         }
 
-        return $valid;
+        return array_merge($valid, $this->cart->automaticFor($valid, $lines, $email, $userId, true, $excludeOrderId));
     }
 
     // ------------------------------------------------------------------ after the order

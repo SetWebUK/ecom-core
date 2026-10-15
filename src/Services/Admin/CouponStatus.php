@@ -101,13 +101,14 @@ class CouponStatus
         ];
     }
 
-    /** "20% off", "£5.00 off basket", "£2.00 off each item" (+ free shipping). */
+    /** "20% off", "£5.00 off basket", "£2.00 off each item", "Any 2 for £25.00" (+ free shipping). */
     public static function summary(Coupon $coupon): string
     {
         $amount = (float) $coupon->amount;
         $text = match ($coupon->type) {
             'percent' => rtrim(rtrim(number_format($amount, 2), '0'), '.').'% off',
             'fixed_product' => money($amount).' off each item',
+            'multibuy' => 'Any '.max(2, (int) $coupon->buy_quantity).' for '.money($amount),
             default => money($amount).' off the basket',
         };
         if ($amount <= 0 && $coupon->free_shipping) {

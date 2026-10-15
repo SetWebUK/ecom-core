@@ -9,8 +9,9 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 /**
- * Create/update a discount code. Controllers call $request->couponData() – never $request->all() – so only
- * these normalised fields can ever reach the model (Coupon uses $guarded = ['id']).
+ * Create/update a discount code or an automatic discount. Controllers call $request->couponData() – never
+ * $request->all() – so only these normalised fields can ever reach the model (Coupon uses $guarded = ['id']).
+ * An automatic discount needs a label (what customers see); its code is generated from the label when left blank.
  */
 class CouponRequest extends FormRequest
 {
@@ -34,6 +35,12 @@ class CouponRequest extends FormRequest
         if (is_string($this->input('code'))) {
             $clean['code'] = trim($this->input('code'));
         }
+        if (is_string($this->input('label'))) {
+            $clean['label'] = trim($this->input('label'));
+        }
+        if ($this->boolean('auto_apply') && trim((string) ($clean['code'] ?? $this->input('code'))) === '' && trim((string) ($clean['label'] ?? '')) !== '') {
+            $clean['code'] = static::codeFor($clean['label'], $this->route('coupon') instanceof Coupon ? $this->route('coupon')->id : null);
+        }
         foreach (self::ID_LISTS as $field) {
             if (! $this->filled($field)) {
                 $clean[$field] = [];
@@ -50,7 +57,11 @@ class CouponRequest extends FormRequest
             'code' => ['required', 'string', 'min:2', 'max:50', 'regex:/^[A-Za-z0-9][A-Za-z0-9_\-]*$/',
                 Rule::unique('coupons', 'code')->ignore($coupon instanceof Coupon ? $coupon->id : null)],
             'description' => ['nullable', 'string', 'max:255'],
+            'auto_apply' => ['boolean'],
+            'label' => [Rule::requiredIf($this->boolean('auto_apply')), 'nullable', 'string', 'max:120'],
+            'show_countdown' => ['boolean'],
             'type' => ['required', Rule::in(array_keys(Coupon::TYPES))],
+            'buy_quantity' => [Rule::requiredIf($this->input('type') === 'multibuy'), 'nullable', 'integer', 'min:2', 'max:100'],
             'amount' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:99999.99', Rule::when($this->input('type') === 'percent', ['max:100'])],
             'free_shipping' => ['boolean'],
             'minimum_spend' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:999999.99'],
@@ -79,6 +90,9 @@ class CouponRequest extends FormRequest
         return [
             'code.regex' => 'Use letters, numbers, dashes or underscores only (no spaces).',
             'code.unique' => 'Another discount already uses this code.',
+            'label.required' => 'Give the automatic discount a name customers will see, e.g. “Any 2 tees for £25”.',
+            'buy_quantity.required' => 'Enter how many items make up the multi-buy, e.g. 2.',
+            'buy_quantity.min' => 'A multi-buy needs at least 2 items.',
             'amount.max' => $this->input('type') === 'percent' ? 'A percentage discount can’t be more than 100%.' : 'That amount is too large.',
             '*.decimal' => 'Use at most 2 decimal places.',
             'product_ids.*.exists' => 'One of the chosen products no longer exists.',
@@ -98,6 +112,7 @@ class CouponRequest extends FormRequest
             'starts_at' => 'start date',
             'expires_at' => 'end date',
             'allowed_emails' => 'allowed emails',
+            'buy_quantity' => 'number of items',
         ];
     }
 
@@ -113,7 +128,7 @@ class CouponRequest extends FormRequest
                     $errors->add('maximum_spend', 'The maximum spend must be more than the minimum spend.');
                 }
                 if (! $errors->hasAny(['amount', 'free_shipping']) && (float) $this->input('amount') <= 0 && ! $this->boolean('free_shipping')) {
-                    $errors->add('amount', 'Enter a discount amount, or turn on free shipping.');
+                    $errors->add('amount', $this->input('type') === 'multibuy' ? 'Enter the price of the set, e.g. 25.00 for “any 2 for £25”.' : 'Enter a discount amount, or turn on free shipping.');
                 }
                 if (! $errors->hasAny(['starts_at', 'expires_at'])) {
                     $starts = LocalTime::fromInput($this->input('starts_at'));
@@ -148,9 +163,13 @@ class CouponRequest extends FormRequest
 
         return [
             'code' => $this->input('code'),
+            'label' => $this->filled('label') ? $this->input('label') : null,
             'description' => $this->input('description'),
+            'auto_apply' => $this->boolean('auto_apply'),
+            'show_countdown' => $this->boolean('show_countdown'),
             'type' => $this->input('type'),
             'amount' => round((float) $this->input('amount'), 2),
+            'buy_quantity' => $this->input('type') === 'multibuy' ? (int) $this->input('buy_quantity') : null,
             'free_shipping' => $this->boolean('free_shipping'),
             'minimum_spend' => $money('minimum_spend'),
             'maximum_spend' => $money('maximum_spend'),
@@ -178,6 +197,19 @@ class CouponRequest extends FormRequest
             fn ($e) => mb_strtolower(trim($e)),
             preg_split('/[\s,;]+/', $raw) ?: []
         ))));
+    }
+
+    /** "Any 2 tees for £25" → "AUTO-ANY-2-TEES-FOR-25" (made unique), the internal code of an automatic discount. */
+    public static function codeFor(string $label, ?int $ignoreId = null): string
+    {
+        $slug = \Illuminate\Support\Str::slug(preg_replace('/[£$€%]/u', ' ', $label)); // Str::slug spells £ as "ps"
+        $base = 'AUTO-'.mb_strtoupper(trim(substr($slug, 0, 40), '-') ?: 'DISCOUNT');
+        $code = $base;
+        for ($i = 2; Coupon::query()->whereRaw('LOWER(code) = ?', [mb_strtolower($code)])->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))->exists(); $i++) {
+            $code = $base.'-'.$i;
+        }
+
+        return $code;
     }
 
     public static function validEmailPattern(string $email): bool

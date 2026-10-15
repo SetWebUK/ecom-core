@@ -10,6 +10,9 @@
     $amount = $coupon->amount !== null ? number_format((float) $coupon->amount, 2, '.', '') : '';
     $initial = [
         'code' => (string) old('code', $coupon->code),
+        'auto' => (string) old('auto_apply', $coupon->auto_apply ? '1' : '0'),
+        'label' => (string) old('label', $coupon->label),
+        'buyQty' => (string) old('buy_quantity', $coupon->buy_quantity),
         'type' => (string) old('type', $coupon->type ?? 'percent'),
         'amount' => (string) old('amount', $amount),
         'freeShipping' => (bool) old('free_shipping', $coupon->free_shipping),
@@ -26,10 +29,10 @@
     $saveLabel = $editing ? 'Save' : 'Create discount';
 @endphp
 
-@section('title', $editing ? $coupon->code.' · Discounts' : 'Create discount')
+@section('title', $editing ? $coupon->displayName().' · Discounts' : 'Create discount')
 
 @section('content')
-    <x-admin.page-header :title="$editing ? $coupon->code : 'Create discount'" :back="route('admin.coupons.index')" back-label="Back to discounts">
+    <x-admin.page-header :title="$editing ? $coupon->displayName() : 'Create discount'" :back="route('admin.coupons.index')" back-label="Back to discounts">
         @if ($state)
             <x-slot:badges><x-admin.badge :color="CouponStatus::color($state)" dot>{{ CouponStatus::label($state) }}</x-admin.badge></x-slot:badges>
             <x-slot:actions>
@@ -47,11 +50,20 @@
     <x-admin.form id="coupon-form" :action="$editing ? route('admin.coupons.update', $coupon) : route('admin.coupons.store')" :method="$editing ? 'PUT' : 'POST'" dirty :save-label="$saveLabel">
         <div class="layout" x-data="couponForm(@js($initial))">
             <div class="layout__main">
-                <x-admin.card title="Discount code">
+                <x-admin.card title="How customers get it">
                     <div class="stack-fields">
-                        <x-admin.field label="Code" for="f-code" error="code" required help="Customers type this in the basket or at checkout. Letters, numbers and dashes – capitals don’t matter.">
+                        <x-admin.radio-cards name="auto_apply" x-model="auto" :value="$initial['auto']" :options="[
+                            '0' => ['label' => 'Discount code', 'help' => 'Customers type a code in the basket', 'icon' => 'ticket'],
+                            '1' => ['label' => 'Automatic', 'help' => 'Applied in the basket whenever it qualifies – no code', 'icon' => 'bolt'],
+                        ]" />
+                        <div x-show="auto === '1'" @if ($initial['auto'] !== '1') x-cloak @endif>
+                            <x-admin.input name="label" label="Name customers see" maxlength="120" :value="$initial['label']" x-model="label"
+                                           help="In the basket and on the product pages it covers, e.g. “Any 2 tees for £25” or “20% off knitwear”." />
+                        </div>
+                        <x-admin.field label="Code" for="f-code" error="code"
+                                       help="Customers type this in the basket or at checkout. Letters, numbers and dashes – capitals don’t matter. For an automatic discount it is only a reference for reports (left blank, it is made from the name).">
                             <div @class(['input-group', 'is-invalid' => $errors->has('code')])>
-                                <input type="text" name="code" id="f-code" class="input input--mono" value="{{ $initial['code'] }}" x-model="code" required maxlength="50"
+                                <input type="text" name="code" id="f-code" class="input input--mono" value="{{ $initial['code'] }}" x-model="code" x-bind:required="auto !== '1'" maxlength="50"
                                        autocomplete="off" spellcheck="false" @if (! $editing) autofocus @endif @error('code') aria-invalid="true" aria-describedby="f-code-error" @enderror>
                                 <button type="button" class="btn btn--sm" @click="generate()"><span>Generate</span></button>
                             </div>
@@ -66,7 +78,12 @@
                             'percent' => ['label' => 'Percentage', 'help' => 'e.g. 10% off the basket', 'icon' => 'receipt-percent'],
                             'fixed_cart' => ['label' => 'Amount off basket', 'help' => 'e.g. £20 off the order', 'icon' => 'banknotes'],
                             'fixed_product' => ['label' => 'Amount off each item', 'help' => 'e.g. £5 off every item', 'icon' => 'tag'],
+                            'multibuy' => ['label' => 'Multi-buy', 'help' => 'e.g. any 2 for £25', 'icon' => 'squares-plus'],
                         ]" />
+                        <div x-show="type === 'multibuy'" @if ($initial['type'] !== 'multibuy') x-cloak @endif>
+                            <x-admin.input type="number" min="2" max="100" step="1" inputmode="numeric" name="buy_quantity" label="Number of items in the set" :value="$initial['buyQty']" x-model="buyQty"
+                                           help="Any mix of the products this discount applies to (below). Each full set costs the price below; extra items pay their own price." style="max-width:160px" />
+                        </div>
                         <x-admin.field label="Discount value" for="f-amount" error="amount" required>
                             <div @class(['input-group', 'is-invalid' => $errors->has('amount')]) style="max-width:240px">
                                 <span class="input-group__addon" x-show="type !== 'percent'">£</span>
@@ -75,6 +92,7 @@
                             </div>
                         </x-admin.field>
                         <x-admin.toggle name="free_shipping" label="Free shipping" help="Removes the shipping charge too. Use a value of 0 for a free-shipping-only code." :checked="$initial['freeShipping']" x-model="freeShipping" />
+                        <p class="text-sm text-muted" x-show="type === 'multibuy'" x-cloak>For a multi-buy the value is the price of each full set, e.g. 25.00.</p>
                     </div>
                 </x-admin.card>
 
@@ -124,12 +142,18 @@
                         <x-admin.datetime name="starts_at" label="Starts" optional :value="$coupon->starts_at" x-model="startsAt" help="UK time. Blank = straight away." />
                         <x-admin.datetime name="expires_at" label="Ends" optional :value="$coupon->expires_at" x-model="expiresAt" help="UK time. Blank = never." />
                     </div>
+                    <div class="mt-4" x-show="auto === '1'" @if ($initial['auto'] !== '1') x-cloak @endif>
+                        <x-admin.checkbox name="show_countdown" label="Show a countdown to the end date on product pages" :checked="$coupon->show_countdown"
+                                          help="Only while the discount runs and has an end date (themes that support it)." />
+                    </div>
                 </x-admin.card>
             </div>
 
             <div class="layout__aside layout__aside--sticky">
                 <x-admin.card title="Summary">
-                    <p class="mono fw-700 text-lg break" x-text="code || 'No code yet'" :class="{ 'text-subtle': !code }">{{ $initial['code'] ?: 'No code yet' }}</p>
+                    <p class="fw-700 text-lg break" x-show="auto === '1'" x-text="label || 'No name yet'" :class="{ 'text-subtle': !label }" @if ($initial['auto'] !== '1') x-cloak @endif>{{ $initial['label'] ?: 'No name yet' }}</p>
+                    <p class="text-sm text-muted" x-show="auto === '1'" @if ($initial['auto'] !== '1') x-cloak @endif>Applied automatically – no code needed</p>
+                    <p class="mono fw-700 text-lg break" x-show="auto !== '1'" x-text="code || 'No code yet'" :class="{ 'text-subtle': !code }" @if ($initial['auto'] === '1') x-cloak @endif>{{ $initial['code'] ?: 'No code yet' }}</p>
                     <ul class="summary-list mt-3">
                         <li x-text="valueText"></li>
                         <li x-show="minSpend" x-text="'Minimum basket total ' + Admin.money(minSpend)"></li>
@@ -198,7 +222,10 @@
                     get valueText() {
                         var amount = parseFloat(this.amount) || 0;
                         var text;
-                        if (this.type === 'percent') {
+                        if (this.type === 'multibuy') {
+                            var qty = parseInt(this.buyQty, 10);
+                            text = 'Any ' + (qty > 1 ? qty : 'X') + ' for ' + (amount ? Admin.money(amount) : '£…');
+                        } else if (this.type === 'percent') {
                             text = (amount ? (Math.round(amount * 100) / 100) + '% off' : 'Percentage off') + ' the basket';
                         } else if (this.type === 'fixed_product') {
                             text = (amount ? Admin.money(amount) : 'An amount') + ' off each item';

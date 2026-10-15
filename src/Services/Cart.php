@@ -277,11 +277,15 @@ class Cart
         if (! $coupon) {
             return ['ok' => false, 'message' => sprintf('Coupon "%s" cannot be applied because it does not exist.', $code)];
         }
+        if ($coupon->auto_apply) {
+            return ['ok' => false, 'message' => sprintf('"%s" is applied automatically when your basket qualifies – there is no need to enter it.', $coupon->displayName())];
+        }
         if ($this->isEmpty()) {
             return ['ok' => false, 'message' => 'Your basket is currently empty.'];
         }
 
-        $applied = $this->coupons();
+        // codes typed in before (automatic discounts are worked out afresh every time)
+        $applied = array_values(array_filter($this->coupons(), fn (Coupon $c) => ! $c->auto_apply));
         foreach ($applied as $current) {
             if (mb_strtolower($current->code) === mb_strtolower($coupon->code)) {
                 return ['ok' => false, 'message' => sprintf('Coupon code "%s" already applied!', $coupon->code)];
@@ -339,7 +343,8 @@ class Cart
     }
 
     /**
-     * Applied coupons that are still valid. Invalid ones are dropped from the basket with a notice.
+     * Applied coupons that are still valid, then the automatic discounts the basket qualifies for (automaticFor()).
+     * Invalid codes are dropped from the basket with a notice.
      *
      * @return array<int, Coupon>
      */
@@ -348,9 +353,12 @@ class Cart
         if ($this->validCoupons !== null) {
             return $this->validCoupons;
         }
-        $codes = $this->couponCodes();
-        if (! $codes || $this->items()->isEmpty()) {
+        if ($this->items()->isEmpty() || ! Features::enabled('coupons', false)) {
             return $this->validCoupons = [];
+        }
+        $codes = $this->couponCodes();
+        if (! $codes) {
+            return $this->validCoupons = $this->automaticFor([], null, $this->email(), $this->user()?->id);
         }
 
         $coupons = Coupon::whereIn(DB::raw('LOWER(code)'), array_map('mb_strtolower', $codes))->get();
@@ -373,7 +381,37 @@ class Cart
             $this->model()->forceFill(['coupon_code' => $valid ? implode(',', array_map(fn ($c) => $c->code, $valid)) : null])->save();
         }
 
-        return $this->validCoupons = $valid;
+        return $this->validCoupons = array_merge($valid, $this->automaticFor($valid, null, $this->email(), $this->user()?->id));
+    }
+
+    /**
+     * The automatic discounts (Admin › Discounts › "Apply automatically") these lines qualify for, after the codes the
+     * customer applied. None next to a code that "can't be combined"; one that can't be combined itself steps aside
+     * for any code. A discount the basket doesn't (yet) qualify for is simply not applied – no notice.
+     *
+     * @param  array<int, Coupon>  $codeCoupons  valid codes already applied
+     * @param  Collection<int, CartLine>|null  $lines  priced lines (null = this basket's)
+     * @return array<int, Coupon>
+     */
+    public function automaticFor(array $codeCoupons, ?Collection $lines, ?string $email, ?int $userId, bool $atCheckout = false, ?int $excludeOrderId = null): array
+    {
+        $running = Coupon::running();
+        if ($running->isEmpty() || collect($codeCoupons)->contains(fn (Coupon $c) => $c->individual_use)) {
+            return [];
+        }
+        $lines ??= $this->pricedLines($this->itemsForCoupons($running->all()));
+        $taken = collect($codeCoupons)->map(fn (Coupon $c) => $c->id)->all();
+        $out = [];
+        foreach ($running as $coupon) {
+            if (in_array($coupon->id, $taken, true) || ($coupon->individual_use && $codeCoupons)) {
+                continue;
+            }
+            if ($this->engine->validate($coupon, $lines, $email, $userId, $atCheckout, $excludeOrderId) === null) {
+                $out[] = $coupon;
+            }
+        }
+
+        return $out;
     }
 
     // ------------------------------------------------------------------ shipping / contact
@@ -541,6 +579,9 @@ class Cart
             'discount' => $result['discount'],
             'coupons' => $couponTotals,
             'coupon_models' => $coupons,
+            // v1.6: customer-facing names (an automatic discount's label, else the code) and which ones were automatic
+            'coupon_labels' => collect($coupons)->mapWithKeys(fn (Coupon $c) => [$c->code => $c->displayName()])->all(),
+            'automatic_coupons' => collect($coupons)->filter(fn (Coupon $c) => $c->auto_apply)->map(fn (Coupon $c) => $c->code)->values()->all(),
             'free_shipping' => $freeShipping,
             'shipping_methods' => $methods,
             'shipping_method' => $selected['method'] ?? null,

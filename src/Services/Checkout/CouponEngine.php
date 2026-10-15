@@ -5,6 +5,7 @@ namespace Pine\Commerce\Services\Checkout;
 use Pine\Commerce\Models\Category;
 use Pine\Commerce\Models\Coupon;
 use Pine\Commerce\Models\Order;
+use Pine\Commerce\Models\Product;
 use Illuminate\Support\Collection;
 
 /**
@@ -19,8 +20,8 @@ use Illuminate\Support\Collection;
  */
 class CouponEngine
 {
-    /** Types whose discount is limited to "eligible" lines (WooCommerce product coupon types). */
-    public const PRODUCT_TYPES = ['percent', 'fixed_product'];
+    /** Types whose discount is limited to "eligible" lines (WooCommerce product coupon types, and multi-buys). */
+    public const PRODUCT_TYPES = ['percent', 'fixed_product', 'multibuy'];
 
     /** Order statuses that do not count as a coupon use. */
     public const UNUSED_STATUSES = ['cancelled', 'failed'];
@@ -33,7 +34,7 @@ class CouponEngine
      */
     public function validate(Coupon $coupon, Collection $lines, ?string $email = null, ?int $userId = null, bool $atCheckout = false, ?int $excludeOrderId = null): ?string
     {
-        $code = $coupon->code;
+        $code = $coupon->displayName(); // an automatic discount is known to customers by its label
 
         if (! $coupon->is_active) {
             return sprintf('Coupon "%s" cannot be applied because it does not exist.', $code);
@@ -97,6 +98,19 @@ class CouponEngine
             }
         }
 
+        if ($coupon->type === 'multibuy') {
+            $size = (int) $coupon->buy_quantity;
+            if ($size < 2) {
+                return sprintf('Sorry, coupon "%s" is not applicable to your cart contents.', $code);
+            }
+            $units = $lines->filter(fn (CartLine $l) => $this->isValidForLine($coupon, $l))->sum(fn (CartLine $l) => $l->quantity);
+            if ($units < $size) {
+                $more = $size - $units;
+
+                return sprintf('Add %d more eligible %s to your basket for "%s".', $more, $more === 1 ? 'item' : 'items', $code);
+            }
+        }
+
         $allowed = array_values(array_filter(array_map(fn ($e) => mb_strtolower(trim((string) $e)), (array) $coupon->allowed_emails)));
         if ($allowed) {
             if (! $email) {
@@ -157,8 +171,8 @@ class CouponEngine
             $line->discount = 0.0;
         }
 
-        // WooCommerce order: fixed product first, then percentage, then fixed basket
-        $priority = ['fixed_product' => 0, 'percent' => 1, 'fixed_cart' => 2];
+        // Multi-buy set prices first (they replace prices), then WooCommerce's order: fixed product, percentage, fixed basket
+        $priority = ['multibuy' => -1, 'fixed_product' => 0, 'percent' => 1, 'fixed_cart' => 2];
         usort($coupons, fn (Coupon $a, Coupon $b) => ($priority[$a->type] ?? 3) <=> ($priority[$b->type] ?? 3));
 
         // Most expensive lines first, like WC_Discounts::sort_by_price (decides who gets rounding pennies)
@@ -193,6 +207,10 @@ class CouponEngine
                         }
                         break;
 
+                    case 'multibuy':
+                        $given += $this->applyMultibuy(max(2, (int) $coupon->buy_quantity), $amount, $eligible, $lines, $remaining);
+                        break;
+
                     default: // fixed_cart
                         $pool = array_sum(array_map(fn ($i) => $remaining[$i], $eligible));
                         $target = min($amount, $pool);
@@ -213,6 +231,69 @@ class CouponEngine
         }
 
         return $totals;
+    }
+
+    /**
+     * "Any {size} for £{price}": the eligible items, one by one and most expensive first, are grouped into sets of
+     * $size; each full set that costs more than $setPrice is brought down to it (spread over its items by price).
+     * Items left over, and sets already cheaper than the set price (e.g. sale items), pay their own price.
+     * Returns the pence given.
+     */
+    protected function applyMultibuy(int $size, int $setPrice, array $eligible, Collection $lines, array &$remaining): int
+    {
+        $units = [];
+        foreach ($eligible as $i) {
+            $qty = max(1, (int) $lines[$i]->quantity);
+            $each = intdiv($remaining[$i], $qty);
+            $extra = $remaining[$i] - $each * $qty;
+            for ($u = 0; $u < $qty; $u++) {
+                $units[] = [$i, $each + ($u < $extra ? 1 : 0)];
+            }
+        }
+        usort($units, fn ($a, $b) => $b[1] <=> $a[1] ?: $a[0] <=> $b[0]);
+
+        $given = 0;
+        for ($s = 0, $sets = intdiv(count($units), $size); $s < $sets; $s++) {
+            $set = array_slice($units, $s * $size, $size);
+            $total = array_sum(array_column($set, 1));
+            $off = $total - $setPrice;
+            if ($off <= 0) {
+                continue;
+            }
+            $left = $off;
+            foreach ($set as $k => [$i, $price]) {
+                $d = $k === count($set) - 1 ? $left : (int) floor($off * $price / $total);
+                $d = min($d, $remaining[$i]);
+                $remaining[$i] -= $d;
+                $left -= $d;
+                $given += $d;
+            }
+        }
+
+        return $given;
+    }
+
+    /**
+     * Would this discount apply to the product (one of it, at its current price)? Products / categories / exclusions /
+     * sale items only – spend, usage and email rules depend on the basket. For product pages and cards. A basket-wide
+     * type counts for the products it lists (all when it lists none), never for excluded ones.
+     */
+    public function appliesToProduct(Coupon $coupon, Product $product): bool
+    {
+        $line = new CartLine(null, $product, null, 1, (float) ($product->currentPrice() ?? 0));
+        if (in_array($coupon->type, self::PRODUCT_TYPES, true)) {
+            return $this->isValidForLine($coupon, $line);
+        }
+        $productIds = $this->ids($coupon->product_ids);
+        $categoryIds = $this->ids($coupon->category_ids);
+        $listed = (! $productIds && ! $categoryIds)
+            || ($productIds && $this->matchesProducts($line, $productIds))
+            || ($categoryIds && array_intersect($line->categoryIds(), $categoryIds));
+
+        return $listed
+            && ! (($excluded = $this->ids($coupon->excluded_product_ids)) && $this->matchesProducts($line, $excluded))
+            && ! (($excludedCats = $this->ids($coupon->excluded_category_ids)) && array_intersect($line->categoryIds(), $excludedCats))
+            && ! ($coupon->exclude_sale_items && $line->isOnSale());
     }
 
     /** Hand out leftover rounding pennies one at a time. Returns how many were given. */
