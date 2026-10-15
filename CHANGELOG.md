@@ -73,8 +73,11 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
   (`LoyaltyPoint`: signup, earn, redeem, refund, reverse, adjust, import), so every balance is explained. My account ›
   Points (balance, rules, history), a points card with adjust on each admin customer, Admin › Settings › Loyalty points
   (points per £1, points for £1 off, welcome bonus, minimum, maximum share of an order, name), and
-  `php artisan commerce:loyalty:import file.csv [--dry-run]` for balances from the old shop (re-runnable: adds only the
-  difference). Points are checked under lock at checkout so they can't be spent twice. **Config keys added:**
+  `php artisan commerce:loyalty:import --from-wordpress [--dry-run]` for balances straight from WooCommerce Points &
+  Rewards in the WordPress database (read only; the importer's WP_DB_* settings or `--wp-path`; the REST API doesn't
+  expose them) or `commerce:loyalty:import file.csv` (re-runnable: adds only the difference). Exports:
+  `php artisan commerce:loyalty:export [file] [--all]` (email, points, worth – importable again) and a Points column in
+  Admin › Customers › Export. Points are checked under lock at checkout so they can't be spent twice. **Config keys added:**
   `features.loyalty` (false), `loyalty.*` defaults. Tests: `LoyaltyPointsTest`.
 - Payment method **Debit or credit card (via PayPal)** (`paypal_card`, `PaypalCardGateway`): the PayPal app and keys of
   Admin › Settings › Payments › PayPal, with PayPal's page opening on its card form (`landing_page: GUEST_CHECKOUT`) –

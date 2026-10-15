@@ -148,4 +148,48 @@ class LoyaltyPointsTest extends TestCase
         $this->assertStringContainsString('Welcome bonus', $page);
         $this->assertStringContainsString('Correction', $page);
     }
+
+    public function test_balances_come_straight_from_points_and_rewards_in_the_wordpress_database(): void
+    {
+        $bob = $this->customer();
+        $file = sys_get_temp_dir().'/commerce-points-wp-'.bin2hex(random_bytes(4)).'.sqlite';
+        touch($file);
+        config(['database.connections.points_wp' => ['driver' => 'sqlite', 'database' => $file, 'prefix' => 'wp_', 'foreign_key_constraints' => false],
+            'commerce-import.source' => ['connection' => 'points_wp', 'wp_path' => null, 'site_url' => null, 'site_host' => null, 'snapshots' => []]]);
+        $wp = \Illuminate\Support\Facades\Schema::connection('points_wp');
+        $wp->create('options', function ($t) { $t->bigIncrements('option_id'); $t->string('option_name'); $t->text('option_value'); $t->string('autoload')->default('yes'); });
+        $wp->create('posts', function ($t) { $t->bigIncrements('ID'); $t->string('post_type')->default('post'); });
+        $wp->create('users', function ($t) { $t->bigIncrements('ID'); $t->string('user_email'); });
+        $wp->create('wc_points_rewards_user_points', function ($t) { $t->bigIncrements('id'); $t->unsignedBigInteger('user_id'); $t->bigInteger('points'); $t->bigInteger('points_balance'); });
+        $db = \Illuminate\Support\Facades\DB::connection('points_wp');
+        $db->table('users')->insert([['ID' => 7, 'user_email' => 'Bob@Example.test'], ['ID' => 8, 'user_email' => 'ghost@example.test']]);
+        $db->table('wc_points_rewards_user_points')->insert([
+            ['user_id' => 7, 'points' => 120, 'points_balance' => 80], ['user_id' => 7, 'points' => 300, 'points_balance' => 300], ['user_id' => 8, 'points' => 50, 'points_balance' => 50],
+        ]);
+
+        $this->artisan('commerce:loyalty:import', ['--from-wordpress' => true])->expectsOutputToContain('2 customers with Points & Rewards balances')
+            ->expectsOutputToContain('1 customers updated')->assertSuccessful();
+        $this->assertSame(200 + 380, Loyalty::balance($bob->id), 'the sum of the remaining balances');
+
+        \Illuminate\Support\Facades\DB::purge('points_wp');
+        \Illuminate\Support\Facades\DB::purge('wordpress_import');
+        @unlink($file);
+    }
+
+    public function test_balances_export_to_csv_and_with_the_customers(): void
+    {
+        $bob = $this->customer();
+        $this->customer('amy@example.test');
+        Loyalty::add($bob->id, 200, 'adjust');
+        $csv = tempnam(sys_get_temp_dir(), 'exp');
+
+        $this->artisan('commerce:loyalty:export', ['file' => $csv])->expectsOutputToContain('2 customers, 600 points')->assertSuccessful();
+        $lines = array_map('str_getcsv', file($csv, FILE_IGNORE_NEW_LINES));
+        $this->assertSame(['email', 'points', 'worth', 'first_name', 'last_name'], $lines[0]);
+        $this->assertSame(['bob@example.test', '400', '10.00', 'Bob', 'Big'], $lines[2]);
+        @unlink($csv);
+
+        $customers = $this->actingAs($this->neutralAdmin())->get(route('admin.customers.export'))->assertOk()->streamedContent();
+        $this->assertStringContainsString(',Points', strtok($customers, "\n"));
+    }
 }

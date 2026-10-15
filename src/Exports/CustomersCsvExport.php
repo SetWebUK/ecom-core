@@ -20,7 +20,9 @@ class CustomersCsvExport extends CsvExport
 
     public static function download(Builder $query, ?string $filename = null): StreamedResponse
     {
-        return static::stream($filename ?? 'customers-'.LocalTime::now()->format('Y-m-d-His').'.csv', self::HEADINGS, static::rows($query));
+        $headings = commerce_feature('loyalty') ? [...self::HEADINGS, 'Points'] : self::HEADINGS;
+
+        return static::stream($filename ?? 'customers-'.LocalTime::now()->format('Y-m-d-His').'.csv', $headings, static::rows($query));
     }
 
     public static function rows(Builder $query): \Generator
@@ -49,6 +51,7 @@ class CustomersCsvExport extends CsvExport
                 $user->is_active ? 'Active' : 'Disabled',
                 LocalTime::format($user->created_at, 'Y-m-d'),
                 $user->admin_note,
+                ...(commerce_feature('loyalty') ? [\Pine\Commerce\Services\Loyalty\Loyalty::balance((int) $user->id)] : []),
             ];
         }
     }

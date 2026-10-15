@@ -174,7 +174,7 @@ class CommerceServiceProvider extends ServiceProvider
         // image sizes: (re)build the size variants of existing uploads
         $this->commands([Console\ImagesGenerateCommand::class]);
         // loyalty points balances from the old shop
-        $this->commands([Console\LoyaltyImportCommand::class]);
+        $this->commands([Console\LoyaltyImportCommand::class, Console\LoyaltyExportCommand::class]);
         // full product CSV (feature switch product_csv – the commands refuse to run while it is off)
         $this->commands([Console\ProductsExportCommand::class, Console\ProductsImportCommand::class]);
         // scheduled tasks: status table + run one task by hand
