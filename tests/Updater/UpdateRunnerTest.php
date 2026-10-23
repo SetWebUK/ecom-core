@@ -162,12 +162,10 @@ class UpdateRunnerTest extends TestCase
         $this->runner->on('commerce:doctor', function () use (&$calls) {
             $calls++;
 
-            $checks = [['title' => 'Old problem', 'status' => 'fail']];
-            if ($calls > 1) {
-                $checks[] = ['title' => 'Theme', 'status' => 'fail'];
-            }
-
-            return json_encode(['checks' => $checks]);
+            return json_encode(['checks' => [
+                ['title' => 'Old problem', 'status' => 'fail'],
+                ['title' => 'Theme', 'status' => $calls > 1 ? 'fail' : 'pass'],
+            ]]);
         });
         $update = $this->approved();
         $this->assertFalse(app(UpdateRunner::class)->run($update));
@@ -176,6 +174,56 @@ class UpdateRunnerTest extends TestCase
         $this->assertStringContainsString('Theme', (string) $update->error);
         $this->assertStringNotContainsString('Old problem', (string) $update->error, 'checks failing before the update do not count');
         $this->assertNotNull($this->runner->indexOf('composer-test install'));
+    }
+
+    public function test_a_failing_check_added_by_the_new_version_warns_but_does_not_roll_back(): void
+    {
+        $calls = 0;
+        $this->runner->on('commerce:doctor', function () use (&$calls) {
+            $calls++;
+            $checks = [['title' => 'Theme', 'status' => 'pass']];
+            if ($calls > 1) {
+                $checks[] = ['title' => 'Time zone', 'status' => 'fail'];
+            }
+
+            return json_encode(['checks' => $checks]);
+        });
+        $update = $this->approved();
+        $this->assertTrue(app(UpdateRunner::class)->run($update));
+        $update->refresh();
+        $this->assertSame('succeeded', $update->status);
+        $this->assertSame(['Time zone'], $update->meta('doctor_introduced'));
+        $this->assertStringContainsString('WARNING: check(s) added by this version fail: Time zone', (string) $update->log);
+        $this->assertNull($this->runner->indexOf('composer-test install'), 'no rollback');
+    }
+
+    public function test_every_failing_check_counts_when_the_doctor_did_not_answer_before_the_update(): void
+    {
+        $calls = 0;
+        $this->runner->on('commerce:doctor', function () use (&$calls) {
+            $calls++;
+
+            return $calls > 1 ? json_encode(['checks' => [['title' => 'Time zone', 'status' => 'fail']]]) : new ProcessResult(255, 'PHP Fatal error');
+        });
+        $update = $this->approved();
+        $this->assertFalse(app(UpdateRunner::class)->run($update));
+        $update->refresh();
+        $this->assertSame('health', $update->meta('failed_step'));
+        $this->assertStringContainsString('Time zone', (string) $update->error);
+    }
+
+    public function test_a_composer_error_is_reported_instead_of_its_usage_line(): void
+    {
+        $this->runner->on('composer-test update', fn () => new ProcessResult(100, implode("\n", [
+            'Loading composer repositories with package information',
+            'In AuthHelper.php line 152:',
+            '  Could not authenticate against github.com',
+            'update [--with WITH] [--prefer-source] [--] [<packages>...]',
+        ])));
+        $update = $this->approved();
+        $this->assertFalse(app(UpdateRunner::class)->run($update));
+        $update->refresh();
+        $this->assertSame('composer update exited with code 100: Could not authenticate against github.com', (string) $update->error);
     }
 
     public function test_only_one_update_runs_at_a_time(): void
