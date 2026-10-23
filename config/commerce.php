@@ -308,6 +308,8 @@ return [
             'stripe' => 'Pine\\Commerce\\Services\\Payments\\Gateways\\StripeGateway',
             'paypal' => 'Pine\\Commerce\\Services\\Payments\\Gateways\\PaypalGateway',
             'paypal_card' => 'Pine\\Commerce\\Services\\Payments\\Gateways\\PaypalCardGateway', // cards through PayPal (off until switched on)
+            'paypal_googlepay' => 'Pine\\Commerce\\Services\\Payments\\Gateways\\PaypalGooglePayGateway', // Google Pay through PayPal (off until switched on)
+            'paypal_applepay' => 'Pine\\Commerce\\Services\\Payments\\Gateways\\PaypalApplePayGateway', // Apple Pay through PayPal (off until switched on)
             'bacs' => 'Pine\\Commerce\\Services\\Payments\\Gateways\\BacsGateway',
         ],
     ],

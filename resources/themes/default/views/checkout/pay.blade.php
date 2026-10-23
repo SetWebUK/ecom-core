@@ -1,4 +1,4 @@
-{{-- Pay for a pending / failed order. $order, $gateways, $problem, $error, $termsUrl, $stripe, $noGatewaysMessage --}}
+{{-- Pay for a pending / failed order. $order, $gateways, $problem, $error, $termsUrl, $stripe, $wallets, $noGatewaysMessage --}}
 @extends('checkout.layout')
 
 @php $S = \Pine\Commerce\Theme\Storefront::class; @endphp
@@ -10,6 +10,14 @@
     @push('head')
         <link rel="preconnect" href="https://js.stripe.com">
         <script src="https://js.stripe.com/v3/" defer></script>
+    @endpush
+@endif
+@if ($wallets && ! $problem)
+    @push('head')
+        {{-- Google Pay / Apple Pay through PayPal: PayPal's SDK and the wallets' own scripts --}}
+        @foreach ($wallets['scripts'] as $src)
+            <script src="{{ $src }}" defer></script>
+        @endforeach
     @endpush
 @endif
 
@@ -56,6 +64,7 @@
 </div>
 <script type="application/json" id="checkout-config">{!! json_encode([
     'stripe' => $problem ? null : $stripe,
+    'wallets' => $problem || ! $wallets ? null : \Illuminate\Support\Arr::except($wallets, ['scripts']),
     'needsPayment' => ! $problem,
     'total' => (float) $order->total,
     'currency' => config('commerce.currency.code', 'GBP'),

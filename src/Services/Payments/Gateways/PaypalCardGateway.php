@@ -15,8 +15,7 @@ use Pine\Commerce\Models\Order;
  */
 class PaypalCardGateway extends PaypalGateway
 {
-    /** Keys read from PayPal's own settings, so there is one set of credentials. */
-    protected const SHARED = ['client_id', 'secret', 'sandbox', 'webhook_id'];
+    use SharesPaypalKeys;
 
     public function code(): string
     {
@@ -55,15 +54,4 @@ class PaypalCardGateway extends PaypalGateway
         return ['landing_page' => 'GUEST_CHECKOUT'] + parent::experienceContext($order);
     }
 
-    public function handleWebhook(\Illuminate\Http\Request $request): \Symfony\Component\HttpFoundation\Response
-    {
-        return response('PayPal notifications for card payments arrive at /webhooks/paypal.', 404);
-    }
-
-    protected function setting(string $key, $default = null)
-    {
-        return in_array($key, self::SHARED, true)
-            ? setting('payments.paypal.'.$key, $default)
-            : parent::setting($key, $default);
-    }
 }

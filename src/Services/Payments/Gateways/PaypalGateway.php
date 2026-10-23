@@ -26,8 +26,8 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class PaypalGateway extends Gateway
 {
-    /** Gateways that take payments through this PayPal app (PayPal itself and PaypalCardGateway): one webhook for both. */
-    public const PAYPAL_CODES = ['paypal', 'paypal_card'];
+    /** Gateways that take payments through this PayPal app (PayPal, card, Google Pay, Apple Pay): one webhook for all. */
+    public const PAYPAL_CODES = ['paypal', 'paypal_card', 'paypal_googlepay', 'paypal_applepay'];
 
     public function code(): string
     {
@@ -132,6 +132,25 @@ class PaypalGateway extends Gateway
 
     public function process(Order $order, Request $request): PaymentResult
     {
+        $response = $this->createOrder($order);
+        if ($response === null) {
+            return PaymentResult::failure('Sorry, we could not connect to PayPal. Please try again or choose another payment method.');
+        }
+
+        $approve = collect($response->json('links', []))->first(fn ($l) => in_array($l['rel'] ?? '', ['payer-action', 'approve'], true));
+        if (! $response->successful() || ! $approve) {
+            Log::warning('PayPal create order rejected for '.$order->number.': '.$response->body());
+
+            return PaymentResult::failure('Sorry, PayPal could not start your payment. Please try again or choose another payment method.');
+        }
+        $this->recordStarted($order, (string) $response->json('id'));
+
+        return PaymentResult::redirect($approve['href']);
+    }
+
+    /** POST /v2/checkout/orders for the order (null when PayPal could not be reached). */
+    protected function createOrder(Order $order): ?HttpResponse
+    {
         $value = number_format((float) $order->total, 2, '.', '');
         $payload = [
             'intent' => 'CAPTURE',
@@ -153,40 +172,43 @@ class PaypalGateway extends Gateway
                     ]),
                 ],
             ]],
-            'payment_source' => [
-                'paypal' => [
-                    'email_address' => $order->email,
-                    'experience_context' => $this->experienceContext($order),
-                ],
-            ],
         ];
+        if ($source = $this->paymentSource($order)) {
+            $payload['payment_source'] = $source;
+        }
 
         try {
-            $response = $this->api()->withHeaders(['PayPal-Request-Id' => strtolower($this->reference()).'-create-'.$order->id.'-'.md5(json_encode($payload))])
+            return $this->api()->withHeaders(['PayPal-Request-Id' => strtolower($this->reference()).'-create-'.$order->id.'-'.md5(json_encode($payload))])
                 ->post('/v2/checkout/orders', $payload);
         } catch (\Throwable $e) {
             Log::warning('PayPal create order failed for '.$order->number.': '.$e->getMessage());
 
-            return PaymentResult::failure('Sorry, we could not connect to PayPal. Please try again or choose another payment method.');
+            return null;
         }
+    }
 
-        $approve = collect($response->json('links', []))->first(fn ($l) => in_array($l['rel'] ?? '', ['payer-action', 'approve'], true));
-        if (! $response->successful() || ! $approve) {
-            Log::warning('PayPal create order rejected for '.$order->number.': '.$response->body());
+    /** Orders v2 payment_source: the customer approves on PayPal's own page ([] = none, the browser supplies it). */
+    protected function paymentSource(Order $order): array
+    {
+        return [
+            'paypal' => [
+                'email_address' => $order->email,
+                'experience_context' => $this->experienceContext($order),
+            ],
+        ];
+    }
 
-            return PaymentResult::failure('Sorry, PayPal could not start your payment. Please try again or choose another payment method.');
-        }
-
+    /** The pending payment the return / webhook later completes, keyed by the PayPal order id. */
+    protected function recordStarted(Order $order, string $paypalOrderId): void
+    {
         $order->payments()->create([
             'gateway' => $this->code(),
-            'reference' => $response->json('id'),
+            'reference' => $paypalOrderId,
             'amount' => $order->total,
             'status' => 'pending',
             'payload' => ['sandbox' => $this->isSandbox()],
         ]);
-        $order->addNote('PayPal payment started (PayPal Order ID: '.$response->json('id').').');
-
-        return PaymentResult::redirect($approve['href']);
+        $order->addNote($this->title().' payment started (PayPal Order ID: '.$paypalOrderId.').');
     }
 
     /** How PayPal's page behaves (Orders v2 payment_source.paypal.experience_context). */
