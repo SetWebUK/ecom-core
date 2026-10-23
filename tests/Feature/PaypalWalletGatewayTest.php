@@ -138,6 +138,22 @@ class PaypalWalletGatewayTest extends TestCase
         $this->postJson(route('webhooks.payment', 'paypal_applepay'), [])->assertNotFound();
     }
 
+    public function test_apples_domain_check_gets_paypals_file_for_the_environment_at_the_exact_address(): void
+    {
+        $url = '/.well-known/apple-developer-merchantid-domain-association';
+
+        $sandbox = $this->get($url)->assertOk()->assertHeader('Content-Type', 'application/octet-stream');
+        $this->assertStringStartsWith('7B227073704964223A2241443631', $sandbox->streamedContent(), 'PayPal sandbox pspId AD61…');
+
+        Setting::set('payments.paypal.sandbox', false, 'payments');
+        $live = $this->get($url)->assertOk();
+        $this->assertStringStartsWith('7B227073704964223A2246354246', $live->streamedContent(), 'PayPal live pspId F5BF…');
+        $this->assertSame(9094, strlen($live->streamedContent()));
+
+        Setting::set('payments.paypal.client_id', '', 'payments');
+        $this->get($url)->assertNotFound();
+    }
+
     public function test_the_checkout_offers_the_wallets_hidden_until_the_browser_confirms_them(): void
     {
         Setting::set('payments.paypal_googlepay.enabled', true, 'payments');

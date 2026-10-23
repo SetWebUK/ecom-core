@@ -1,6 +1,7 @@
 <?php
 
 use Pine\Commerce\Http\Controllers\AccountController;
+use Pine\Commerce\Http\Controllers\ApplePayDomainController;
 use Pine\Commerce\Http\Controllers\Auth\AuthController;
 use Pine\Commerce\Http\Controllers\BlogController;
 use Pine\Commerce\Http\Controllers\CartController;
@@ -81,6 +82,7 @@ Route::post('checkout/order-pay/{order}', [CheckoutController::class, 'payOrder'
 Route::get('checkout/payment/{gateway}/return', [CheckoutController::class, 'paymentReturn'])->name('checkout.payment.return');
 Route::get('checkout/payment/{gateway}/cancel', [CheckoutController::class, 'paymentCancel'])->name('checkout.payment.cancel');
 Route::post('webhooks/{gateway}', [PaymentWebhookController::class, 'handle'])->name('webhooks.payment');
+Route::get('.well-known/apple-developer-merchantid-domain-association', ApplePayDomainController::class)->name('applepay.domain'); // Apple Pay through PayPal
 
 // Customer account (WooCommerce "my-account" endpoints)
 Route::get('my-account', [AccountController::class, 'dashboard'])->name('account');

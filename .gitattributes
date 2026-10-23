@@ -6,6 +6,8 @@
 *.ico binary
 *.woff binary
 *.woff2 binary
+# PayPal's Apple Pay domain association files: served byte for byte
+resources/payments/apple-pay/paypal-* binary
 
 # Left out of composer dist archives (what client servers download): development-only files.
 # Everything the running shop needs (src, config, routes, resources, database, stubs) stays in.

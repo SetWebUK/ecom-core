@@ -349,7 +349,7 @@
         if (!wallets.methods.googlepay || !window.paypal || !window.paypal.Googlepay || !window.google || !window.google.payments) { return; }
         googleClient = new window.google.payments.api.PaymentsClient({ environment: wallets.sandbox ? 'TEST' : 'PRODUCTION' });
         window.paypal.Googlepay().config().then(function (cfg) {
-            if (!cfg || !cfg.isEligible) { return; }
+            if (!cfg || !cfg.isEligible) { return; } // (PayPal rejects instead when the account can't take Google Pay)
             googleConfig = cfg;
             return googleClient.isReadyToPay({ apiVersion: cfg.apiVersion || 2, apiVersionMinor: cfg.apiVersionMinor || 0, allowedPaymentMethods: cfg.allowedPaymentMethods })
                 .then(function (res) {
@@ -368,7 +368,7 @@
             apiVersionMinor: googleConfig.apiVersionMinor || 0,
             allowedPaymentMethods: googleConfig.allowedPaymentMethods,
             merchantInfo: googleConfig.merchantInfo,
-            transactionInfo: { countryCode: googleConfig.countryCode || wallets.country, currencyCode: wallets.currency, totalPriceStatus: 'FINAL', totalPrice: walletTotal(), totalPriceLabel: 'Total' }
+            transactionInfo: { countryCode: googleConfig.countryCode || wallets.country, currencyCode: wallets.currency, totalPriceStatus: 'FINAL', totalPrice: walletTotal(), totalPriceLabel: 'Total', checkoutOption: 'DEFAULT' }
         }).then(function (paymentData) {
             walletBusy(true);
             return walletOrder(scope).then(function (data) {
@@ -393,7 +393,7 @@
 
     function setUpApplePay() {
         if (!wallets.methods.applepay || !window.paypal || !window.paypal.Applepay || !window.ApplePaySession) { return; }
-        try { if (!window.ApplePaySession.canMakePayments()) { return; } } catch (e) { return; }
+        try { if (!window.ApplePaySession.supportsVersion(4) || !window.ApplePaySession.canMakePayments()) { return; } } catch (e) { return; }
         window.paypal.Applepay().config().then(function (cfg) {
             if (!cfg || !cfg.isEligible) { return; }
             appleConfig = cfg;

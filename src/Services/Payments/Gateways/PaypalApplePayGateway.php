@@ -31,6 +31,12 @@ class PaypalApplePayGateway extends PaypalWalletGateway
         return 'https://applepay.cdn-apple.com/jsapi/1.latest/apple-pay-sdk.js';
     }
 
+    /** PayPal's domain association file for the current environment (served by ApplePayDomainController). */
+    public function domainAssociationFile(): string
+    {
+        return dirname(__DIR__, 4).'/resources/payments/apple-pay/paypal-'.($this->isSandbox() ? 'sandbox' : 'live');
+    }
+
     public function adminSettings(): array
     {
         return [
