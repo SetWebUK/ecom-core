@@ -9,6 +9,8 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-10-23
+
 ### Fixed
 - Admin › Updates rolled back any release that adds a `commerce:doctor` check which fails on the site (e.g. 1.6.0's
   Database › Time zone): the health step counted it as a new failure. A failing check that did not exist before the
