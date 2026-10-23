@@ -61,13 +61,17 @@
                 <x-slot:helpSlot><span x-text="saleNote || 'Leave empty when the product isn’t on sale.'">Leave empty when the product isn’t on sale.</span></x-slot:helpSlot>
             </x-admin.field>
         </div>
-        <div class="mt-4" x-show="sale !== ''">
-            <x-admin.toggle name="schedule_sale" label="Schedule the sale" help="Start and/or end the sale automatically (UK time)." :checked="(bool) ($product->sale_starts_at || $product->sale_ends_at)" x-model="schedule" />
-            <div class="form-grid mt-3" x-show="schedule" x-cloak>
-                <x-admin.datetime name="sale_starts_at" label="Sale starts" optional :value="$product->sale_starts_at" help="Blank = straight away." />
-                <x-admin.datetime name="sale_ends_at" label="Sale ends" optional :value="$product->sale_ends_at" help="Blank = until you remove the sale price." />
-            </div>
+    </div>
+    {{-- one schedule: the sale price of a simple product, or every variant's sale price --}}
+    <div class="mt-4" x-show="type === 'variable' || sale !== ''" @if (! ($product->type === 'variable' || $product->sale_price !== null)) x-cloak @endif>
+        <x-admin.toggle name="schedule_sale" label="Schedule the sale" :checked="(bool) ($product->sale_starts_at || $product->sale_ends_at)" x-model="schedule"
+                        help="Start and/or end the sale automatically (UK time). For a product with variants this applies to every variant’s sale price." />
+        <div class="form-grid mt-3" x-show="schedule" x-cloak>
+            <x-admin.datetime name="sale_starts_at" label="Sale starts" optional :value="$product->sale_starts_at" help="Blank = straight away." />
+            <x-admin.datetime name="sale_ends_at" label="Sale ends" optional :value="$product->sale_ends_at" help="Blank = until you remove the sale price." />
         </div>
+    </div>
+    <div x-show="type !== 'variable'">
         <div class="subsection">
             <div class="form-grid">
                 <x-admin.money name="cost_price" label="Cost per item" optional :value="$product->cost_price" x-model="cost" help="What you paid. Customers never see this." />

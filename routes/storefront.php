@@ -1,6 +1,7 @@
 <?php
 
 use Pine\Commerce\Http\Controllers\AccountController;
+use Pine\Commerce\Http\Controllers\ApplePayDomainController;
 use Pine\Commerce\Http\Controllers\Auth\AuthController;
 use Pine\Commerce\Http\Controllers\BlogController;
 use Pine\Commerce\Http\Controllers\CartController;
@@ -11,6 +12,7 @@ use Pine\Commerce\Http\Controllers\ContactController;
 use Pine\Commerce\Http\Controllers\FeedController;
 use Pine\Commerce\Http\Controllers\HomeController;
 use Pine\Commerce\Http\Controllers\InvoiceController;
+use Pine\Commerce\Http\Controllers\LegacyImageController;
 use Pine\Commerce\Http\Controllers\PaymentWebhookController;
 use Pine\Commerce\Http\Controllers\ProductController;
 use Pine\Commerce\Http\Controllers\ResolveController;
@@ -59,6 +61,8 @@ Route::post('cart/update', [CartController::class, 'update'])->name('cart.update
 Route::post('cart/remove', [CartController::class, 'remove'])->name('cart.remove');
 Route::post('cart/coupon', [CartController::class, 'applyCoupon'])->middleware([RequireFeature::for('coupons'), 'throttle:10,1,coupon'])->name('cart.coupon'); // no coupon-code guessing
 Route::delete('cart/coupon', [CartController::class, 'removeCoupon'])->middleware(RequireFeature::for('coupons'))->name('cart.coupon.remove');
+Route::post('cart/points', [CartController::class, 'applyPoints'])->middleware([RequireFeature::for('loyalty'), 'throttle:20,1'])->name('cart.points');
+Route::delete('cart/points', [CartController::class, 'removePoints'])->middleware(RequireFeature::for('loyalty'))->name('cart.points.remove');
 Route::get('cart/fragment', [CartController::class, 'fragment'])->name('cart.fragment'); // side-cart HTML + count JSON
 // Abandoned-cart reminder links (signed; CartRecoveryController). The unsubscribe POST is CSRF-exempt (RFC 8058 one-click).
 Route::get('basket/restore/{cart}', [CartRecoveryController::class, 'restore'])->whereNumber('cart')
@@ -78,6 +82,7 @@ Route::post('checkout/order-pay/{order}', [CheckoutController::class, 'payOrder'
 Route::get('checkout/payment/{gateway}/return', [CheckoutController::class, 'paymentReturn'])->name('checkout.payment.return');
 Route::get('checkout/payment/{gateway}/cancel', [CheckoutController::class, 'paymentCancel'])->name('checkout.payment.cancel');
 Route::post('webhooks/{gateway}', [PaymentWebhookController::class, 'handle'])->name('webhooks.payment');
+Route::get('.well-known/apple-developer-merchantid-domain-association', ApplePayDomainController::class)->name('applepay.domain'); // Apple Pay through PayPal
 
 // Customer account (WooCommerce "my-account" endpoints)
 Route::get('my-account', [AccountController::class, 'dashboard'])->name('account');
@@ -101,6 +106,7 @@ Route::middleware('auth')->group(function () {
     Route::get('my-account/edit-account', [AccountController::class, 'details'])->name('account.details');
     Route::post('my-account/edit-account', [AccountController::class, 'saveDetails'])->name('account.details.save');
     Route::get('my-account/wishlist', [AccountController::class, 'wishlist'])->middleware(RequireFeature::for('wishlist'))->name('account.wishlist');
+    Route::get('my-account/points', [AccountController::class, 'points'])->middleware(RequireFeature::for('loyalty'))->name('account.points');
     Route::get('my-account/downloads', [AccountController::class, 'downloads'])->name('account.downloads');
 });
 Route::post('wishlist/toggle', [AccountController::class, 'toggleWishlist'])->middleware(RequireFeature::for('wishlist'))->name('wishlist.toggle');
@@ -116,6 +122,11 @@ Route::get('sitemap_index.xml', [SitemapController::class, 'index']);
 Route::get('robots.txt', [SitemapController::class, 'robots'])->name('robots');
 Route::get('feeds/google-shopping.xml', [FeedController::class, 'google'])->middleware(RequireFeature::for('google_feed'))->name('feed.google');
 Route::get('feed', [BlogController::class, 'feed'])->middleware(RequireFeature::for('blog'))->name('feed.posts'); // legacy WordPress posts RSS feed
+
+// A WordPress image size that is not on disk (imported content links photo-450x206.jpg; imports keep the original):
+// 301 to the nearest file that is. The web server answers every file that exists before Laravel sees the request.
+Route::get('storage/uploads/{path}', [LegacyImageController::class, 'show'])
+    ->where('path', '.+-[0-9]+x[0-9]+\\.[A-Za-z0-9]+')->name('legacy.image');
 
 // Catch-all: pages, product categories (+ /page/N), products, legacy redirects
 // Registered as a *fallback* route, so it always matches after every other route (package, theme or client

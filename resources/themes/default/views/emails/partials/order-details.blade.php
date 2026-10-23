@@ -21,7 +21,7 @@
         </tr>
     @endforeach
     <tr><td style="{{ $cell }}color:#6b7280;">Subtotal</td><td style="{{ $cell }}text-align:right;">{{ money($amounts['subtotal']) }}</td></tr>
-    @if ($amounts['discount'] > 0)<tr><td style="{{ $cell }}color:#6b7280;">Discount @if ($order->coupon_code)({{ $order->coupon_code }})@endif</td><td style="{{ $cell }}text-align:right;">−{{ money($amounts['discount']) }}</td></tr>@endif
+    @if ($amounts['discount'] > 0)<tr><td style="{{ $cell }}color:#6b7280;">Discount @if ($order->coupon_code)({{ $order->discountNames() }})@endif</td><td style="{{ $cell }}text-align:right;">−{{ money($amounts['discount']) }}</td></tr>@endif
     <tr><td style="{{ $cell }}color:#6b7280;">Delivery @if ($order->shipping_method_title)<span style="font-size:13px;">({{ $order->shipping_method_title }})</span>@endif</td><td style="{{ $cell }}text-align:right;">{{ $amounts['shipping'] > 0 ? money($amounts['shipping']) : 'Free' }}</td></tr>
     @foreach ($amounts['tax_lines'] as $taxLine)<tr><td style="{{ $cell }}color:#6b7280;">{{ $amounts['incl'] ? 'Includes '.$taxLine['label'] : $taxLine['label'] }}</td><td style="{{ $cell }}text-align:right;">{{ money($taxLine['amount']) }}</td></tr>@endforeach
     @if ($order->payment_method_title)<tr><td style="{{ $cell }}color:#6b7280;">Payment method</td><td style="{{ $cell }}text-align:right;">{{ $order->payment_method_title }}</td></tr>@endif

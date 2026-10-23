@@ -136,6 +136,12 @@ class Doctor
             return;
         }
 
+        if (in_array(DB::connection($this->connection)->getDriverName(), ['mysql', 'mariadb'], true)) {
+            ($clock = DatabaseClock::problem($this->connection))
+                ? $this->fail('Time zone', ucfirst($clock).'.', DatabaseClock::fix())
+                : $this->pass('Time zone', 'The database session keeps the app\'s times ('.DatabaseClock::sessionZone($this->connection).').');
+        }
+
         $migrator = app('migrator');
         $repository = $migrator->getRepository();
         $repository->setSource($this->connection);

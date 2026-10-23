@@ -6,8 +6,9 @@
  *   POST|DELETE /cart/coupon {coupon_code, context: 'checkout'} → {ok, message, checkout: fragments}
  *   POST /checkout (form)  → {result: success|action|failure, redirect, client_secret, return_url, pay_url, errors, messages}
  *   POST /checkout/order-pay/{order} (order pay form) → same result shape
- * Stripe Payment Element (cards, Apple Pay, Google Pay), PayPal redirect, bank transfer. Without JavaScript the
- * forms post normally.
+ * Stripe Payment Element (cards, Apple Pay, Google Pay), PayPal redirect, Google Pay / Apple Pay through PayPal's JS
+ * SDK, bank transfer. Without JavaScript the forms post normally.
+ *   GET return_url (wallets, AJAX) → {result: success|failure, redirect, messages}
  */
 (function () {
     'use strict';
@@ -176,6 +177,7 @@
             if (pw) { pw.hidden = !t.checked; if (t.checked) { var i = $('input', pw); if (i) { i.focus(); } } }
         } else if (t.matches('input[name="payment_method"]')) {
             if (t.value === 'stripe') { mountStripe(); }
+            showWalletButton();
         } else if (t.matches('input[name="shipping_method"]') && form) {
             updateCheckout({ shipping_method: t.value });
         } else if (t.matches('#billing_email') && form && EMAIL.test(t.value)) {
@@ -195,7 +197,7 @@
         if (data.mobile_total) { $$('[data-order-total]').forEach(function (el) { el.textContent = data.mobile_total; }); }
         if (data.total !== undefined) { config.total = Number(data.total); }
         var paySection = $('[data-payment-section]');
-        if (paySection && data.needs_payment !== undefined) { paySection.hidden = !data.needs_payment; }
+        if (paySection && data.needs_payment !== undefined) { paySection.hidden = !data.needs_payment; showWalletButton(); }
         if (stripeElements && data.amount) { try { stripeElements.update({ amount: Math.max(1, data.amount) }); } catch (e) {} }
         if (data.notices && data.notices.length) { alerts(data.notices, 'info'); }
     }
@@ -229,7 +231,19 @@
                 return;
             }
             var remove = e.target.closest('[data-coupon-remove]');
-            if (remove) { e.preventDefault(); coupon('DELETE', remove.getAttribute('data-coupon-remove')); }
+            if (remove) { e.preventDefault(); coupon('DELETE', remove.getAttribute('data-coupon-remove')); return; }
+            // loyalty points: use them / keep them (the URL is on the button), then re-render the summary
+            var points = e.target.closest('[data-points-apply], [data-points-remove]');
+            if (points) {
+                e.preventDefault();
+                points.disabled = true;
+                var use = points.hasAttribute('data-points-apply');
+                request(points.getAttribute(use ? 'data-points-apply' : 'data-points-remove'), use ? 'POST' : 'DELETE', { context: 'checkout' }).then(function (data) {
+                    if (data.checkout) { applyFragments(data.checkout); }
+                    if (data.message) { alerts([data.message], data.ok ? 'success' : 'error'); }
+                    points.disabled = false;
+                });
+            }
         });
         d.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' && e.target.matches && e.target.matches('[data-coupon-input]')) {
@@ -270,6 +284,175 @@
     function stripeSelected(scope) { var c = $('input[name="payment_method"]:checked', scope); return c && c.value === 'stripe'; }
     function stripeError(message) { var box = $('[data-stripe-errors]'); if (box) { box.textContent = message; } alerts([message], 'error'); }
 
+    /* ------------------------------------------------------------------ Google Pay / Apple Pay (through PayPal) */
+    // config.wallets = {methods: {googlepay|applepay: method code}, sandbox, currency, country, storeName}. Each method
+    // starts hidden and is shown once PayPal says the account can take it and the browser can pay that way. While one
+    // is selected its own button stands in for "Place order": the sheet opens first (inside the click, as Google and
+    // Apple require), then the order is placed, confirmed with the wallet's payment data and captured (return URL).
+    var wallets = config.wallets && config.wallets.methods ? config.wallets : null;
+    var walletBox = null, googleClient = null, googleConfig = null, appleConfig = null;
+    var WALLET_NAMES = { googlepay: 'Google Pay', applepay: 'Apple Pay' };
+    var WALLET_FAILED = 'Your payment could not be completed. Please try again or choose another payment method.';
+
+    function walletScope() { return form || payForm; }
+    function selectedWallet(scope) {
+        if (!wallets || !scope) { return null; }
+        var paySection = $('[data-payment-section]', scope);
+        if (paySection && paySection.hidden) { return null; }
+        var checked = $('input[name="payment_method"]:checked', scope);
+        var li = checked && checked.closest('[data-wallet]');
+        return li && !li.hidden ? li.getAttribute('data-wallet') : null;
+    }
+    function showWalletButton() {
+        var scope = walletScope();
+        if (!scope || !walletBox) { return; }
+        var wallet = selectedWallet(scope), place = $('[data-place-order]', scope);
+        $$('[data-wallet-button]', walletBox).forEach(function (b) { b.hidden = b.getAttribute('data-wallet-button') !== wallet; });
+        walletBox.hidden = !wallet;
+        if (place) { place.hidden = !!wallet; }
+    }
+    function addWalletButton(wallet, button) {
+        var scope = walletScope(), place = scope && $('[data-place-order]', scope);
+        if (!place) { return; }
+        if (!walletBox) {
+            walletBox = d.createElement('div');
+            walletBox.className = 'wallet-buttons';
+            walletBox.hidden = true;
+            place.parentNode.insertBefore(walletBox, place.nextSibling);
+        }
+        var wrap = d.createElement('div');
+        wrap.className = 'wallet-button wallet-button--' + wallet;
+        wrap.setAttribute('data-wallet-button', wallet);
+        wrap.hidden = true;
+        wrap.appendChild(button);
+        walletBox.appendChild(wrap);
+        var li = $('[data-gateway="' + wallets.methods[wallet] + '"]', scope);
+        if (li) { li.hidden = false; }
+        showWalletButton();
+    }
+    function walletBusy(on) {
+        if (!walletBox) { return; }
+        walletBox.classList.toggle('is-busy', on);
+        walletBox.setAttribute('aria-busy', on ? 'true' : 'false');
+    }
+    function walletTotal() { return (Math.round(Number(config.total) * 100) / 100).toFixed(2); }
+    // the order is placed once the customer has approved in the sheet; field errors come back as for "Place order"
+    function walletOrder(scope) { return request(scope.getAttribute('action'), 'POST', new FormData(scope)); }
+    function walletFailed(data, scope) {
+        walletBusy(false);
+        if (data && data.result) { handleResult(data, null, scope); } else { alerts([WALLET_FAILED], 'error'); }
+    }
+    // capture: the return URL answers JSON over AJAX ({result, redirect, messages})
+    function walletCapture(data) { return request(data.return_url, 'GET'); }
+
+    function setUpGooglePay() {
+        if (!wallets.methods.googlepay || !window.paypal || !window.paypal.Googlepay || !window.google || !window.google.payments) { return; }
+        googleClient = new window.google.payments.api.PaymentsClient({ environment: wallets.sandbox ? 'TEST' : 'PRODUCTION' });
+        window.paypal.Googlepay().config().then(function (cfg) {
+            if (!cfg || !cfg.isEligible) { return; } // (PayPal rejects instead when the account can't take Google Pay)
+            googleConfig = cfg;
+            return googleClient.isReadyToPay({ apiVersion: cfg.apiVersion || 2, apiVersionMinor: cfg.apiVersionMinor || 0, allowedPaymentMethods: cfg.allowedPaymentMethods })
+                .then(function (res) {
+                    if (res && res.result) {
+                        addWalletButton('googlepay', googleClient.createButton({ onClick: googlePay, buttonType: 'pay', buttonColor: 'black', buttonSizeMode: 'fill', buttonRadius: 4, buttonLocale: 'en' }));
+                    }
+                });
+        }).catch(function () {});
+    }
+    function googlePay() {
+        var scope = walletScope();
+        alerts([]);
+        if (!googleConfig || !validate(scope)) { return; }
+        googleClient.loadPaymentData({
+            apiVersion: googleConfig.apiVersion || 2,
+            apiVersionMinor: googleConfig.apiVersionMinor || 0,
+            allowedPaymentMethods: googleConfig.allowedPaymentMethods,
+            merchantInfo: googleConfig.merchantInfo,
+            transactionInfo: { countryCode: googleConfig.countryCode || wallets.country, currencyCode: wallets.currency, totalPriceStatus: 'FINAL', totalPrice: walletTotal(), totalPriceLabel: 'Total', checkoutOption: 'DEFAULT' }
+        }).then(function (paymentData) {
+            walletBusy(true);
+            return walletOrder(scope).then(function (data) {
+                if (data.result !== 'action' || !data.paypal_order_id) { walletFailed(data, scope); return; }
+                var gp = window.paypal.Googlepay();
+                return gp.confirmOrder({ orderId: data.paypal_order_id, paymentMethodData: paymentData.paymentMethodData }).then(function (res) {
+                    var status = res && res.status;
+                    if (status === 'PAYER_ACTION_REQUIRED') { return gp.initiatePayerAction({ orderId: data.paypal_order_id }).then(function () { return walletCapture(data); }); }
+                    if (status === 'APPROVED') { return walletCapture(data); }
+                    return { result: 'failure', messages: [WALLET_FAILED] };
+                }).then(function (res) {
+                    if (res.result === 'success' && res.redirect) { window.location.href = res.redirect; return; }
+                    walletFailed({ result: 'failure', messages: res.messages || [WALLET_FAILED] }, scope);
+                });
+            });
+        }).catch(function (err) {
+            walletBusy(false);
+            if (err && err.statusCode === 'CANCELED') { return; }
+            alerts([WALLET_FAILED], 'error');
+        });
+    }
+
+    function setUpApplePay() {
+        if (!wallets.methods.applepay || !window.paypal || !window.paypal.Applepay || !window.ApplePaySession) { return; }
+        try { if (!window.ApplePaySession.supportsVersion(4) || !window.ApplePaySession.canMakePayments()) { return; } } catch (e) { return; }
+        window.paypal.Applepay().config().then(function (cfg) {
+            if (!cfg || !cfg.isEligible) { return; }
+            appleConfig = cfg;
+            var button = d.createElement('apple-pay-button');
+            button.setAttribute('buttonstyle', 'black');
+            button.setAttribute('type', 'pay');
+            button.setAttribute('locale', 'en-GB');
+            button.addEventListener('click', applePay);
+            addWalletButton('applepay', button);
+        }).catch(function () {});
+    }
+    function applePay() {
+        var scope = walletScope();
+        alerts([]);
+        if (!appleConfig || !validate(scope)) { return; }
+        // created inside the click: Safari refuses a session started later
+        var session = new window.ApplePaySession(4, {
+            countryCode: appleConfig.countryCode || wallets.country,
+            currencyCode: wallets.currency,
+            merchantCapabilities: appleConfig.merchantCapabilities,
+            supportedNetworks: appleConfig.supportedNetworks,
+            requiredBillingContactFields: ['name', 'postalAddress'],
+            total: { label: wallets.storeName, type: 'final', amount: walletTotal() }
+        });
+        var ap = window.paypal.Applepay();
+        session.onvalidatemerchant = function (event) {
+            ap.validateMerchant({ validationUrl: event.validationURL, displayName: wallets.storeName })
+                .then(function (res) { session.completeMerchantValidation(res.merchantSession); })
+                .catch(function () { try { session.abort(); } catch (e) {} alerts(['Apple Pay is not available right now. Please choose another payment method.'], 'error'); });
+        };
+        session.onpaymentauthorized = function (event) {
+            walletBusy(true);
+            walletOrder(scope).then(function (data) {
+                if (data.result !== 'action' || !data.paypal_order_id) { session.completePayment(window.ApplePaySession.STATUS_FAILURE); walletFailed(data, scope); return; }
+                return ap.confirmOrder({ orderId: data.paypal_order_id, token: event.payment.token, billingContact: event.payment.billingContact })
+                    .then(function () { return walletCapture(data); })
+                    .then(function (res) {
+                        var ok = res.result === 'success' && res.redirect;
+                        session.completePayment(ok ? window.ApplePaySession.STATUS_SUCCESS : window.ApplePaySession.STATUS_FAILURE);
+                        if (ok) { window.location.href = res.redirect; return; }
+                        walletFailed({ result: 'failure', messages: res.messages || [WALLET_FAILED] }, scope);
+                    });
+            }).catch(function () {
+                try { session.completePayment(window.ApplePaySession.STATUS_FAILURE); } catch (e) {}
+                walletFailed(null, scope);
+            });
+        };
+        session.oncancel = function () { walletBusy(false); };
+        session.begin();
+    }
+
+    function setUpWallets(tries) {
+        if (!wallets || !walletScope()) { return; }
+        // PayPal's SDK and the wallets' scripts load with the page (defer); wait briefly if one is late
+        if ((!window.paypal || (wallets.methods.googlepay && !window.google)) && tries < 20) { setTimeout(function () { setUpWallets(tries + 1); }, 250); return; }
+        setUpGooglePay();
+        setUpApplePay();
+    }
+
     /* ------------------------------------------------------------------ place order / pay */
     function setBusy(btn, on) { if (btn) { btn.disabled = on; btn.classList.toggle('is-busy', on); btn.setAttribute('aria-busy', on ? 'true' : 'false'); } }
 
@@ -300,6 +483,8 @@
     function submit(scope, e) {
         if (!window.fetch || !window.FormData) { return; }
         e.preventDefault();
+        var wallet = selectedWallet(scope);
+        if (wallet) { alerts(['Please use the ' + WALLET_NAMES[wallet] + ' button to pay.'], 'info'); return; }
         var btn = $('[data-place-order]', scope);
         if (btn && btn.disabled) { return; }
         alerts([]);
@@ -325,7 +510,13 @@
     if (payForm) { payForm.addEventListener('submit', function (e) { submit(payForm, e); }); }
 
     var initial = $('input[name="payment_method"]:checked');
+    if (initial && initial.closest('[data-wallet][hidden]')) {
+        var visible = $$('input[name="payment_method"]').filter(function (i) { return !i.closest('[hidden]'); })[0];
+        if (visible) { visible.checked = true; initial = visible; }
+    }
     if (initial) { selectChoice(initial); if (initial.value === 'stripe') { mountStripe(); } }
+    setUpWallets(0);
     var summaryDetails = $('[data-summary-details]');
-    if (summaryDetails && window.matchMedia('(max-width: 999px)').matches) { summaryDetails.open = false; }
+    // phones: the summary starts closed – unless the customer has loyalty points to use (the button is inside it)
+    if (summaryDetails && window.matchMedia('(max-width: 999px)').matches && !summaryDetails.querySelector('[data-points-apply]')) { summaryDetails.open = false; }
 })();

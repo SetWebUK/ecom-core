@@ -238,18 +238,26 @@ class Storefront
         return '<svg class="icon'.($class !== '' ? ' '.$class : '').'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'.$paths.'</svg>';
     }
 
-    /** Payment method marks for the footer / checkout (inline SVG, no external requests). */
-    public static function paymentIcons(): string
+        /**
+     * Payment marks as inline SVG: all of them (Stripe's card form: cards, PayPal, Apple Pay, Google Pay), or only the
+     * ones named, e.g. paymentIcons(['visa', 'mastercard', 'maestro', 'amex']) for cards taken through PayPal.
+     *
+     * @param  list<string>|null  $only  visa | mastercard | maestro | amex | paypal | applepay | googlepay
+     */
+    public static function paymentIcons(?array $only = null): string
     {
         $card = fn (string $inner, string $label, string $bg = '#fff') => '<svg class="pay-icon" viewBox="0 0 38 24" width="38" height="24" role="img" aria-label="'.$label.'"><rect x=".5" y=".5" width="37" height="23" rx="3.5" fill="'.$bg.'" stroke="#d9dce1"/>'.$inner.'</svg>';
+        $icons = [
+            'visa' => $card('<text x="19" y="16" font-family="Arial,Helvetica,sans-serif" font-size="9.5" font-weight="700" font-style="italic" fill="#1a1f71" text-anchor="middle">VISA</text>', 'Visa'),
+            'mastercard' => $card('<circle cx="15" cy="12" r="6.5" fill="#eb001b"/><circle cx="23" cy="12" r="6.5" fill="#f79e1b"/><path d="M19 7.2a6.5 6.5 0 0 0 0 9.6 6.5 6.5 0 0 0 0-9.6Z" fill="#ff5f00"/>', 'Mastercard'),
+            'maestro' => $card('<circle cx="15" cy="12" r="6.5" fill="#eb001b"/><circle cx="23" cy="12" r="6.5" fill="#00a2e5"/><path d="M19 7.2a6.5 6.5 0 0 0 0 9.6 6.5 6.5 0 0 0 0-9.6Z" fill="#7375cf"/>', 'Maestro'),
+            'amex' => $card('<text x="19" y="15" font-family="Arial,Helvetica,sans-serif" font-size="7" font-weight="700" fill="#fff" text-anchor="middle">AMEX</text>', 'American Express', '#006fcf'),
+            'paypal' => $card('<text x="19" y="15.5" font-family="Arial,Helvetica,sans-serif" font-size="8" font-weight="700" font-style="italic" text-anchor="middle"><tspan fill="#003087">Pay</tspan><tspan fill="#009cde">Pal</tspan></text>', 'PayPal'),
+            'applepay' => $card('<text x="19" y="15.5" font-family="-apple-system,Helvetica,Arial,sans-serif" font-size="6.6" font-weight="700" fill="#000" text-anchor="middle">Apple Pay</text>', 'Apple Pay'),
+            'googlepay' => $card('<text x="19" y="15.5" font-family="Arial,Helvetica,sans-serif" font-size="8.5" font-weight="600" text-anchor="middle"><tspan fill="#4285f4">G</tspan><tspan fill="#5f6368"> Pay</tspan></text>', 'Google Pay'),
+        ];
+        $keys = $only ?? ['visa', 'mastercard', 'amex', 'paypal', 'applepay', 'googlepay'];
 
-        return '<span class="pay-icons">'
-            .$card('<text x="19" y="16" font-family="Arial,Helvetica,sans-serif" font-size="9.5" font-weight="700" font-style="italic" fill="#1a1f71" text-anchor="middle">VISA</text>', 'Visa')
-            .$card('<circle cx="15" cy="12" r="6.5" fill="#eb001b"/><circle cx="23" cy="12" r="6.5" fill="#f79e1b"/><path d="M19 7.2a6.5 6.5 0 0 0 0 9.6 6.5 6.5 0 0 0 0-9.6Z" fill="#ff5f00"/>', 'Mastercard')
-            .$card('<text x="19" y="15" font-family="Arial,Helvetica,sans-serif" font-size="7" font-weight="700" fill="#fff" text-anchor="middle">AMEX</text>', 'American Express', '#006fcf')
-            .$card('<text x="19" y="15.5" font-family="Arial,Helvetica,sans-serif" font-size="8" font-weight="700" font-style="italic" text-anchor="middle"><tspan fill="#003087">Pay</tspan><tspan fill="#009cde">Pal</tspan></text>', 'PayPal')
-            .$card('<text x="19" y="15.5" font-family="-apple-system,Helvetica,Arial,sans-serif" font-size="6.6" font-weight="700" fill="#000" text-anchor="middle">Apple Pay</text>', 'Apple Pay')
-            .$card('<text x="19" y="15.5" font-family="Arial,Helvetica,sans-serif" font-size="8.5" font-weight="600" text-anchor="middle"><tspan fill="#4285f4">G</tspan><tspan fill="#5f6368"> Pay</tspan></text>', 'Google Pay')
-            .'</span>';
+        return '<span class="pay-icons">'.implode('', array_map(fn ($k) => $icons[$k] ?? '', $keys)).'</span>';
     }
 }

@@ -99,7 +99,10 @@
                     </div>
                     <p class="field__help" x-show="parseFloat(percent) > 0" x-text="'e.g. £100.00 becomes ' + Admin.money(100 * (1 - (parseFloat(percent) || 0) / 100))"></p>
                 </div>
-                <x-admin.input type="date" name="sale_ends_at" label="Sale ends" optional help="UK time, end of the day. Leave blank to keep the sale until you end it." />
+                <div class="form-grid">
+                    <x-admin.input type="date" name="sale_starts_at" label="Sale starts" optional help="UK time, start of the day. Blank = now." />
+                    <x-admin.input type="date" name="sale_ends_at" label="Sale ends" optional help="UK time, end of the day. Blank = until you end it." />
+                </div>
             </div>
         </form>
         <x-slot:footer>
@@ -127,6 +130,28 @@
         <x-slot:footer>
             <x-admin.button x-on:click="hide()">Cancel</x-admin.button>
             <x-admin.button type="submit" form="bulk-category-form" variant="primary">Apply to <span x-text="selected.length"></span> products</x-admin.button>
+        </x-slot:footer>
+    </x-admin.modal>
+</template>
+
+{{-- Add / remove a label --}}
+<template x-teleport="body">
+    <x-admin.modal name="bulk-label" title="Labels" size="sm">
+        <form method="POST" action="{{ route('admin.products.bulk') }}" id="bulk-label-form" x-data="{ action: 'add_label' }">
+            @csrf
+            <template x-for="id in selected" :key="id"><input type="hidden" name="ids[]" :value="id"></template>
+            <div class="stack-fields">
+                <x-admin.radio-cards name="action" x-model="action" value="add_label" :options="[
+                    'add_label' => ['label' => 'Add a label', 'icon' => 'tag'],
+                    'remove_label' => ['label' => 'Remove a label', 'icon' => 'x-mark'],
+                ]" />
+                <x-admin.input name="label" label="Label" maxlength="40" required list="bulk-label-options" autocomplete="off" help="e.g. New Season, Special offer. Shown on product cards and pages." />
+                <datalist id="bulk-label-options">@foreach (\Pine\Commerce\Services\Admin\CatalogueTools::labelsInUse() as $option)<option value="{{ $option }}"></option>@endforeach</datalist>
+            </div>
+        </form>
+        <x-slot:footer>
+            <x-admin.button x-on:click="hide()">Cancel</x-admin.button>
+            <x-admin.button type="submit" form="bulk-label-form" variant="primary">Apply to <span x-text="selected.length"></span> products</x-admin.button>
         </x-slot:footer>
     </x-admin.modal>
 </template>

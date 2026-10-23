@@ -267,6 +267,17 @@ class AccountController extends Controller
         return $this->page('account.wishlist', 'wishlist', ['items' => $items]);
     }
 
+    /** My account › Points: balance, what it is worth, how points are earned, the history. */
+    public function points(Request $request)
+    {
+        $userId = $request->user()->id;
+
+        return $this->page('account.points', 'points', [
+            'balance' => \Pine\Commerce\Services\Loyalty\Loyalty::balance($userId),
+            'history' => \Pine\Commerce\Models\LoyaltyPoint::query()->where('user_id', $userId)->with('order:id,number,order_key')->latest('id')->paginate(25),
+        ]);
+    }
+
     /** POST /wishlist/toggle - product_id. JSON for AJAX buttons, redirect otherwise. */
     public function toggleWishlist(Request $request)
     {

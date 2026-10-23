@@ -87,6 +87,10 @@
         @endif
 
         <x-admin.toggle name="is_featured" label="Featured" help="Highlight it in featured product sections." :checked="(bool) $product->is_featured" />
+
+        <x-admin.input name="labels" label="Labels" optional maxlength="300" :value="old('labels', implode(', ', $product->labels ?? []))" list="label-options" autocomplete="off"
+                       help="Short flags on the product card and page, e.g. New Season, Special offer. Separate with commas." />
+        <datalist id="label-options">@foreach (\Pine\Commerce\Services\Admin\CatalogueTools::labelsInUse() as $option)<option value="{{ $option }}"></option>@endforeach</datalist>
     </div>
 </x-admin.card>
 

@@ -52,6 +52,7 @@ Route::prefix('customers/{customer}')->name('customers.')->whereNumber('customer
     Route::put('note', [CustomerController::class, 'note'])->name('note');
     Route::post('password-reset', [CustomerController::class, 'passwordReset'])->middleware('throttle:10,1')->name('password-reset');
     Route::post('toggle-active', [CustomerController::class, 'toggleActive'])->name('toggle-active');
+    Route::post('points', [CustomerController::class, 'points'])->middleware(RequireFeature::for('loyalty'))->name('points');
 });
 
 // Abandoned checkouts -----------------------------------------------------------------------------

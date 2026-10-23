@@ -35,6 +35,9 @@ class FakeWooShop
     /** route => data replacing the fixture */
     public array $override = [];
 
+    /** route => ids WordPress drops from a page after paging (not readable, e.g. media of a draft post) */
+    public array $hidden = [];
+
     /** expected wc/v3 authentication: basic | query | oauth */
     public string $auth = 'basic';
 
@@ -95,7 +98,10 @@ class FakeWooShop
             $page = max(1, (int) ($query['page'] ?? 1));
             $total = count($data);
 
-            return Http::response(array_slice($data, ($page - 1) * $perPage, $perPage), 200,
+            $items = array_values(array_filter(array_slice($data, ($page - 1) * $perPage, $perPage),
+                fn ($i) => ! in_array($i['id'] ?? null, $this->hidden[$route] ?? [], true)));
+
+            return Http::response($items, 200,
                 ['X-WP-Total' => (string) $total, 'X-WP-TotalPages' => (string) max(1, (int) ceil($total / $perPage))]);
         }
 

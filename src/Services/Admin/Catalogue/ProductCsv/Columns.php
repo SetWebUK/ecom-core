@@ -54,6 +54,7 @@ class Columns
         'meta_title' => ['SEO title', ['meta_title', 'seo_title', 'meta_yoast_wpseo_title', 'meta_rank_math_title']],
         'meta_description' => ['SEO description', ['meta_description', 'seo_description', 'meta_yoast_wpseo_metadesc', 'meta_rank_math_description']],
         'featured' => ['Featured (yes/no)', ['featured', 'is_featured']],
+        'labels' => ['Labels (comma-separated)', ['labels', 'label', 'badges', 'badge']],
         'condition' => ['Condition', ['condition']],
         'brand' => ['Brand', ['brand', 'brands', 'make']],
         'subtitle' => ['Subtitle', ['subtitle']],

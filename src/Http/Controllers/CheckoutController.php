@@ -12,6 +12,7 @@ use Pine\Commerce\Services\Checkout\CheckoutService;
 use Pine\Commerce\Contracts\PaymentGateway;
 use Pine\Commerce\Support\Features;
 use Pine\Commerce\Services\Payments\Gateways\BacsGateway;
+use Pine\Commerce\Services\Payments\Gateways\PaypalWalletGateway;
 use Pine\Commerce\Services\Payments\Gateways\StripeGateway;
 use Pine\Commerce\Services\Payments\PaymentManager;
 use Pine\Commerce\Services\Payments\PaymentResult;
@@ -75,6 +76,7 @@ class CheckoutController extends Controller
             'notices' => $this->cart->pullNotices(),
             'error' => session('checkout_error'),
             'stripe' => $this->stripeConfig($gateways, $totals['total']),
+            'wallets' => PaypalWalletGateway::checkoutConfig($gateways),
             'user' => $request->user(),
             'noGatewaysMessage' => self::NO_GATEWAYS,
         ]))->header('Cache-Control', 'no-store, private');
@@ -274,6 +276,7 @@ class CheckoutController extends Controller
             'error' => session('checkout_error'),
             'termsUrl' => $this->checkout->termsUrl(),
             'stripe' => $this->stripeConfig($gateways, (float) $model->total),
+            'wallets' => PaypalWalletGateway::checkoutConfig($gateways),
             'noGatewaysMessage' => self::NO_GATEWAYS,
         ]))->header('Cache-Control', 'no-store, private');
     }
@@ -320,7 +323,11 @@ class CheckoutController extends Controller
         return $this->startPayment($request, $model->refresh(), $gateway);
     }
 
-    /** GET /checkout/payment/{gateway}/return?order=&key= - customer back from Stripe 3-D Secure / PayPal. */
+    /**
+     * GET /checkout/payment/{gateway}/return?order=&key= - customer back from Stripe 3-D Secure / PayPal. Asked over
+     * AJAX (Google Pay / Apple Pay, which capture before the wallet sheet closes) it answers
+     * {result: success|failure, redirect, messages} instead of redirecting.
+     */
     public function paymentReturn(Request $request, string $gateway)
     {
         $order = $this->findOrder($this->param($request, 'order'), $this->param($request, 'key'));
@@ -336,7 +343,10 @@ class CheckoutController extends Controller
                 CheckoutService::closeBasket($order);
             }
 
-            return redirect()->to($result->redirect ?: $order->view_url);
+            return $this->success($request, $result->redirect ?: $order->view_url);
+        }
+        if ($this->wantsJson($request)) {
+            return $this->failure($request, (string) ($result->message ?: 'Payment failed. Please try again.'), [], $result->redirect ?: $this->payUrl($order));
         }
 
         return redirect()->to($result->redirect ?: $this->payUrl($order))->with('checkout_error', $result->message);

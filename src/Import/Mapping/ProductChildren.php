@@ -54,7 +54,10 @@ final class ProductChildren
                 if (! ($image['exists'] ?? true)) {
                     $missing++;
                 }
-                $images[] = ['product_id' => $pid, 'path' => $image['path'], 'alt' => $image['alt'] ?? null, 'sort_order' => $pos,
+                // alt capped like the media library's (MediaDownloader): shops paste whole descriptions into it, and
+                // product_images.alt is a varchar(255) that MySQL refuses to overflow
+                $alt = isset($image['alt']) ? Str::limit($image['alt'], 250, '') : null;
+                $images[] = ['product_id' => $pid, 'path' => $image['path'], 'alt' => $alt, 'sort_order' => $pos,
                     'created_at' => $now, 'updated_at' => $now];
             }
             foreach ($c['attributes'] as $a) {

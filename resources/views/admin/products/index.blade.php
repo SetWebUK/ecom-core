@@ -85,6 +85,7 @@
                                 <div class="dropdown__sep"></div>
                                 <div class="dropdown__label">Organise</div>
                                 <x-admin.dropdown-item icon="folder-plus" x-on:click="close(); $dispatch('open-modal', 'bulk-category')">Add to / remove from category…</x-admin.dropdown-item>
+                                <x-admin.dropdown-item icon="tag" x-on:click="close(); $dispatch('open-modal', 'bulk-label')">Add / remove a label…</x-admin.dropdown-item>
                                 <x-admin.dropdown-item type="submit" name="action" value="feature" icon="star">Mark as featured</x-admin.dropdown-item>
                                 <x-admin.dropdown-item type="submit" name="action" value="unfeature" icon="minus-circle">Remove from featured</x-admin.dropdown-item>
                                 <div class="dropdown__sep"></div>

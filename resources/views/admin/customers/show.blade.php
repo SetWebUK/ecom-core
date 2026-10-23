@@ -199,6 +199,32 @@
                 </form>
             </x-admin.card>
 
+            @if (commerce_feature('loyalty'))
+                @php
+                    $L = \Pine\Commerce\Services\Loyalty\Loyalty::class;
+                    $pointsBalance = $L::balance($customer->id);
+                    $pointsRows = \Pine\Commerce\Models\LoyaltyPoint::query()->where('user_id', $customer->id)->with('order:id,number')->latest('id')->limit(8)->get();
+                @endphp
+                <x-admin.card :title="'Loyalty '.$L::label()">
+                    <p class="text-lg fw-700">{{ number_format($pointsBalance) }} <span class="text-muted text-sm fw-400">worth {{ money($L::value($pointsBalance)) }}</span></p>
+                    @if ($pointsRows->isNotEmpty())
+                        <ul class="summary-list mt-2 text-sm">
+                            @foreach ($pointsRows as $row)
+                                <li>{{ $row->points > 0 ? '+' : '' }}{{ number_format($row->points) }} · {{ $row->label() }}@if ($row->order) <a href="{{ route('admin.orders.show', $row->order_id) }}">#{{ $row->order->number }}</a>@endif @if ($row->note && ! $row->order)<span class="text-muted">– {{ $row->note }}</span>@endif <span class="text-subtle"><x-admin.time :value="$row->created_at" format="date" /></span></li>
+                            @endforeach
+                        </ul>
+                    @endif
+                    <form method="POST" action="{{ route('admin.customers.points', $customer) }}" class="stack-fields mt-4">
+                        @csrf
+                        <div class="form-grid">
+                            <x-admin.input type="number" name="points" label="Add or take away" step="1" inputmode="numeric" placeholder="e.g. 200 or -200" />
+                            <x-admin.input name="note" label="Reason" optional maxlength="200" placeholder="e.g. Goodwill gesture" />
+                        </div>
+                        <div class="row row--end"><x-admin.button type="submit" size="sm">Adjust {{ $L::label() }}</x-admin.button></div>
+                    </form>
+                </x-admin.card>
+            @endif
+
             <x-admin.card title="Account">
                 <dl class="kv">
                     <dt>Type</dt><dd>{{ $customer->password ? 'Registered – can sign in' : 'Guest – no password set' }}</dd>

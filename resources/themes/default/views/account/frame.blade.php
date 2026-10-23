@@ -17,6 +17,7 @@
         'edit-address' => ['Addresses', route('account.addresses'), 'map-pin'],
         'edit-account' => ['Account details', route('account.details'), 'user'],
         'wishlist' => commerce_feature('wishlist') ? ['Wishlist', route('account.wishlist'), 'heart'] : null,
+        'points' => commerce_feature('loyalty') ? [ucfirst(\Pine\Commerce\Services\Loyalty\Loyalty::label()), route('account.points'), 'star'] : null,
         'customer-logout' => ['Sign out', \Pine\Commerce\Http\Controllers\Auth\AuthController::logoutUrl(), 'logout'],
     ]) : [];
     $displayName = $accountUser ? ($accountUser->first_name ?: $accountUser->name ?: $accountUser->email) : '';

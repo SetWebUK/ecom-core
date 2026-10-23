@@ -37,7 +37,10 @@ class CustomerCompletedOrder extends OrderEmail
         return ['trackingUrl' => static::trackingUrl($this->order->tracking_carrier, $this->order->tracking_number)];
     }
 
-    /** Link to the carrier's tracking page for the common UK carriers. */
+    /**
+     * Link to the carrier's tracking page: the store's carriers first (config commerce.shipping.carriers, name =>
+     * URL with {number}; "Royal Mail Tracked 48" matches "Royal Mail"), then the common UK carriers.
+     */
     public static function trackingUrl(?string $carrier, ?string $number): ?string
     {
         $number = trim((string) $number);
@@ -45,7 +48,16 @@ class CustomerCompletedOrder extends OrderEmail
             return null;
         }
         $n = rawurlencode($number);
-        $carrier = strtolower((string) $carrier);
+        $carrier = strtolower(trim((string) $carrier));
+
+        if ($carrier !== '') {
+            foreach ((array) config('commerce.shipping.carriers', []) as $name => $url) {
+                $name = strtolower(trim((string) $name));
+                if ($name !== '' && is_string($url) && str_contains($url, '{number}') && ($carrier === $name || str_starts_with($carrier, $name.' '))) {
+                    return str_replace('{number}', $n, $url);
+                }
+            }
+        }
 
         return match (true) {
             str_contains($carrier, 'dpd') => 'https://track.dpd.co.uk/parcels/'.$n,

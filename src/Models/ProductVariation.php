@@ -13,6 +13,8 @@ class ProductVariation extends Model
         'options' => 'array',
         'regular_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
+        'sale_starts_at' => 'datetime',
+        'sale_ends_at' => 'datetime',
         'manage_stock' => 'boolean',
         'is_active' => 'boolean',
     ];
@@ -32,9 +34,15 @@ class ProductVariation extends Model
         return $this->belongsTo(Product::class);
     }
 
+    /** A sale price below the regular price, inside its sale dates (UTC; none = no limit), like Product::isOnSale(). */
     public function isOnSale(): bool
     {
-        return $this->sale_price !== null && (float) $this->sale_price > 0 && (float) $this->sale_price < (float) $this->regular_price;
+        if ($this->sale_price === null || (float) $this->sale_price <= 0 || (float) $this->sale_price >= (float) $this->regular_price) {
+            return false;
+        }
+        $now = now();
+
+        return ! ($this->sale_starts_at && $this->sale_starts_at->gt($now)) && ! ($this->sale_ends_at && $this->sale_ends_at->lt($now));
     }
 
     public function currentPrice(): ?float

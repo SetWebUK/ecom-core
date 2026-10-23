@@ -16,6 +16,7 @@ class Product extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
+        'labels' => 'array',
         'regular_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
         'price' => 'decimal:2',
@@ -90,6 +91,26 @@ class Product extends Model
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * "new season, Special offer,  new season" → ["new season", "Special offer"]: trimmed, de-duplicated (ignoring case),
+     * at most 40 characters and 6 labels. Accepts a list or comma/newline-separated text.
+     *
+     * @return list<string>
+     */
+    public static function normaliseLabels(array|string|null $labels): array
+    {
+        $labels = is_array($labels) ? $labels : preg_split('/[,\n]+/', (string) $labels);
+        $out = [];
+        foreach ($labels as $label) {
+            $label = mb_substr(trim(preg_replace('/\s+/', ' ', (string) $label)), 0, 40);
+            if ($label !== '' && ! in_array(mb_strtolower($label), array_map('mb_strtolower', $out), true)) {
+                $out[] = $label;
+            }
+        }
+
+        return array_slice($out, 0, 6);
     }
 
     // Scopes --------------------------------------------------------------

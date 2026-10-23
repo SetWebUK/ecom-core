@@ -90,9 +90,10 @@ class Client
             $response = $this->get($route, ['per_page' => $perPage, 'page' => $page] + $query, $namespace);
             $items = $response->items();
             yield [$page, $items, $response->totalPages, $response->total];
-            // no X-WP-TotalPages header = an endpoint that does not paginate (it returned everything)
-            $last = $response->totalPages === null || $page >= $response->totalPages;
-            if ($last || ! $items) {
+            // no X-WP-TotalPages header = an endpoint that does not paginate (it returned everything). An empty page
+            // is not the end: WordPress pages first and drops the items the request may not read afterwards (media
+            // attached to a draft or private post), so a page can come back empty with more pages after it
+            if ($response->totalPages === null || $page >= $response->totalPages) {
                 return;
             }
             $page++;

@@ -41,11 +41,15 @@ return [
         'wp_404_guess' => true,     // unknown old URLs: guess the new page by slug before the 404
         'add_to_cart_query' => true, // old ?add-to-cart=ID links keep working
         'product_csv' => true,      // admin Products › Import / Export (full product CSV, WooCommerce exports accepted)
+        'loyalty' => false,         // loyalty points: earned on orders, spent at checkout (rates: Admin › Settings › Loyalty points)
     ],
 
     // 'store' => ['country' => 'GB', 'countries' => ['GB' => 'United Kingdom (UK)'], 'timezone' => 'Europe/London', 'locale' => 'en_GB'],
     // 'currency' => ['code' => 'GBP', 'symbol' => '£', 'decimals' => 2, 'decimal_separator' => '.', 'thousands_separator' => ','],
     // 'orders' => ['reference_prefix' => 'ORD'],
+    // Couriers of Admin › Orders › Ready to send (and the tracking links in emails), plus the one pre-selected:
+    // 'shipping' => ['install_zones' => true, 'carriers' => ['Royal Mail' => 'https://www.royalmail.com/track-your-item#/tracking-results/{number}',
+    //     'DPD' => 'https://track.dpd.co.uk/parcels/{number}'], 'default_carrier' => 'Royal Mail'],
     // Image sizes generated on upload (package default: thumbnail 150 crop, card 400, medium 800, large 1600 + WebP).
     // Copy the whole 'images' block from the package config to change them, then run
     // `php artisan commerce:images:generate --missing` for the media that is already there.

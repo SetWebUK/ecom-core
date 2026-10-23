@@ -515,12 +515,13 @@ class OrderController extends Controller
         ][$type] ?? Str::headline($type);
     }
 
-    /** Carrier suggestions: the store's usual couriers plus any used before. */
+    /** Carrier choices: the store's couriers (config commerce.shipping.carriers) plus any used before. */
     protected function carriers(): array
     {
         $used = DB::table('orders')->whereNotNull('tracking_carrier')->where('tracking_carrier', '!=', '')
             ->distinct()->limit(20)->pluck('tracking_carrier')->all();
+        $configured = array_keys((array) config('commerce.shipping.carriers', []));
 
-        return array_values(array_unique(array_merge(['DPD', 'Royal Mail', 'Parcelforce', 'DHL', 'UPS', 'Evri', 'FedEx'], $used)));
+        return array_values(array_unique(array_merge($configured ?: ['Royal Mail', 'DPD', 'Parcelforce', 'DHL', 'UPS', 'Evri', 'FedEx'], $used)));
     }
 }

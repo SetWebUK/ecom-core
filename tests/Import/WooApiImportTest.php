@@ -221,6 +221,20 @@ class WooApiImportTest extends TestCase
         $this->assertSame([['1', '100']], array_map(fn ($c) => [$c['query']['page'], $c['query']['per_page']], $shop->calls('wc/v3/products')));
     }
 
+    public function test_an_empty_page_before_the_last_does_not_end_the_list(): void
+    {
+        // WordPress drops media it may not show (attached to a draft/private post) after paging: on a live shop page
+        // 514 of 691 came back empty and the import stopped there, 1,700 images short
+        $shop = FakeWooShop::fake();
+        $shop->hidden['wp/v2/media'] = [500];
+        config(['commerce.woo_api.per_page' => 1]);
+
+        $this->assertSame(0, $this->import(['--only' => 'media']), $this->lastOutput);
+        $this->assertSame(['1', '2', '3'], array_map(fn ($c) => $c['query']['page'], $shop->calls('wp/v2/media')));
+        $this->assertTrue(DB::table('media')->where('path', 'uploads/2025/02/banner.png')->exists(), 'the page after the empty one');
+        $this->assertFalse(DB::table('media')->where('path', 'uploads/2025/01/shirt.jpg')->exists());
+    }
+
     public function test_every_authentication_mode_reaches_woocommerce(): void
     {
         $connection = fn (array $c) => Connection::make($c + ['url' => FakeWooShop::BASE, 'key' => FakeWooShop::KEY, 'secret' => FakeWooShop::SECRET]);
@@ -320,6 +334,21 @@ class WooApiImportTest extends TestCase
         $this->assertSame('Polo (new season)', DB::table('products')->where('wp_id', 110)->value('name'));
         $this->assertSame('Linen Shirt', DB::table('products')->where('wp_id', 100)->value('name'));
         $this->assertSame([], $shop->calls('wc/v3/products/100/variations'));
+    }
+
+    public function test_an_image_alt_longer_than_the_column_is_shortened(): void
+    {
+        // a product description pasted into an image alt (573 characters on a live shop) stopped the import on MySQL
+        $shop = FakeWooShop::fake();
+        $products = json_decode((string) file_get_contents(dirname(__DIR__).'/Fixtures/woo-api/wc-v3/products.json'), true);
+        $products[0]['images'][0]['alt'] = str_repeat('Fully approved by the Institute of Chiropodists and Podiatrists. ', 9);
+        $shop->override['wc/v3/products'] = $products;
+
+        $this->assertSame(0, $this->import(['--only' => 'categories,products']), $this->lastOutput);
+        $alt = (string) DB::table('product_images')->where('path', 'uploads/2025/01/shirt.jpg')->value('alt');
+        $this->assertStringStartsWith('Fully approved by the Institute', $alt);
+        $this->assertLessThanOrEqual(250, mb_strlen($alt));
+        $this->assertSame('Polo', DB::table('product_images')->where('path', 'uploads/2025/01/polo.jpg')->value('alt'), 'short alts untouched');
     }
 
     public function test_the_ssrf_guard_blocks_private_and_reserved_hosts(): void

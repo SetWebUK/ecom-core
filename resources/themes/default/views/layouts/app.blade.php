@@ -121,6 +121,7 @@
     'catalogHeader' => config('commerce.catalog.ajax_header', 'X-Commerce-Catalog'),
     'openCartCookie' => \Pine\Commerce\Http\Controllers\CartController::openCookie(),
     'currency' => config('commerce.currency.symbol', '£'),
+    'attributionCookie' => \Pine\Commerce\Services\Checkout\Attribution::cookieName(),
 ], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
 <script src="{{ theme_asset('js/app.js') }}" defer></script>
 @stack('scripts')

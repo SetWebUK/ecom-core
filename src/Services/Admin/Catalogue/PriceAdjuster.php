@@ -108,9 +108,9 @@ class PriceAdjuster
                     continue;
                 }
                 $item->sale_price = $sale;
+                $item->sale_starts_at = $percent === null ? null : $startsAt;
+                $item->sale_ends_at = $percent === null ? null : $endsAt;
                 if ($item instanceof Product) {
-                    $item->sale_starts_at = $percent === null ? null : $startsAt;
-                    $item->sale_ends_at = $percent === null ? null : $endsAt;
                     $item->save();
                 } else {
                     $item->saveQuietly();
@@ -119,6 +119,7 @@ class PriceAdjuster
                 $count++;
             }
             foreach (Product::query()->whereIn('id', array_keys($parents))->get() as $product) {
+                $product->forceFill(['sale_starts_at' => $percent === null ? null : $startsAt, 'sale_ends_at' => $percent === null ? null : $endsAt])->saveQuietly();
                 ProductSaver::refreshVariable($product);
             }
         });

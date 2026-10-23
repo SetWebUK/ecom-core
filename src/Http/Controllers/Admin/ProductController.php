@@ -275,6 +275,23 @@ class ProductController extends Controller
                 Product::query()->whereIn('id', $existing)->update(['updated_at' => now()]);
                 break;
 
+            case 'add_label':
+            case 'remove_label':
+                $label = Product::normaliseLabels((string) $request->input('label'))[0] ?? '';
+                $count = 0;
+                foreach (Product::query()->whereIn('id', $ids)->get(['id', 'labels']) as $product) {
+                    $current = $product->labels ?? [];
+                    $next = $action === 'add_label'
+                        ? Product::normaliseLabels([...$current, $label])
+                        : array_values(array_filter($current, fn ($l) => mb_strtolower($l) !== mb_strtolower($label)));
+                    if ($next !== $current) {
+                        Product::query()->whereKey($product->id)->update(['labels' => $next ? json_encode($next, JSON_UNESCAPED_UNICODE) : null, 'updated_at' => now()]);
+                        $count++;
+                    }
+                }
+                $message = $action === 'add_label' ? "“{$label}” added to ".$noun($count).'.' : "“{$label}” removed from ".$noun($count).'.';
+                break;
+
             case 'adjust_price':
                 $result = PriceAdjuster::apply($ids, $request->priceParams());
                 $message = $result['changed'].' '.Str::plural('price', $result['changed']).' updated.'
@@ -282,9 +299,11 @@ class ProductController extends Controller
                 break;
 
             case 'set_sale':
+                $starts = LocalTime::fromInput($request->input('sale_starts_at'));
                 $ends = LocalTime::fromInput($request->input('sale_ends_at'), true);
-                $count = PriceAdjuster::setSale($ids, (float) $request->input('percent'), null, $ends);
+                $count = PriceAdjuster::setSale($ids, (float) $request->input('percent'), $starts && $starts->isFuture() ? $starts : null, $ends);
                 $message = $count.' '.Str::plural('item', $count).' put on sale at '.rtrim(rtrim(number_format((float) $request->input('percent'), 2), '0'), '.').'% off'
+                    .($starts && $starts->isFuture() ? ' from '.LocalTime::format($starts, 'j M Y') : '')
                     .($ends ? ' until '.LocalTime::format($ends, 'j M Y') : '').'.';
                 break;
 

@@ -176,20 +176,21 @@ class ProductFilter
                   AND lv.manage_stock = 1 AND lv.stock_quantity IS NOT NULL AND lv.stock_quantity > 0 AND lv.stock_quantity <= COALESCE(products.low_stock_threshold, ?))))", ['products']);
     }
 
-    /** SQL matching Product::isOnSale() (simple) or any active variant with a sale price (variable). */
+    /** SQL matching Product::isOnSale() (simple) or any active variant ProductVariation::isOnSale() (variable). */
     public static function onSaleSql(): string
     {
         return Sql::qualify("((products.type <> 'variable' AND products.sale_price IS NOT NULL AND products.sale_price < products.regular_price
                   AND (products.sale_starts_at IS NULL OR products.sale_starts_at <= ?) AND (products.sale_ends_at IS NULL OR products.sale_ends_at >= ?))
               OR (products.type = 'variable' AND EXISTS (SELECT 1 FROM ".Sql::table('product_variations')." sv WHERE sv.product_id = products.id AND sv.is_active = 1
-                  AND sv.sale_price > 0 AND sv.sale_price < sv.regular_price)))", ['products']);
+                  AND sv.sale_price > 0 AND sv.sale_price < sv.regular_price
+                  AND (sv.sale_starts_at IS NULL OR sv.sale_starts_at <= ?) AND (sv.sale_ends_at IS NULL OR sv.sale_ends_at >= ?))))", ['products']);
     }
 
     public static function onSaleBindings(): array
     {
         $now = now()->toDateTimeString();
 
-        return [$now, $now];
+        return [$now, $now, $now, $now];
     }
 
     /** Tab counts in one query. @return array<string,int> */

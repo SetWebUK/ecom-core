@@ -6,10 +6,10 @@
 */
 
 return [
-    // header navigation: first location with items wins
-    'main' => ['main', 'mega'],
-    // mobile drawer: first location with items wins
-    'mobile' => ['mobile_nav', 'mobile', 'main'],
+    // header navigation: first location with items wins, in the admin's order ("Header menu" = mega, its backup = main)
+    'main' => ['mega', 'main'],
+    // mobile drawer: first location with items wins, then the header menu
+    'mobile' => ['mobile_nav', 'mobile', 'mega', 'main'],
     // footer link columns (headed by the menu's name), up to three that have items
     'footer' => ['footer_shop', 'footer_company', 'footer_information', 'footer_why', 'footer_categories'],
     // small links next to the copyright line

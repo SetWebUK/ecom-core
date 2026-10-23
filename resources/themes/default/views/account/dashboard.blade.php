@@ -11,5 +11,9 @@
     @if (commerce_feature('wishlist'))
         <li><a class="tile" href="{{ route('account.wishlist') }}">{!! $S::icon('heart', 28) !!}<strong>Wishlist</strong><span>Products you have saved</span></a></li>
     @endif
+    @if (commerce_feature('loyalty'))
+        @php $points = \Pine\Commerce\Services\Loyalty\Loyalty::balance(auth()->id()); @endphp
+        <li><a class="tile" href="{{ route('account.points') }}">{!! $S::icon('star', 28) !!}<strong>{{ number_format($points) }} {{ \Pine\Commerce\Services\Loyalty\Loyalty::label() }}</strong><span>Worth {{ money(\Pine\Commerce\Services\Loyalty\Loyalty::value($points)) }} off – see how to earn more</span></a></li>
+    @endif
 </ul>
 @endsection

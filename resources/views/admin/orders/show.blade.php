@@ -174,11 +174,7 @@
                     <form method="POST" action="{{ route('admin.orders.fulfil', $order) }}" class="stack-fields">
                         @csrf
                         <p class="text-sm text-muted">{{ $itemCount }} {{ Str::plural('item', $itemCount) }} to {{ $order->shipping_name ?: $order->billing_name }}{{ $order->shipping_method_title ? ' · '.$order->shipping_method_title : '' }}.</p>
-                        <div class="form-grid">
-                            <x-admin.input name="tracking_carrier" label="Carrier" optional :value="$order->tracking_carrier ?? 'DPD'" list="carrier-options" autocomplete="off" />
-                            <x-admin.input name="tracking_number" label="Tracking number" optional :value="$order->tracking_number" autocomplete="off" />
-                        </div>
-                        <datalist id="carrier-options">@foreach ($carriers as $carrier)<option value="{{ $carrier }}">@endforeach</datalist>
+                        @include('commerce::admin.orders._carrier-field')
                         <div class="row row--between">
                             <p class="text-xs text-muted flex-1">The customer is emailed that their order is on its way{{ ' (with the tracking number, if you add one)' }}.</p>
                             <x-admin.button type="submit" variant="primary" icon="truck">Mark as completed</x-admin.button>
@@ -193,7 +189,7 @@
                             <x-admin.badge color="success" dot>Completed</x-admin.badge>
                         </div>
                     </x-slot:header>
-                    <div x-data="{ edit: {{ $errors->hasAny(['tracking_carrier', 'tracking_number']) ? 'true' : 'false' }} }">
+                    <div x-data="{ edit: {{ $errors->hasAny(['tracking_carrier', 'tracking_carrier_other', 'tracking_number']) ? 'true' : 'false' }} }">
                         <div class="row row--between" x-show="!edit">
                             <div class="text-sm">
                                 @if ($order->completed_at)<div>Completed <x-admin.time :value="$order->completed_at" format="datetime" /></div>@endif
@@ -209,11 +205,7 @@
                         </div>
                         <form method="POST" action="{{ route('admin.orders.fulfil', $order) }}" class="stack-fields" x-show="edit" x-cloak>
                             @csrf
-                            <div class="form-grid">
-                                <x-admin.input name="tracking_carrier" label="Carrier" optional :value="$order->tracking_carrier ?? 'DPD'" list="carrier-options" autocomplete="off" />
-                                <x-admin.input name="tracking_number" label="Tracking number" optional :value="$order->tracking_number" autocomplete="off" />
-                            </div>
-                            <datalist id="carrier-options">@foreach ($carriers as $carrier)<option value="{{ $carrier }}">@endforeach</datalist>
+                            @include('commerce::admin.orders._carrier-field')
                             <p class="text-xs text-muted">Saving doesn’t email the customer again – use “Send email” for that.</p>
                             <div class="row row--end">
                                 <button type="button" class="btn" @click="edit = false"><span>Cancel</span></button>

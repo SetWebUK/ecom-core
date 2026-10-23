@@ -11,6 +11,9 @@ class PaymentMethods
     public const LABELS = [
         'stripe' => 'Card (Stripe)',
         'paypal' => 'PayPal',
+        'paypal_card' => 'Card (PayPal)',
+        'paypal_googlepay' => 'Google Pay (PayPal)',
+        'paypal_applepay' => 'Apple Pay (PayPal)',
         'bacs' => 'Bank transfer',
         'cheque' => 'Cheque',
         'cod' => 'Cash on delivery',
@@ -20,6 +23,8 @@ class PaymentMethods
         'woocommerce_payments' => 'WooPayments (card, Apple Pay, Google Pay)',
         'ppcp-gateway' => 'PayPal (legacy)',
         'ppcp-credit-card-gateway' => 'PayPal card (legacy)',
+        'ppcp-googlepay' => 'Google Pay via PayPal (legacy)',
+        'ppcp-applepay' => 'Apple Pay via PayPal (legacy)',
         'superpayments' => 'Super Payments (legacy)',
         'takepaymentscardpayments' => 'TakePayments card (legacy)',
     ];
@@ -60,7 +65,7 @@ class PaymentMethods
         if ($code === 'stripe' && $isStripeId) {
             return ['url' => 'https://dashboard.stripe.com/payments/'.$id, 'label' => 'View in Stripe'];
         }
-        if (in_array($code, ['paypal', 'ppcp-gateway', 'ppcp-credit-card-gateway'], true) && ! $isStripeId && preg_match('/^[A-Z0-9]{12,20}$/', $id)) {
+        if (in_array($code, ['paypal', 'paypal_card', 'paypal_googlepay', 'paypal_applepay', 'ppcp-gateway', 'ppcp-credit-card-gateway', 'ppcp-googlepay', 'ppcp-applepay'], true) && ! $isStripeId && preg_match('/^[A-Z0-9]{12,20}$/', $id)) {
             return ['url' => 'https://www.paypal.com/activity/payment/'.$id, 'label' => 'View in PayPal'];
         }
 

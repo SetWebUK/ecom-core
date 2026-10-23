@@ -28,6 +28,9 @@ class PaymentManager
     public const DEFAULTS = [
         'stripe' => StripeGateway::class,
         'paypal' => PaypalGateway::class,
+        'paypal_card' => \Pine\Commerce\Services\Payments\Gateways\PaypalCardGateway::class,
+        'paypal_googlepay' => \Pine\Commerce\Services\Payments\Gateways\PaypalGooglePayGateway::class,
+        'paypal_applepay' => \Pine\Commerce\Services\Payments\Gateways\PaypalApplePayGateway::class,
         'bacs' => BacsGateway::class,
     ];
 

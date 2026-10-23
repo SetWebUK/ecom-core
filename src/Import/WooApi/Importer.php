@@ -10,6 +10,7 @@ use Pine\Commerce\Import\Support\Upserter;
 use Pine\Commerce\Models\Redirect;
 use Pine\Commerce\Models\Setting;
 use Pine\Commerce\Models\WooApiImport;
+use Pine\Commerce\Support\DatabaseClock;
 use Pine\Commerce\Support\Features;
 use Throwable;
 
@@ -103,6 +104,10 @@ class Importer
         $this->log->info(($this->checkpoint ? 'Resuming' : 'Starting').' import #'.$this->run->id.' from '.$this->client->connection->describe()
             .($this->dryRun ? ' – DRY RUN (nothing is written)' : '').'; source '.($this->run->source ?? 'database-import rows (same site)'));
         try {
+            // stop before the first write, not thousands of rows in at the first date inside the clocks' skipped hour
+            if (! $this->dryRun && ($clock = DatabaseClock::problem())) {
+                throw new \RuntimeException('Nothing imported – '.$clock.'. '.DatabaseClock::fix());
+            }
             $this->boot();
             foreach ($this->run->entities() as $entity) {
                 $state = $this->progress['entities'][$entity]['status'] ?? 'waiting';

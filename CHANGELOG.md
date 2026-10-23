@@ -9,6 +9,159 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-15
+
+### Migrations
+- `2026_10_15_000100_add_sale_dates_to_product_variations`: `product_variations.sale_starts_at` / `sale_ends_at`
+  (nullable). **Client action:** `php artisan migrate`, then re-run the WooCommerce import's products step (or wait for
+  the next sync) so imported variations get their sale dates.
+- `2026_10_15_000200_add_automatic_discounts_to_coupons`: `coupons.auto_apply`, `label`, `buy_quantity`,
+  `show_countdown` (additive; existing codes keep `auto_apply = false`). **Client action:** `php artisan migrate`.
+- `2026_10_15_000300_add_labels_to_products`: `products.labels` (JSON, nullable). **Client action:** `php artisan migrate`.
+- `2026_10_15_000400_create_loyalty_points`: table `loyalty_points` (the points ledger) and `carts.loyalty_points`.
+  **Client action:** `php artisan migrate`.
+
+### Fixed
+- Order emails, the thank-you page and PDF invoices name each discount as customers saw it ("Any 2 tees for £25",
+  "Points (400)") instead of internal codes; checkout stores the names in order meta `coupon_labels`
+  (`Order::discountNames()`). Staff screens keep the codes.
+- Order attribution: every order's Origin was "Direct (typed in / bookmark)" – checkout reads the attribution cookie
+  (`commerce.checkout.attribution_cookie`) but nothing wrote it. The default theme's `js/app.js` now records it: the last
+  campaign link (`utm_*`, Google Ads `gclid`/`gbraid`/`wbraid` → google / cpc) or other website / search engine, the
+  landing page, first-visit time and pages viewed, for 30 days; a typed-in visit keeps the earlier source, and the
+  checkout / basket pages and returns from PayPal / Stripe / Klarna / Clearpay never replace it. Where the cookie banner
+  is shown it waits for statistics consent (and records straight after "Accept all"). The cookie name reaches the
+  script through `#store-config` (`attributionCookie`). Child themes keep it as long as they load `js/app.js`.
+  Tests: `OrderAttributionTest`.
+- Imports (WooCommerce API and database): a product image alt longer than 255 characters (a whole description pasted
+  into it) no longer stops the import with "Data too long for column 'alt'" on MySQL – it is cut to 250 characters,
+  like the media library's. Regression test added.
+- MySQL/MariaDB: the connection's session time zone now follows the app (UTC). Without it MySQL used the server's own
+  clock: on a server set to UK time every summer TIMESTAMP was stored an hour out, and a UTC time inside the hour the
+  clocks skip in March (e.g. `2025-03-30 01:39:36`) was refused with "Incorrect datetime value" – which stopped a
+  WooCommerce import half-way through the customers. Both importers now refuse to start (before writing anything) while
+  the session and app time zones differ, with the fix in the message.
+- Default theme: the header now reads the **Header menu** (location `mega`) before **Header menu (backup)** (`main`),
+  as Admin › Menus labels them – a site with both showed the backup and ignored the menu the admin marks "in use". The
+  mobile drawer falls back to the header menu (`mega`, then `main`) when no mobile menu has items. Regression test added.
+- WooCommerce API import: a page of results that came back empty no longer ends the list. WordPress drops the items a
+  request may not read *after* paging (media attached to a draft or private post), so a whole page can be empty with
+  more after it: on a live shop the media step stopped at page 514 of 691 and ~1,700 images were never downloaded,
+  with no error. Paging now ends at `X-WP-TotalPages` only. Regression test added (`FakeWooShop::$hidden`).
+- Admin › Orders › Ready to send (and Edit tracking): **Carrier** is now a drop-down of the store's carriers plus any
+  used before, with "Other…" for a typed name. It was a typed box pre-filled with "DPD" whose browser suggestions only
+  match what is already typed, so staff only ever saw DPD. The carriers come from `commerce.shipping.carriers` (it was
+  only documentation before; the admin used a hard-coded list), and their `{number}` URLs now drive the tracking link
+  in the completed-order email, order tracking and My account ("Royal Mail Tracked 48" matches "Royal Mail"), before the
+  built-in list. Tests: `FulfilmentCarrierTest`.
+- Scheduled sales on products with variants: a variant's sale price now only applies between its sale dates. Variants
+  had no dates – the schedule only covered simple products, and both WooCommerce importers dropped each variation's
+  `date_on_sale_from/to`, so a sale scheduled on the old shop went live the moment it was imported and never ended.
+  The editor's **Schedule the sale** now shows for products with variants (copied onto every variant with a sale
+  price), the bulk **Put on sale** gains **Sale starts** and dates the variants too, the "On sale" filter and the
+  scheduled price refresh (`RefreshSalePrices`) follow variant dates. Tests: `ScheduledVariantSaleTest`.
+
+### Added
+- Search mode **precise** (config `commerce.catalog.search` = `precise`; default `broad` = unchanged): every word
+  must be in the name, SKU, brand, a category name or a filterable attribute's value (e.g. Colour "Black" – not an
+  imported "Tags" attribute of search phrases); descriptions are only
+  searched when that finds nothing. "black" no longer returns navy products whose description says "also available in
+  black", and finds black products named without the colour. The live suggestions follow the same rule.
+  `ProductListing::searchMode()`. Tests: `PreciseSearchTest`. **Config key added:** `catalog.search` – a client config
+  with its own `catalog` block adds it to switch.
+- **Loyalty points** (feature `loyalty`, default off; `Services\Loyalty\Loyalty`), like WooCommerce Points & Rewards:
+  signed-in customers earn points on paid orders (per £1 of items after discounts, VAT included, delivery not), spend
+  them at checkout ("Use my points", shown as a discount line "Points (400)"), get a welcome bonus for a new account;
+  a cancelled / failed / refunded order takes back what it earned and gives back what it spent. A ledger
+  (`LoyaltyPoint`: signup, earn, redeem, refund, reverse, adjust, import), so every balance is explained. My account ›
+  Points (balance, rules, history), a points card with adjust on each admin customer, Admin › Settings › Loyalty points
+  (points per £1, points for £1 off, welcome bonus, minimum, maximum share of an order, name), and
+  `php artisan commerce:loyalty:import --from-wordpress [--dry-run]` for balances straight from WooCommerce Points &
+  Rewards in the WordPress database (read only; the importer's WP_DB_* settings or `--wp-path`; the REST API doesn't
+  expose them) or `commerce:loyalty:import file.csv` (re-runnable: adds only the difference). Exports:
+  `php artisan commerce:loyalty:export [file] [--all]` (email, points, worth – importable again) and a Points column in
+  Admin › Customers › Export. The basket stores the points chosen as at most the balance. On phones the checkout summary stays open when there are points to use. Points are checked under lock at checkout so they can't be spent twice. **Config keys added:**
+  `features.loyalty` (false), `loyalty.*` defaults. Tests: `LoyaltyPointsTest`.
+- Payment method **Debit or credit card (via PayPal)** (`paypal_card`, `PaypalCardGateway`): the PayPal app and keys of
+  Admin › Settings › Payments › PayPal, with PayPal's page opening on its card form (`landing_page: GUEST_CHECKOUT`) –
+  card payments without a separate card provider, as the WooCommerce PayPal Payments plugin's "Debit & Credit Cards".
+  Off until switched on; refunds, the order's transaction link and `/webhooks/paypal` work for it (the PayPal webhook
+  now completes a payment under the method it was started with). **Config:** `payments.gateways` gains `paypal_card`
+  (a client config with its own `gateways` list adds it to offer it). Tests: `PaypalCardGatewayTest`.
+- Payment methods **Google Pay** and **Apple Pay through PayPal** (`paypal_googlepay` / `paypal_applepay`,
+  `PaypalGooglePayGateway` / `PaypalApplePayGateway`, base `PaypalWalletGateway`): the PayPal app and keys of Admin ›
+  Settings › Payments › PayPal, through PayPal's JS SDK (`components=googlepay,applepay`) – what the WooCommerce PayPal
+  Payments plugin offers, no Stripe account needed. Off until switched on.
+  - The checkout lists a wallet only once PayPal says the account can take it and the browser can pay that way (Google
+    Pay set up; Apple Pay on Apple devices, or in other browsers through Apple's QR code). While one is chosen, the
+    wallet's own button stands in for Place order.
+  - Flow: the customer approves in the sheet → the order is placed → the browser confirms the PayPal order with the
+    wallet's payment data (3-D Secure when PayPal asks) → the return URL captures it. `checkout/payment/{gateway}/return`
+    now answers `{result, redirect, messages}` when asked over AJAX. Refunds, transaction links and `/webhooks/paypal`
+    work as for PayPal (`PaypalGateway::PAYPAL_CODES`).
+  - Apple's domain check: `/.well-known/apple-developer-merchantid-domain-association` serves PayPal's own file (sandbox
+    or live, following the PayPal sandbox switch; `resources/payments/apple-pay`) while PayPal has its keys.
+    `TrailingSlash` leaves `/.well-known/` addresses alone.
+  - PayPal account: Google Pay and Apple Pay ticked under the REST app's Features (live: Advanced Checkout onboarding),
+    and for Apple Pay each domain registered with PayPal.
+  - **Config:** `payments.gateways` gains `paypal_googlepay` and `paypal_applepay`. Theme: `checkout.show` and
+    `checkout.pay` load `$wallets['scripts']` and pass `wallets` in `#checkout-config`; `checkout.partials.payment-methods`
+    starts methods with `browserWallet()` hidden. Admin labels include the legacy Woo `ppcp-googlepay` / `ppcp-applepay`.
+    Tests: `PaypalWalletGatewayTest`.
+- **Product labels** ("New Season", "Special offer"): `products.labels`, set in the product editor (Organisation),
+  in bulk from the Products list (More actions › Add / remove a label…) and in the product CSV (`labels` column).
+  Presenter `labels(Product)` adds automatic labels from attribute values, config `commerce.catalog.labels.attributes`
+  (e.g. `['fitting' => ['tall' => 'Available in Tall fitting']]`, default none). Themes choose where to show them.
+  Tests: `ProductLabelsTest`. **Config key added:** `catalog.labels` – a client config with its own `catalog` block
+  copies it in to use automatic labels.
+- **Automatic discounts** (Admin › Discounts › "How customers get it" › Automatic): the basket applies every running
+  automatic discount whose rules match – whole shop, chosen categories or products, exclusions, minimum spend, dates,
+  usage limits – with no code. Customers see its **label** ("20% off knitwear") in the basket and checkout (no remove
+  button); the order records its code like a typed one, so usage counts and reports work. It never combines with a
+  code that "can't be combined", and one marked "can't be combined" steps aside for any code. Typing an automatic
+  discount's code is refused. The code is generated from the label when left blank (`AUTO-20-OFF-KNITWEAR`).
+  Cart totals gain `coupon_labels` and `automatic_coupons`.
+- Discount type **Multi-buy** (`multibuy`, "any X for £Y"): eligible items, most expensive first, are grouped into
+  sets of `buy_quantity`; each full set costs `amount`, the rest pay their own price. Works as a code too.
+- Presenter: `offers(Product)` (automatic discounts covering a product, with the price after a simple % / amount off,
+  the condition and the end date / countdown flag) and `bestSaving(Product)` (the biggest % saving, including any
+  variant on sale, for "UP TO 40% OFF" badges). Tests: `AutomaticDiscountTest`.
+- Config `commerce.shipping.default_carrier` (default `null`): the carrier pre-selected on Ready to send. Replaces the
+  hard-coded "DPD". `commerce.shipping.carriers` gains Parcelforce. **Client action:** a shop that relied on DPD
+  being pre-filled sets `'default_carrier' => 'DPD'` in its `config/commerce.php`; a shop with its own `shipping` block
+  lists its couriers in `carriers` (the drop-down shows those, in that order).
+- `php artisan commerce:db:utc [--dry-run] [--connection=]`: re-stores every TIMESTAMP value written in the server's
+  clock so it reads the same once the connection runs in UTC. Per table, in a transaction, checksum-verified (rolled
+  back on any difference); only the connection's prefixed tables; refuses a second run (marker setting
+  `database_timestamps_utc`), SQLite, and an app time zone other than UTC.
+- `commerce:doctor` › Database › **Time zone**: fails when the session time zone does not keep the app's times (probed
+  in January and July, so it is caught in winter too).
+- Missing WordPress image sizes in imported content: `/storage/uploads/…-{W}x{H}.{ext}` that is not on disk 301s to
+  the nearest file that is (a square size for a square request, else the smallest variant of the original's shape that
+  covers the width, else the original or WordPress's `-scaled` original). Imports download originals and the media
+  library makes its own sizes, so `photo-450x206.jpg` in a page, post or category description was a broken image
+  (452 of them on one shop). Route `legacy.image`, `LegacyImageController`, feature switch `legacy_content`.
+
+### Client skeleton (`stubs/client-skeleton`)
+- `config/database.php`: `'timezone' => env('DB_TIMEZONE')` on `mysql` and `scratch` (null = unchanged behaviour, so
+  applying the file can never shift an existing database). `.env.example`: `DB_TIMEZONE=+00:00` for new clients.
+- `config/commerce.php`: feature switch `loyalty` (off) in the `features` block; a commented `shipping` example
+  (carriers and `default_carrier`).
+
+### Client actions required
+- `php artisan migrate --force` (four additive migrations, see Migrations), then `php artisan commerce:publish`,
+  `php artisan commerce:theme:publish` (the default theme's `js/app.js`, `js/checkout.js` and `css/app.css` changed) and
+  `php artisan optimize`.
+- A shop that liked "DPD" pre-filled on Ready to send: `'shipping' => [..., 'default_carrier' => 'DPD']`.
+- Optional per shop: `catalog.search = 'precise'`, `features.loyalty = true`, Admin › Settings › Payments › "Debit or
+  credit card (via PayPal)", "Google Pay (via PayPal)", "Apple Pay (via PayPal)".
+- Child themes that override `checkout/show`, `checkout/pay` or `checkout/partials/payment-methods`: copy the wallet
+  parts (see Added) to offer Google Pay / Apple Pay; without them the wallets simply stay hidden.
+- Run `php artisan commerce:doctor`. If **Time zone** fails: back up the database, `php artisan down`,
+  `php artisan commerce:db:utc --dry-run`, `php artisan commerce:db:utc`, apply the skeleton's `config/database.php`
+  (or add `'timezone' => env('DB_TIMEZONE')` to the `mysql` connection), add `DB_TIMEZONE=+00:00` to `.env`,
+  `php artisan config:cache`, `php artisan up`. Never set DB_TIMEZONE on an existing database without converting first.
+
 ## [1.5.0] - 2026-10-03
 
 Import a WooCommerce shop over its REST API: no database access needed – a shop URL and a read-only API key. One

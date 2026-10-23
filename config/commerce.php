@@ -77,6 +77,7 @@ return [
         'product_csv' => true,        // admin Products › Import / Export: full product CSV export + import (mapping, dry run, batches), commerce:products:* commands
         'updater' => true,            // admin Updates (administrators): update check, approved pine/commerce updates, skeleton file updates; commerce:update:* / commerce:skeleton:*
         'woo_api_import' => true,     // admin Import › WooCommerce API (administrators): import from a WooCommerce shop's REST API with API keys; commerce:import-woo-api
+        'loyalty' => false,           // loyalty points: earned on paid orders, spent at checkout, My account › Points, Admin › Settings › Loyalty points, commerce:loyalty:import
     ],
 
     'catalog' => [
@@ -92,6 +93,12 @@ return [
         'spec_attributes' => [],
         'ajax_header' => 'X-Commerce-Catalog',
         'legacy_page_params' => [],
+        // search: 'broad' (name, SKU, descriptions – as WordPress) or 'precise' (name, SKU, brand, category names and
+        // attribute values such as the colour; descriptions only when nothing else matches) – ProductListing::searchMode()
+        'search' => 'broad',
+        // automatic product labels (ProductPresenter::labels(), after the ones set in the admin): an attribute value
+        // gives a label, e.g. 'attributes' => ['fitting' => ['tall' => 'Available in Tall fitting']]
+        'labels' => ['attributes' => []],
     ],
 
     /*
@@ -120,6 +127,16 @@ return [
 
     'pay_in_3' => ['min' => 30, 'max' => 2000, 'instalments' => 3],
 
+    // Loyalty points defaults (feature "loyalty"; Admin › Settings › Loyalty points overrides each key)
+    'loyalty' => [
+        'earn_per_pound' => 1,        // points per £1 of items (after discounts, VAT included, delivery not)
+        'points_per_pound' => 100,    // points that make £1 off
+        'signup_points' => 0,         // welcome bonus for a new account
+        'min_redeem' => 0,            // points needed before any can be spent
+        'max_discount_percent' => 100, // most of the items' price that points can pay
+        'label' => 'points',
+    ],
+
     // Tax defaults (Admin › Settings › Tax overrides each key). New stores: UK-style prices including VAT, shown
     // including VAT, rounded per line. A store upgraded from before v1.1 keeps its behaviour: the migration saves
     // "prices exclude tax" when it had a VAT rate, and with no rates no tax is charged in either mode.
@@ -141,14 +158,18 @@ return [
 
     'shipping' => [
         'install_zones' => true,                  // commerce:install creates a UK zone with free delivery
+        // the Carrier drop-down of Admin › Orders › Ready to send, in this order, and the tracking link in emails and
+        // the account (name => tracking page, {number} = the tracking number)
         'carriers' => [
             'Royal Mail' => 'https://www.royalmail.com/track-your-item#/tracking-results/{number}',
             'DPD' => 'https://track.dpd.co.uk/parcels/{number}',
+            'Parcelforce' => 'https://www.parcelforce.com/track-trace?trackNumber={number}',
             'DHL' => 'https://www.dhl.com/gb-en/home/tracking.html?tracking-id={number}',
             'UPS' => 'https://www.ups.com/track?tracknum={number}',
             'FedEx' => 'https://www.fedex.com/fedextrack/?trknbr={number}',
             'Evri' => 'https://www.evri.com/track/parcel/{number}',
         ],
+        'default_carrier' => null,                // pre-selected on Ready to send (a name from 'carriers'; null = none)
     ],
 
     'feeds' => ['google' => ['default_category' => null, 'default_condition' => 'new', 'condition_map' => ['used' => 'used']]],
@@ -286,6 +307,9 @@ return [
         'gateways' => [
             'stripe' => 'Pine\\Commerce\\Services\\Payments\\Gateways\\StripeGateway',
             'paypal' => 'Pine\\Commerce\\Services\\Payments\\Gateways\\PaypalGateway',
+            'paypal_card' => 'Pine\\Commerce\\Services\\Payments\\Gateways\\PaypalCardGateway', // cards through PayPal (off until switched on)
+            'paypal_googlepay' => 'Pine\\Commerce\\Services\\Payments\\Gateways\\PaypalGooglePayGateway', // Google Pay through PayPal (off until switched on)
+            'paypal_applepay' => 'Pine\\Commerce\\Services\\Payments\\Gateways\\PaypalApplePayGateway', // Apple Pay through PayPal (off until switched on)
             'bacs' => 'Pine\\Commerce\\Services\\Payments\\Gateways\\BacsGateway',
         ],
     ],

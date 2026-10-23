@@ -331,7 +331,7 @@ class OrderManager
                 return (bool) $manager->canRefund($order);
             }
 
-            return in_array($order->payment_method, ['stripe', 'paypal'], true);
+            return in_array($order->payment_method, ['stripe', 'paypal', 'paypal_card', 'paypal_googlepay', 'paypal_applepay'], true);
         } catch (Throwable) {
             return false;
         }

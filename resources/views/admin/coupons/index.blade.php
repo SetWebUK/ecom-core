@@ -50,7 +50,11 @@
                         <tr>
                             <x-admin.row-check :id="$coupon->id" :label="'Select '.$coupon->code" />
                             <td class="stack-title">
-                                <a href="{{ route('admin.coupons.edit', $coupon) }}" class="row-link mono">{{ $coupon->code }}</a>
+                                @if ($coupon->auto_apply)
+                                    <a href="{{ route('admin.coupons.edit', $coupon) }}" class="row-link">{{ $coupon->displayName() }}</a> <x-admin.badge color="info">Automatic</x-admin.badge>
+                                @else
+                                    <a href="{{ route('admin.coupons.edit', $coupon) }}" class="row-link mono">{{ $coupon->code }}</a>
+                                @endif
                                 @if ($coupon->description)<div class="cell-sub truncate" style="max-width:320px">{{ $coupon->description }}</div>@endif
                             </td>
                             <td data-label="Discount">

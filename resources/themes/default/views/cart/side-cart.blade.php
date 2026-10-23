@@ -48,7 +48,7 @@
             <dl class="totals">
                 <div><dt>Subtotal</dt><dd>{{ money($totals['subtotal_display'] ?? $totals['subtotal']) }}</dd></div>
                 @foreach ($totals['coupons_display'] ?? $totals['coupons'] as $code => $amount)
-                    <div><dt>Coupon {{ $code }}</dt><dd>−{{ money($amount) }}</dd></div>
+                    <div><dt>{{ in_array($code, $totals['automatic_coupons'] ?? [], true) ? ($totals['coupon_labels'][$code] ?? $code) : 'Coupon '.$code }}</dt><dd>−{{ money($amount) }}</dd></div>
                 @endforeach
             </dl>
             <p class="muted small">{{ ($totals['display_incl'] ?? false) && ($totals['tax'] ?? 0) > 0 ? 'Prices include '.\Pine\Commerce\Services\Tax\TaxSettings::label().'. Delivery calculated at checkout.' : 'Shipping and taxes calculated at checkout.' }}</p>

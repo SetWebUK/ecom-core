@@ -24,6 +24,14 @@
         <script src="https://js.stripe.com/v3/" defer></script>
     @endpush
 @endif
+@if ($wallets)
+    @push('head')
+        {{-- Google Pay / Apple Pay through PayPal: PayPal's SDK and the wallets' own scripts --}}
+        @foreach ($wallets['scripts'] as $src)
+            <script src="{{ $src }}" defer></script>
+        @endforeach
+    @endpush
+@endif
 
 @section('content')
 <form id="checkout" class="container checkout" method="POST" action="{{ route('checkout.place') }}" novalidate
@@ -121,6 +129,7 @@
 
 <script type="application/json" id="checkout-config">{!! json_encode([
     'stripe' => $stripe,
+    'wallets' => $wallets ? \Illuminate\Support\Arr::except($wallets, ['scripts']) : null,
     'needsPayment' => $needsPayment,
     'total' => $totals['total'],
     'currency' => config('commerce.currency.code', 'GBP'),

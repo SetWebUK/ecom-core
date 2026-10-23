@@ -20,7 +20,7 @@
     <dl class="totals">
         <div><dt>Subtotal</dt><dd>{{ money($amounts['subtotal']) }}</dd></div>
         @if ($amounts['discount'] > 0)
-            <div class="totals__discount"><dt>Discount @if ($order->coupon_code)({{ $order->coupon_code }})@endif</dt><dd>−{{ money($amounts['discount']) }}</dd></div>
+            <div class="totals__discount"><dt>Discount @if ($order->coupon_code)({{ $order->discountNames() }})@endif</dt><dd>−{{ money($amounts['discount']) }}</dd></div>
         @endif
         <div><dt>Delivery</dt><dd>{{ $amounts['shipping'] > 0 ? money($amounts['shipping']) : 'Free' }}</dd></div>
         @unless ($amounts['incl'])

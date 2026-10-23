@@ -28,10 +28,37 @@
     </div>
     @endif
 
+    @if (commerce_feature('loyalty') && auth()->check())
+        {{-- loyalty points (Services\Loyalty\Loyalty): use them on this order, or keep them --}}
+        @php
+            $L = \Pine\Commerce\Services\Loyalty\Loyalty::class;
+            $pointsBalance = $L::balance(auth()->id());
+            $pointsUsed = (float) ($totals['coupons'][$L::CODE] ?? 0) > 0;
+            $pointsUsable = $L::usable(auth()->id(), (float) ($totals['subtotal_display'] ?? $totals['subtotal']));
+        @endphp
+        @if ($pointsUsed || $pointsUsable > 0)
+            <div class="points-box" data-points>
+                @if ($pointsUsed)
+                    <span>Using your {{ $L::label() }} ({{ number_format($pointsBalance) }} available).</span>
+                    <button type="button" class="btn btn--outline btn--sm" data-points-remove="{{ route('cart.points.remove') }}">Keep them</button>
+                @else
+                    <span>You have <strong>{{ number_format($pointsBalance) }} {{ $L::label() }}</strong> – use {{ number_format($pointsUsable) }} for {{ money($L::value($pointsUsable)) }} off.</span>
+                    <button type="button" class="btn btn--outline btn--sm" data-points-apply="{{ route('cart.points') }}">Use my {{ $L::label() }}</button>
+                @endif
+            </div>
+        @elseif ($pointsBalance > 0)
+            <p class="points-box points-box--note muted">You have {{ number_format($pointsBalance) }} {{ $L::label() }}@if ($L::minRedeem() > $pointsBalance) – you can use them from {{ number_format($L::minRedeem()) }}@endif.</p>
+        @endif
+    @endif
+
     <dl class="totals">
         <div><dt>Subtotal</dt><dd>{{ money($totals['subtotal_display'] ?? $totals['subtotal']) }}</dd></div>
         @foreach ($totals['coupons_display'] ?? $totals['coupons'] as $code => $amount)
-            <div class="totals__discount"><dt>Discount <span class="chip chip--sm">{{ $code }} <button type="button" class="chip__x" aria-label="Remove discount {{ $code }}" data-coupon-remove="{{ $code }}">×</button></span></dt><dd>−{{ money($amount) }}</dd></div>
+            @if (in_array($code, $totals['automatic_coupons'] ?? [], true))
+                <div class="totals__discount"><dt>{{ $totals['coupon_labels'][$code] ?? $code }}</dt><dd>−{{ money($amount) }}</dd></div>
+            @else
+                <div class="totals__discount"><dt>Discount <span class="chip chip--sm">{{ $code }} <button type="button" class="chip__x" aria-label="Remove discount {{ $code }}" data-coupon-remove="{{ $code }}">×</button></span></dt><dd>−{{ money($amount) }}</dd></div>
+            @endif
         @endforeach
         @if ($totals['shipping_method'])
             <div><dt>Delivery</dt><dd>{{ ($totals['shipping_display'] ?? $totals['shipping']) > 0 ? money($totals['shipping_display'] ?? $totals['shipping']) : 'Free' }}</dd></div>

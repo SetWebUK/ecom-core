@@ -149,6 +149,7 @@ class Exporter
             'meta_title' => $p->meta_title,
             'meta_description' => $p->meta_description,
             'featured' => $p->is_featured ? 'yes' : 'no',
+            'labels' => implode(', ', $p->labels ?? []),
             'condition' => $p->condition,
             'brand' => $p->brand,
             'subtitle' => $p->subtitle,

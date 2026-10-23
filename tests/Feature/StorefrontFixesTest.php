@@ -106,6 +106,28 @@ class StorefrontFixesTest extends TestCase
         $this->assertSame('tel:0800000111', MenuComponent::treeFor('mobile_nav')[0]['url']);
     }
 
+    public function test_the_header_shows_the_admins_header_menu_before_its_backup(): void
+    {
+        $items = function (string $location, string $label) {
+            $menu = Menu::firstOrCreate(['location' => $location], ['name' => $label]);
+            MenuItem::where('menu_id', $menu->id)->delete();
+            MenuItem::create(['menu_id' => $menu->id, 'label' => $label, 'url' => '/'.$location.'/', 'sort_order' => 1]);
+        };
+        $items('main', 'Backup link');
+        $items('mega', 'Header link');
+        Menu::where('location', 'mobile_nav')->orWhere('location', 'mobile')->each(fn ($m) => $m->items()->delete());
+        MenuComponent::flush();
+
+        // Admin › Menus: "Header menu" (mega) is in use, "Header menu (backup)" (main) only while mega is empty
+        $this->assertSame('Header link', menu_tree(theme_config('menus.main'))[0]['label']);
+        $this->assertSame('Header link', menu_tree(theme_config('menus.mobile'))[0]['label']);
+        $this->get('/')->assertOk()->assertSee('Header link')->assertDontSee('Backup link');
+
+        Menu::where('location', 'mega')->first()->items()->delete();
+        MenuComponent::flush();
+        $this->assertSame('Backup link', menu_tree(theme_config('menus.main'))[0]['label']);
+    }
+
     public function test_a_410_redirect_rule_answers_gone_with_the_themes_removed_page(): void
     {
         Redirect::create(['from_path' => 'old-range', 'to_url' => '', 'status_code' => 410, 'is_active' => true]);

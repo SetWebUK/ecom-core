@@ -26,6 +26,9 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class PaypalGateway extends Gateway
 {
+    /** Gateways that take payments through this PayPal app (PayPal, card, Google Pay, Apple Pay): one webhook for all. */
+    public const PAYPAL_CODES = ['paypal', 'paypal_card', 'paypal_googlepay', 'paypal_applepay'];
+
     public function code(): string
     {
         return 'paypal';
@@ -79,6 +82,12 @@ class PaypalGateway extends Gateway
         return $this->flag('sandbox');
     }
 
+    /** What the customer paid with, in their messages ("Your PayPal payment could not be completed…"). */
+    protected function customerName(): string
+    {
+        return 'PayPal';
+    }
+
     /** Theme partial checkout.partials.paypal-icon (the default theme ships a neutral PayPal mark). */
     public function icons(): string
     {
@@ -129,6 +138,25 @@ class PaypalGateway extends Gateway
 
     public function process(Order $order, Request $request): PaymentResult
     {
+        $response = $this->createOrder($order);
+        if ($response === null) {
+            return PaymentResult::failure('Sorry, we could not connect to PayPal. Please try again or choose another payment method.');
+        }
+
+        $approve = collect($response->json('links', []))->first(fn ($l) => in_array($l['rel'] ?? '', ['payer-action', 'approve'], true));
+        if (! $response->successful() || ! $approve) {
+            Log::warning('PayPal create order rejected for '.$order->number.': '.$response->body());
+
+            return PaymentResult::failure('Sorry, PayPal could not start your payment. Please try again or choose another payment method.');
+        }
+        $this->recordStarted($order, (string) $response->json('id'));
+
+        return PaymentResult::redirect($approve['href']);
+    }
+
+    /** POST /v2/checkout/orders for the order (null when PayPal could not be reached). */
+    protected function createOrder(Order $order): ?HttpResponse
+    {
         $value = number_format((float) $order->total, 2, '.', '');
         $payload = [
             'intent' => 'CAPTURE',
@@ -150,47 +178,56 @@ class PaypalGateway extends Gateway
                     ]),
                 ],
             ]],
-            'payment_source' => [
-                'paypal' => [
-                    'email_address' => $order->email,
-                    'experience_context' => [
-                        'brand_name' => mb_substr((string) setting('store.name', config('app.name')), 0, 127),
-                        'locale' => 'en-GB',
-                        'shipping_preference' => 'SET_PROVIDED_ADDRESS',
-                        'user_action' => 'PAY_NOW',
-                        'return_url' => route('checkout.payment.return', ['gateway' => $this->code(), 'order' => $order->number, 'key' => $order->order_key]),
-                        'cancel_url' => route('checkout.payment.cancel', ['gateway' => $this->code(), 'order' => $order->number, 'key' => $order->order_key]),
-                    ],
-                ],
-            ],
         ];
+        if ($source = $this->paymentSource($order)) {
+            $payload['payment_source'] = $source;
+        }
 
         try {
-            $response = $this->api()->withHeaders(['PayPal-Request-Id' => strtolower($this->reference()).'-create-'.$order->id.'-'.md5(json_encode($payload))])
+            return $this->api()->withHeaders(['PayPal-Request-Id' => strtolower($this->reference()).'-create-'.$order->id.'-'.md5(json_encode($payload))])
                 ->post('/v2/checkout/orders', $payload);
         } catch (\Throwable $e) {
             Log::warning('PayPal create order failed for '.$order->number.': '.$e->getMessage());
 
-            return PaymentResult::failure('Sorry, we could not connect to PayPal. Please try again or choose another payment method.');
+            return null;
         }
+    }
 
-        $approve = collect($response->json('links', []))->first(fn ($l) => in_array($l['rel'] ?? '', ['payer-action', 'approve'], true));
-        if (! $response->successful() || ! $approve) {
-            Log::warning('PayPal create order rejected for '.$order->number.': '.$response->body());
+    /** Orders v2 payment_source: the customer approves on PayPal's own page ([] = none, the browser supplies it). */
+    protected function paymentSource(Order $order): array
+    {
+        return [
+            'paypal' => [
+                'email_address' => $order->email,
+                'experience_context' => $this->experienceContext($order),
+            ],
+        ];
+    }
 
-            return PaymentResult::failure('Sorry, PayPal could not start your payment. Please try again or choose another payment method.');
-        }
-
+    /** The pending payment the return / webhook later completes, keyed by the PayPal order id. */
+    protected function recordStarted(Order $order, string $paypalOrderId): void
+    {
         $order->payments()->create([
             'gateway' => $this->code(),
-            'reference' => $response->json('id'),
+            'reference' => $paypalOrderId,
             'amount' => $order->total,
             'status' => 'pending',
             'payload' => ['sandbox' => $this->isSandbox()],
         ]);
-        $order->addNote('PayPal payment started (PayPal Order ID: '.$response->json('id').').');
+        $order->addNote($this->title().' payment started (PayPal Order ID: '.$paypalOrderId.').');
+    }
 
-        return PaymentResult::redirect($approve['href']);
+    /** How PayPal's page behaves (Orders v2 payment_source.paypal.experience_context). */
+    protected function experienceContext(Order $order): array
+    {
+        return [
+            'brand_name' => mb_substr((string) setting('store.name', config('app.name')), 0, 127),
+            'locale' => 'en-GB',
+            'shipping_preference' => 'SET_PROVIDED_ADDRESS',
+            'user_action' => 'PAY_NOW',
+            'return_url' => route('checkout.payment.return', ['gateway' => $this->code(), 'order' => $order->number, 'key' => $order->order_key]),
+            'cancel_url' => route('checkout.payment.cancel', ['gateway' => $this->code(), 'order' => $order->number, 'key' => $order->order_key]),
+        ];
     }
 
     public function handleReturn(Order $order, Request $request): PaymentResult
@@ -199,7 +236,7 @@ class PaypalGateway extends Gateway
         $payRetry = route('checkout.pay', ['order' => $order->number, 'key' => $order->order_key]);
         $payment = $order->payments()->where('gateway', $this->code())->where('reference', $paypalOrderId)->first();
         if ($paypalOrderId === '' || ! $payment) {
-            return PaymentResult::failure('We could not match your PayPal payment to this order. Please try again.', $payRetry);
+            return PaymentResult::failure('We could not match your '.$this->customerName().' payment to this order. Please try again.', $payRetry);
         }
         if ($payment->status === 'succeeded') {
             return PaymentResult::success($order->view_url);
@@ -214,7 +251,7 @@ class PaypalGateway extends Gateway
         } catch (\Throwable $e) {
             Log::warning('PayPal capture failed for '.$order->number.': '.$e->getMessage());
 
-            return PaymentResult::failure('We could not confirm your PayPal payment. If you were charged, please contact us.', $payRetry);
+            return PaymentResult::failure('We could not confirm your '.$this->customerName().' payment. If you were charged, please contact us.', $payRetry);
         }
 
         return $this->applyOrderResponse($order, $response, $payRetry);
@@ -228,13 +265,13 @@ class PaypalGateway extends Gateway
             PaymentManager::fail($order, $this->code(), $response->json('id'), 'PayPal payment failed ('.$issue.').');
 
             return PaymentResult::failure($issue === 'INSTRUMENT_DECLINED'
-                ? 'Your PayPal payment method was declined. Please try again with a different funding source.'
-                : 'Your PayPal payment could not be completed. Please try again or choose another payment method.', $retryUrl);
+                ? 'Your '.$this->customerName().' payment method was declined. Please try again with a different funding source.'
+                : 'Your '.$this->customerName().' payment could not be completed. Please try again or choose another payment method.', $retryUrl);
         }
 
         $unit = $response->json('purchase_units.0', []);
         if ((string) ($unit['custom_id'] ?? '') !== '' && (string) $unit['custom_id'] !== (string) $order->id) {
-            return PaymentResult::failure('This PayPal payment does not belong to your order.', $retryUrl);
+            return PaymentResult::failure('This '.$this->customerName().' payment does not belong to your order.', $retryUrl);
         }
         $capture = $unit['payments']['captures'][0] ?? null;
         $status = $capture['status'] ?? $response->json('status');
@@ -257,7 +294,7 @@ class PaypalGateway extends Gateway
 
         PaymentManager::fail($order, $this->code(), $response->json('id'), 'PayPal payment not completed (status '.$status.').');
 
-        return PaymentResult::failure('Your PayPal payment could not be completed. Please try again or choose another payment method.', $retryUrl);
+        return PaymentResult::failure('Your '.$this->customerName().' payment could not be completed. Please try again or choose another payment method.', $retryUrl);
     }
 
     public function handleWebhook(Request $request): Response
@@ -289,14 +326,16 @@ class PaypalGateway extends Gateway
         }
         $order = Order::find((int) $capture->json('custom_id'));
         $paypalOrderId = $capture->json('supplementary_data.related_ids.order_id');
-        if (! $order || ! $order->payments()->where('gateway', $this->code())->where('reference', $paypalOrderId)->exists()) {
+        // the payment may have been started as PayPal or as a card through PayPal: complete it under its own method
+        $payment = $order?->payments()->whereIn('gateway', static::PAYPAL_CODES)->where('reference', $paypalOrderId)->first();
+        if (! $payment) {
             return response('Order not found.', 200);
         }
 
         if ($capture->json('status') === 'COMPLETED') {
-            PaymentManager::complete($order, $this->code(), $captureId, (float) $capture->json('amount.value'), ['paypal_order_id' => $paypalOrderId], null, $paypalOrderId);
+            PaymentManager::complete($order, $payment->gateway, $captureId, (float) $capture->json('amount.value'), ['paypal_order_id' => $paypalOrderId], null, $paypalOrderId);
         } elseif (in_array($capture->json('status'), ['DECLINED', 'FAILED'], true) && in_array($order->status, ['pending', 'on-hold'], true)) {
-            PaymentManager::fail($order, $this->code(), $paypalOrderId, 'PayPal payment was declined.');
+            PaymentManager::fail($order, $payment->gateway, $paypalOrderId, 'PayPal payment was declined.');
         }
 
         return response('OK', 200);

@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
  */
 class TrailingSlash
 {
-    public const EXCLUDED_PREFIXES = ['admin', 'storage', 'ajax', 'cart', 'webhooks', 'feeds', 'up'];
+    public const EXCLUDED_PREFIXES = ['admin', 'storage', 'ajax', 'cart', 'webhooks', 'feeds', 'up', '.well-known'];
 
     public function handle(Request $request, Closure $next)
     {
