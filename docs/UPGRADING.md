@@ -62,8 +62,13 @@ nullable columns / a new table: variant sale dates (`product_variations.sale_sta
   products step to bring in per-variation dates); Ready to send has no hard-coded "DPD" any more (set
   `shipping.default_carrier` to keep a default); every order now records its real origin (before: always Direct).
 - New config keys with defaults: `shipping.default_carrier` (null), `catalog.labels` (no automatic labels),
-  `catalog.search` ('broad'), `features.loyalty` (false), `loyalty.*`, `payments.gateways.paypal_card`. A client config
+  `catalog.search` ('broad'), `features.loyalty` (false), `loyalty.*`, `payments.gateways.paypal_card`,
+  `payments.gateways.paypal_googlepay`, `payments.gateways.paypal_applepay`. A client config
   with its own `shipping`, `catalog` or `payments` block copies the new keys in to use them (blocks merge shallowly).
+- Google Pay / Apple Pay through PayPal: switch them on in Admin › Settings › Payments once the PayPal app has them under
+  Features. For Apple Pay, register each domain with PayPal; the file Apple checks is served at
+  `/.well-known/apple-developer-merchantid-domain-association` (keep that path reachable: no redirect or firewall rule).
+  Child themes overriding `checkout/show`, `checkout/pay` or `checkout/partials/payment-methods` copy the wallet parts.
 
 ### Upgrading from 1.4 to 1.5
 

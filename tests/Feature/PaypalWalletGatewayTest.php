@@ -113,7 +113,7 @@ class PaypalWalletGatewayTest extends TestCase
 
         $this->getJson($result->data['return_url'])->assertStatus(422)
             ->assertJson(['result' => 'failure'])
-            ->assertJsonPath('messages.0', 'Your PayPal payment method was declined. Please try again with a different funding source.');
+            ->assertJsonPath('messages.0', 'Your Apple Pay payment method was declined. Please try again with a different funding source.');
         $this->assertSame('failed', $order->fresh()->status);
     }
 

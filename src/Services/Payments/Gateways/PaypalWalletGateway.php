@@ -30,6 +30,11 @@ abstract class PaypalWalletGateway extends PaypalGateway
         return trim((string) $this->setting('description')) ?: null;
     }
 
+    protected function customerName(): string
+    {
+        return $this->defaultTitle();
+    }
+
     /** Shown at checkout only after the browser confirms it can pay this way (theme payment-methods partial). */
     public function browserWallet(): ?string
     {

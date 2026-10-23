@@ -88,6 +88,26 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
   Off until switched on; refunds, the order's transaction link and `/webhooks/paypal` work for it (the PayPal webhook
   now completes a payment under the method it was started with). **Config:** `payments.gateways` gains `paypal_card`
   (a client config with its own `gateways` list adds it to offer it). Tests: `PaypalCardGatewayTest`.
+- Payment methods **Google Pay** and **Apple Pay through PayPal** (`paypal_googlepay` / `paypal_applepay`,
+  `PaypalGooglePayGateway` / `PaypalApplePayGateway`, base `PaypalWalletGateway`): the PayPal app and keys of Admin ›
+  Settings › Payments › PayPal, through PayPal's JS SDK (`components=googlepay,applepay`) – what the WooCommerce PayPal
+  Payments plugin offers, no Stripe account needed. Off until switched on.
+  - The checkout lists a wallet only once PayPal says the account can take it and the browser can pay that way (Google
+    Pay set up; Apple Pay on Apple devices, or in other browsers through Apple's QR code). While one is chosen, the
+    wallet's own button stands in for Place order.
+  - Flow: the customer approves in the sheet → the order is placed → the browser confirms the PayPal order with the
+    wallet's payment data (3-D Secure when PayPal asks) → the return URL captures it. `checkout/payment/{gateway}/return`
+    now answers `{result, redirect, messages}` when asked over AJAX. Refunds, transaction links and `/webhooks/paypal`
+    work as for PayPal (`PaypalGateway::PAYPAL_CODES`).
+  - Apple's domain check: `/.well-known/apple-developer-merchantid-domain-association` serves PayPal's own file (sandbox
+    or live, following the PayPal sandbox switch; `resources/payments/apple-pay`) while PayPal has its keys.
+    `TrailingSlash` leaves `/.well-known/` addresses alone.
+  - PayPal account: Google Pay and Apple Pay ticked under the REST app's Features (live: Advanced Checkout onboarding),
+    and for Apple Pay each domain registered with PayPal.
+  - **Config:** `payments.gateways` gains `paypal_googlepay` and `paypal_applepay`. Theme: `checkout.show` and
+    `checkout.pay` load `$wallets['scripts']` and pass `wallets` in `#checkout-config`; `checkout.partials.payment-methods`
+    starts methods with `browserWallet()` hidden. Admin labels include the legacy Woo `ppcp-googlepay` / `ppcp-applepay`.
+    Tests: `PaypalWalletGatewayTest`.
 - **Product labels** ("New Season", "Special offer"): `products.labels`, set in the product editor (Organisation),
   in bulk from the Products list (More actions › Add / remove a label…) and in the product CSV (`labels` column).
   Presenter `labels(Product)` adds automatic labels from attribute values, config `commerce.catalog.labels.attributes`
@@ -134,7 +154,9 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
   `php artisan optimize`.
 - A shop that liked "DPD" pre-filled on Ready to send: `'shipping' => [..., 'default_carrier' => 'DPD']`.
 - Optional per shop: `catalog.search = 'precise'`, `features.loyalty = true`, Admin › Settings › Payments › "Debit or
-  credit card (via PayPal)".
+  credit card (via PayPal)", "Google Pay (via PayPal)", "Apple Pay (via PayPal)".
+- Child themes that override `checkout/show`, `checkout/pay` or `checkout/partials/payment-methods`: copy the wallet
+  parts (see Added) to offer Google Pay / Apple Pay; without them the wallets simply stay hidden.
 - Run `php artisan commerce:doctor`. If **Time zone** fails: back up the database, `php artisan down`,
   `php artisan commerce:db:utc --dry-run`, `php artisan commerce:db:utc`, apply the skeleton's `config/database.php`
   (or add `'timezone' => env('DB_TIMEZONE')` to the `mysql` connection), add `DB_TIMEZONE=+00:00` to `.env`,

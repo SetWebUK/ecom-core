@@ -82,6 +82,12 @@ class PaypalGateway extends Gateway
         return $this->flag('sandbox');
     }
 
+    /** What the customer paid with, in their messages ("Your PayPal payment could not be completed…"). */
+    protected function customerName(): string
+    {
+        return 'PayPal';
+    }
+
     /** Theme partial checkout.partials.paypal-icon (the default theme ships a neutral PayPal mark). */
     public function icons(): string
     {
@@ -230,7 +236,7 @@ class PaypalGateway extends Gateway
         $payRetry = route('checkout.pay', ['order' => $order->number, 'key' => $order->order_key]);
         $payment = $order->payments()->where('gateway', $this->code())->where('reference', $paypalOrderId)->first();
         if ($paypalOrderId === '' || ! $payment) {
-            return PaymentResult::failure('We could not match your PayPal payment to this order. Please try again.', $payRetry);
+            return PaymentResult::failure('We could not match your '.$this->customerName().' payment to this order. Please try again.', $payRetry);
         }
         if ($payment->status === 'succeeded') {
             return PaymentResult::success($order->view_url);
@@ -245,7 +251,7 @@ class PaypalGateway extends Gateway
         } catch (\Throwable $e) {
             Log::warning('PayPal capture failed for '.$order->number.': '.$e->getMessage());
 
-            return PaymentResult::failure('We could not confirm your PayPal payment. If you were charged, please contact us.', $payRetry);
+            return PaymentResult::failure('We could not confirm your '.$this->customerName().' payment. If you were charged, please contact us.', $payRetry);
         }
 
         return $this->applyOrderResponse($order, $response, $payRetry);
@@ -259,13 +265,13 @@ class PaypalGateway extends Gateway
             PaymentManager::fail($order, $this->code(), $response->json('id'), 'PayPal payment failed ('.$issue.').');
 
             return PaymentResult::failure($issue === 'INSTRUMENT_DECLINED'
-                ? 'Your PayPal payment method was declined. Please try again with a different funding source.'
-                : 'Your PayPal payment could not be completed. Please try again or choose another payment method.', $retryUrl);
+                ? 'Your '.$this->customerName().' payment method was declined. Please try again with a different funding source.'
+                : 'Your '.$this->customerName().' payment could not be completed. Please try again or choose another payment method.', $retryUrl);
         }
 
         $unit = $response->json('purchase_units.0', []);
         if ((string) ($unit['custom_id'] ?? '') !== '' && (string) $unit['custom_id'] !== (string) $order->id) {
-            return PaymentResult::failure('This PayPal payment does not belong to your order.', $retryUrl);
+            return PaymentResult::failure('This '.$this->customerName().' payment does not belong to your order.', $retryUrl);
         }
         $capture = $unit['payments']['captures'][0] ?? null;
         $status = $capture['status'] ?? $response->json('status');
@@ -288,7 +294,7 @@ class PaypalGateway extends Gateway
 
         PaymentManager::fail($order, $this->code(), $response->json('id'), 'PayPal payment not completed (status '.$status.').');
 
-        return PaymentResult::failure('Your PayPal payment could not be completed. Please try again or choose another payment method.', $retryUrl);
+        return PaymentResult::failure('Your '.$this->customerName().' payment could not be completed. Please try again or choose another payment method.', $retryUrl);
     }
 
     public function handleWebhook(Request $request): Response
