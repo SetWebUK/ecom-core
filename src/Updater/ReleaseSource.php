@@ -52,7 +52,7 @@ class ReleaseSource
         $result = $this->runner->run([$this->environment->git(), 'ls-remote', '--tags', '--refs', $url], null,
             $this->environment->variables(), null, (int) config('commerce.updater.git_timeout', 60));
         if (! $result->ok()) {
-            throw new RuntimeException('Could not list the tags of '.$url.': '.($result->lastLine() ?: 'git ls-remote failed'));
+            throw new RuntimeException('Could not list the tags of '.$url.': '.($result->errorLine() ?: 'git ls-remote failed'));
         }
         $tags = [];
         foreach (explode("\n", $result->output) as $line) {
@@ -116,7 +116,7 @@ class ReleaseSource
             $result = $this->runner->run($command, null, $env, null, $timeout);
             if (! $result->ok()) {
                 File::deleteDirectory($dir);
-                throw new RuntimeException("Could not fetch {$ref} from {$url}: ".($result->lastLine() ?: 'git failed'));
+                throw new RuntimeException("Could not fetch {$ref} from {$url}: ".($result->errorLine() ?: 'git failed'));
             }
         }
         $commit = $this->runner->run([$git, '-C', $dir, 'rev-parse', 'HEAD'], null, $env, null, 30);

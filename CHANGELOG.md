@@ -9,6 +9,16 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+### Fixed
+- Admin › Updates rolled back any release that adds a `commerce:doctor` check which fails on the site (e.g. 1.6.0's
+  Database › Time zone): the health step counted it as a new failure. A failing check that did not exist before the
+  update now logs a WARNING (meta `doctor_introduced`) and the update completes; a check that passed before and fails
+  after still rolls back, and every failure still counts when the doctor could not run before the update. Takes
+  effect for updates started from this version on.
+- Updater errors quoted the last output line, which for composer and artisan is the command's usage synopsis
+  ("update [--with WITH] …"); they now quote the message under Symfony's "In File.php line N:" header
+  (`ProcessResult::errorLine()`), e.g. "Could not authenticate against github.com".
+
 ## [1.6.0] - 2026-10-15
 
 ### Migrations

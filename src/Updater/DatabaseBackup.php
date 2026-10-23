@@ -73,7 +73,7 @@ class DatabaseBackup
         }
         if (! $result->ok() || ! is_file($path) || filesize($path) === 0) {
             @unlink($path);
-            throw new RuntimeException('mysqldump failed: '.($result->lastLine() ?: 'exit code '.$result->exitCode));
+            throw new RuntimeException('mysqldump failed: '.($result->errorLine() ?: 'exit code '.$result->exitCode));
         }
     }
 

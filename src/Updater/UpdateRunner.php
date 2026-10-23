@@ -53,6 +53,9 @@ class UpdateRunner
     /** @var list<string> */
     protected array $doctorBefore = [];
 
+    /** Titles of every check commerce:doctor ran before the update; null when it did not answer. @var list<string>|null */
+    protected ?array $doctorBeforeChecks = null;
+
     public function __construct(
         protected ProcessRunner $runner,
         protected Environment $environment,
@@ -178,7 +181,9 @@ class UpdateRunner
 
         $this->command('composer --version', [...$composer, '--version', '--no-ansi'], 60);
         $this->artisan(['--version'], 60);
-        $this->doctorBefore = $this->doctorFailures(false);
+        $checks = $this->doctorChecks(false);
+        $this->doctorBeforeChecks = $checks === null ? null : array_keys($checks);
+        $this->doctorBefore = $this->failing($checks ?? []);
         $this->update->putMeta(['doctor_before' => $this->doctorBefore]);
         $this->log('commerce:doctor before the update: '.($this->doctorBefore ? count($this->doctorBefore).' failing check(s): '.implode('; ', $this->doctorBefore) : 'no failing checks'));
     }
@@ -263,11 +268,18 @@ class UpdateRunner
 
     protected function stepHealth(): void
     {
-        $after = $this->doctorFailures(true);
+        $after = $this->failing($this->doctorChecks(true));
         $new = array_values(array_diff($after, $this->doctorBefore));
-        $this->update->putMeta(['doctor_after' => $after]);
+        // A check the new version adds reports a problem the site already had: the update did not cause it.
+        $introduced = $this->doctorBeforeChecks === null ? [] : array_values(array_diff($new, $this->doctorBeforeChecks));
+        $new = array_values(array_diff($new, $introduced));
+        $this->update->putMeta(['doctor_after' => $after, 'doctor_introduced' => $introduced]);
         if ($new) {
             throw new RuntimeException('commerce:doctor reports new failing checks: '.implode('; ', $new));
+        }
+        if ($introduced) {
+            $this->log('WARNING: check(s) added by this version fail: '.implode('; ', $introduced).'. They report an existing'
+                .' problem, not one caused by the update – fix them afterwards (php artisan commerce:doctor, release notes).');
         }
         $this->log('commerce:doctor: no new failing checks'.($after ? ' ('.count($after).' already failing before the update)' : '').'.');
     }
@@ -371,14 +383,18 @@ class UpdateRunner
         $result = $this->runner->run($command, $this->project->path(), $this->environment->variables(),
             fn (string $line) => $this->log('  '.$line), $timeout);
         if (! $result->ok()) {
-            throw new RuntimeException("{$label} exited with code {$result->exitCode}".($result->lastLine() ? ': '.$result->lastLine() : '.'));
+            throw new RuntimeException("{$label} exited with code {$result->exitCode}".($result->errorLine() ? ': '.$result->errorLine() : '.'));
         }
 
         return $result;
     }
 
-    /** Titles of the failing commerce:doctor checks. @return list<string> */
-    protected function doctorFailures(bool $strict): array
+    /**
+     * Status of every commerce:doctor check by title; null when it did not answer (only when not $strict).
+     *
+     * @return array<string, string>|null
+     */
+    protected function doctorChecks(bool $strict): ?array
     {
         $php = $this->environment->php();
         $result = $this->runner->run([$php, $this->project->path('artisan'), 'commerce:doctor', '--json', '--no-ansi'],
@@ -386,20 +402,28 @@ class UpdateRunner
         $json = json_decode(substr($result->output, (int) strpos($result->output, '{')), true);
         if (! is_array($json) || ! isset($json['checks'])) {
             if ($strict) {
-                throw new RuntimeException('commerce:doctor --json did not answer: '.($result->lastLine() ?: 'exit code '.$result->exitCode));
+                throw new RuntimeException('commerce:doctor --json did not answer: '.($result->errorLine() ?: 'exit code '.$result->exitCode));
             }
-            $this->log('commerce:doctor could not run before the update: '.$result->lastLine());
+            $this->log('commerce:doctor could not run before the update: '.$result->errorLine());
 
-            return [];
+            return null;
         }
-        $failures = [];
+        $checks = [];
         foreach ((array) $json['checks'] as $check) {
-            if (($check['status'] ?? '') === 'fail') {
-                $failures[] = (string) ($check['title'] ?? '?');
+            $title = (string) ($check['title'] ?? '?');
+            // One title can cover several checks: a failing one wins.
+            if (($checks[$title] ?? '') !== 'fail') {
+                $checks[$title] = (string) ($check['status'] ?? '');
             }
         }
 
-        return $failures;
+        return $checks;
+    }
+
+    /** @param array<string, string> $checks @return list<string> */
+    protected function failing(array $checks): array
+    {
+        return array_keys(array_filter($checks, fn ($status) => $status === 'fail'));
     }
 
     protected function runDirectory(): string
