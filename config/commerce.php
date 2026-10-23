@@ -77,6 +77,7 @@ return [
         'product_csv' => true,        // admin Products › Import / Export: full product CSV export + import (mapping, dry run, batches), commerce:products:* commands
         'updater' => true,            // admin Updates (administrators): update check, approved pine/commerce updates, skeleton file updates; commerce:update:* / commerce:skeleton:*
         'woo_api_import' => true,     // admin Import › WooCommerce API (administrators): import from a WooCommerce shop's REST API with API keys; commerce:import-woo-api
+        'live_chat' => false,         // storefront chat widget + optional AI assistant, Admin › Live chat (settings incl. the Claude/OpenAI key)
         'loyalty' => false,           // loyalty points: earned on paid orders, spent at checkout, My account › Points, Admin › Settings › Loyalty points, commerce:loyalty:import
     ],
 

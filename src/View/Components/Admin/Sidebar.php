@@ -58,6 +58,7 @@ class Sidebar extends Component
                 $e('Form submissions', null, 'admin.form-submissions.index', ['admin.form-submissions.*'], 'contact_form', [], $counts['inbox'], 'Unread'),
                 $e('Newsletter', null, 'admin.newsletter.index', ['admin.newsletter.*'], 'newsletter'),
             ], $counts['inbox'], 'Unread form submissions'),
+            $e('Live chat', 'chat-bubble-left-right', 'admin.live-chat.index', ['admin.live-chat.*'], 'live_chat', [], $counts['chats'], 'Chats waiting for a reply'),
             $e('Analytics', 'chart-bar', 'admin.reports.index', ['admin.reports.*'], 'reports'),
         ];
 
@@ -216,6 +217,7 @@ class Sidebar extends Component
             'orders' => (int) ($row->orders ?? 0),
             'inbox' => (int) ($row->inbox ?? 0),
             'reviews' => (int) ($row->reviews ?? 0),
+            'chats' => Features::enabled('live_chat', false) ? \Pine\Commerce\Http\Controllers\Admin\LiveChatController::waitingCount() : 0,
         ];
     }
 }

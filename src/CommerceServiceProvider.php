@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Pine\Commerce\Console\ImportWooApiCommand;
 use Pine\Commerce\Console\ImportWordPressCommand;
@@ -113,6 +114,9 @@ class CommerceServiceProvider extends ServiceProvider
         }
 
         Paginator::defaultView('partials.pagination');
+
+        // live chat widget on every storefront page (feature "live_chat"; core renders the layout as theme::layouts.app too)
+        View::composer(['layouts.app', 'theme::layouts.app'], \Pine\Commerce\Services\LiveChat\WidgetComposer::class);
 
         // theme helpers as Blade directives: @themeAsset('css/site.css'), @themeSetting('primary_color', '#000')
         Blade::directive('themeAsset', fn ($expression) => "<?php echo e(theme_asset({$expression})); ?>");

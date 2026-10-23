@@ -9,6 +9,37 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+### Migrations
+- `2026_10_23_000100_create_live_chat`: tables `chat_conversations` and `chat_messages` (new, nothing existing changes).
+  **Client action:** `php artisan migrate`.
+
+### Added
+- **Live chat** (feature `live_chat`, off by default): a chat widget on every storefront page (pushed into the theme
+  layout's `@stack('scripts')`, so no theme changes; colours follow `--chat-accent` / `--chat-accent-text`), with an
+  optional AI assistant and hand-over to staff.
+  - **Assistant:** Claude (official `anthropic-ai/sdk`, new dependency) or OpenAI (Chat Completions), chosen with the
+    API key in Admin › Live chat › Settings (administrators; key encrypted with the app key, never shown again). It
+    answers from the catalogue through three tools: `search_products`, `get_product` (published products only: price,
+    sale, stock, specifications, options) and `request_human`, plus the shop's own "store information" text
+    (delivery, returns, warranty …). Claude defaults to `claude-opus-5-5` (Sonnet 5.5 / Haiku 5.5 selectable) with
+    adaptive thinking at effort `low`, prompt caching and server-side refusal fallbacks (`fallbacks: "default"`).
+    The stored history is provider-neutral and append-only, so the provider can change mid-conversation.
+  - **Hand-over:** the customer ("Talk to a person") or the assistant asks for staff → status `waiting`, one email to
+    the notification address (`LiveChatHandoff`). Staff reply from Admin › Live chat (new sidebar entry with a
+    waiting count; replies reach the widget within seconds), hand the chat back to the assistant or close it. Staff
+    count as online while a live-chat page is open. If nobody is online, or nobody answers within the set minutes,
+    the widget asks for an email and the transcript lands in Inbox › Form submissions (form `live_chat`) + store email.
+    Without an AI provider every chat goes straight to staff.
+  - **Limits:** assistant replies per chat (setting, default 40), 10 new chats per IP per hour, throttled endpoints,
+    1,000-character messages. No cron or queue needed (the wait is checked on each widget poll).
+  - Routes `live-chat.send|poll|handoff|details` (POST, token in the body), `admin.live-chat.*`. Tests: `LiveChatTest`.
+
+### Client actions required
+- `composer update pine/commerce` installs `anthropic-ai/sdk` (needs `php-http/discovery` in `config.allow-plugins`,
+  which Laravel's default `composer.json` already allows), then `php artisan migrate --force`.
+- To use it: `'live_chat' => true` in `config/commerce.php` `features`, then Admin › Live chat › Settings (provider,
+  API key, store information).
+
 ## [1.6.0] - 2026-10-15
 
 ### Migrations

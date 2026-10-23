@@ -13,6 +13,7 @@ use Pine\Commerce\Http\Controllers\FeedController;
 use Pine\Commerce\Http\Controllers\HomeController;
 use Pine\Commerce\Http\Controllers\InvoiceController;
 use Pine\Commerce\Http\Controllers\LegacyImageController;
+use Pine\Commerce\Http\Controllers\LiveChatController;
 use Pine\Commerce\Http\Controllers\PaymentWebhookController;
 use Pine\Commerce\Http\Controllers\ProductController;
 use Pine\Commerce\Http\Controllers\ResolveController;
@@ -127,6 +128,14 @@ Route::get('feed', [BlogController::class, 'feed'])->middleware(RequireFeature::
 // 301 to the nearest file that is. The web server answers every file that exists before Laravel sees the request.
 Route::get('storage/uploads/{path}', [LegacyImageController::class, 'show'])
     ->where('path', '.+-[0-9]+x[0-9]+\\.[A-Za-z0-9]+')->name('legacy.image');
+
+// Live chat widget (feature "live_chat"): JSON, POST only, the conversation token travels in the body.
+Route::middleware(RequireFeature::for('live_chat'))->prefix('live-chat')->name('live-chat.')->group(function () {
+    Route::post('send', [LiveChatController::class, 'send'])->middleware('throttle:20,1,live-chat-send')->name('send');
+    Route::post('poll', [LiveChatController::class, 'poll'])->middleware('throttle:60,1,live-chat-poll')->name('poll');
+    Route::post('handoff', [LiveChatController::class, 'handoff'])->middleware('throttle:10,1,live-chat-handoff')->name('handoff');
+    Route::post('details', [LiveChatController::class, 'details'])->middleware('throttle:5,10,live-chat-details')->name('details');
+});
 
 // Catch-all: pages, product categories (+ /page/N), products, legacy redirects
 // Registered as a *fallback* route, so it always matches after every other route (package, theme or client

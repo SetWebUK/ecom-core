@@ -1,5 +1,6 @@
 <?php
 
+use Pine\Commerce\Http\Controllers\Admin\LiveChatController;
 use Pine\Commerce\Http\Controllers\Admin\MediaController;
 use Pine\Commerce\Http\Controllers\Admin\MenuController;
 use Pine\Commerce\Http\Controllers\Admin\NewsletterController;
@@ -65,6 +66,22 @@ Route::middleware(RequireFeature::for('contact_form'))->group(function () {
     Route::post('form-submissions/bulk', [SubmissionController::class, 'bulk'])->name('form-submissions.bulk');
     Route::patch('form-submissions/{submission}/unread', [SubmissionController::class, 'unread'])->name('form-submissions.unread');
     Route::resource('form-submissions', SubmissionController::class)->only(['index', 'show', 'destroy'])->parameters(['form-submissions' => 'submission']);
+});
+
+// Live chat (feature switch "live_chat"): conversations for all staff; settings (AI provider key) for administrators
+Route::middleware(RequireFeature::for('live_chat'))->prefix('live-chat')->name('live-chat.')->group(function () {
+    Route::get('/', [LiveChatController::class, 'index'])->name('index');
+    Route::middleware('admin:admin')->group(function () {
+        Route::get('settings', [LiveChatController::class, 'settings'])->name('settings');
+        Route::put('settings', [LiveChatController::class, 'updateSettings'])->name('settings.update');
+        Route::post('settings/test', [LiveChatController::class, 'test'])->middleware('throttle:10,1')->name('settings.test');
+    });
+    Route::get('{conversation}', [LiveChatController::class, 'show'])->whereNumber('conversation')->name('show');
+    Route::get('{conversation}/messages', [LiveChatController::class, 'messages'])->whereNumber('conversation')->name('messages');
+    Route::post('{conversation}/reply', [LiveChatController::class, 'reply'])->whereNumber('conversation')->name('reply');
+    Route::post('{conversation}/hand-back', [LiveChatController::class, 'handBack'])->whereNumber('conversation')->name('hand-back');
+    Route::post('{conversation}/close', [LiveChatController::class, 'close'])->whereNumber('conversation')->name('close');
+    Route::delete('{conversation}', [LiveChatController::class, 'destroy'])->whereNumber('conversation')->name('destroy');
 });
 
 Route::middleware(RequireFeature::for('newsletter'))->group(function () {
