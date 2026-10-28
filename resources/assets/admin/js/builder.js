@@ -29,11 +29,11 @@
 
         // ------------------------------------------------------------------------------------------- content
 
-        // placeholder picture until one is chosen (a data: SVG, which the server keeps for <img>)
+        // placeholder picture until one is chosen (a data: SVG, which the server keeps for <img>). No words on it:
+        // customers see it too if the page is saved before a picture is chosen.
         var PICTURE = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">'
             + '<rect width="1200" height="800" fill="#e5e7eb"/><path d="M430 540l150-170 110 125 70-80 150 125H430z" fill="#cbd5e1"/>'
-            + '<circle cx="760" cy="330" r="46" fill="#cbd5e1"/><text x="600" y="660" font-family="Arial,sans-serif" font-size="38" fill="#64748b" '
-            + 'text-anchor="middle">Double-click to choose a picture</text></svg>');
+            + '<circle cx="760" cy="330" r="46" fill="#cbd5e1"/></svg>');
         var img = function (cls) { return '<img class="pb-image ' + (cls || 'pb-image--full') + '" src="' + PICTURE + '" alt="">'; };
         var featureIcon = function (name) { return '<span class="pb-icon">' + icon(name) + '</span>'; };
         var section = function (name, cls, inner, container) {
