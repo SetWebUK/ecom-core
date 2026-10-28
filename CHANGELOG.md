@@ -9,6 +9,44 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-10-28
+
+Back-office journeys, from a walk through the admin as a shop owner: what needs doing is on the home page, stock
+warnings see sizes, sending a batch of orders goes from one to the next, and two screens that were hard to use are fixed.
+
+### Added
+- Home › **To do** card (`Services\Admin\StoreTasks`), above the sales figures. It lists only what needs action, most
+  urgent first, each item linking to the screen that fixes it. It is hidden when there's nothing to do.
+  - For administrators, go-live problems: no payment method switched on, a method switched on without its keys,
+    payments in test mode (Stripe test keys or PayPal sandbox, one entry for PayPal and its card/wallet methods), no
+    active delivery option, emails not being sent (`MAIL_MAILER=log|array`), a placeholder sender address, no products.
+  - For all staff, work waiting elsewhere: orders on hold, reviews waiting for approval, unread contact-form messages,
+    and customers waiting for back-in-stock emails. Switched-off features (`reviews`, `contact_form`, `stock_alerts`)
+    are skipped.
+- Order page: after **Mark as completed**, a "N more orders to send" box links straight to the next paid order
+  waiting (oldest first, like the home page), or says "All caught up" after the last one.
+
+### Changed
+- Home › Stock now uses the same rules as Products › Low stock / Out of stock, so its numbers match the lists it
+  links to. Low stock now includes **variants** (the list shows "5XL · SKU …  1 left"), not only simple products,
+  and a new line counts sold-out variants on products still for sale, linking to Inventory › Out of stock.
+- Product editor › Variants: the **Tax class** column only shows when a variant already has its own tax class, or
+  after "Tax some variants differently from the product". The table now fits the editor from 1280px wide, so
+  **Active** and **Remove** no longer need sideways scrolling. Cells are slightly tighter, and the SKU box is 120px.
+- Orders list on phones: one compact card per order (number, name + total, date + status) instead of four labelled
+  rows, so about twice as many orders fit on the screen. The keyboard tip under the list is hidden on phones.
+- Buttons inside a callout are no longer underlined like links (`.callout a:not(.btn)`).
+
+### Fixed
+- `commerce:doctor` (and Settings › System › Health checks) now flags PayPal in sandbox mode as "TEST mode"; it only
+  recognised Stripe's test keys before.
+
+### Client actions
+- `php artisan commerce:publish` (admin CSS changed: `admin.css`, `catalogue.css`, `sales.css`); `composer deploy` and
+  Admin › Updates already run it.
+- Sites that override `admin/dashboard/index`, `admin/orders/show`, `admin/orders/index` or
+  `admin/products/partials/variants` in `resources/views/vendor/commerce/` should diff them against the new views.
+
 ## [1.7.0] - 2026-10-28
 
 ### Added

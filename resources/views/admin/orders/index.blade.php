@@ -112,15 +112,22 @@
                                 @if ($order->created_via === 'admin')
                                     <x-admin.badge color="outline" size="sm" title="Created by staff">Staff</x-admin.badge>
                                 @endif
+                                {{-- Phones: one compact card per order instead of four labelled rows --}}
+                                <span class="order-line only-mobile">
+                                    <span class="order-line__who">{{ $order->billing_name ?: ($order->billing_company ?: $order->email) }}</span>
+                                    <span class="order-line__total">{{ money($refunded ? (float) $order->total - (float) $order->refunded_total : $order->total) }}</span>
+                                    <span class="order-line__when"><x-admin.time :value="$order->created_at" /></span>
+                                    <x-admin.status-badge :status="$order->status" />
+                                </span>
                             </td>
-                            <td class="nowrap" data-label="Date"><x-admin.time :value="$order->created_at" /></td>
-                            <td data-label="Customer" style="max-width:260px">
+                            <td class="nowrap stack-hide" data-label="Date"><x-admin.time :value="$order->created_at" /></td>
+                            <td class="stack-hide" data-label="Customer" style="max-width:260px">
                                 <div class="truncate fw-500">{{ $order->billing_name ?: ($order->billing_company ?: $order->email) }}</div>
                                 <div class="cell-sub truncate hidden-mobile">{{ $order->email }}</div>
                             </td>
-                            <td data-label="Status"><x-admin.status-badge :status="$order->status" /></td>
+                            <td class="stack-hide" data-label="Status"><x-admin.status-badge :status="$order->status" /></td>
                             <td class="num hidden-mobile" data-label="Items">{{ (int) $order->item_quantity }}</td>
-                            <td class="num" data-label="Total">
+                            <td class="num stack-hide" data-label="Total">
                                 @if ($refunded)
                                     <span class="money-was" title="Original total">{{ money($order->total) }}</span>
                                     <span title="{{ money($order->refunded_total) }} refunded">{{ money((float) $order->total - (float) $order->refunded_total) }}</span>
@@ -136,6 +143,6 @@
                 <x-admin.pagination :paginator="$orders" />
             @endif
         </x-admin.card>
-        <p class="text-xs text-muted mt-3">Tip: press <kbd>/</kbd> to search. Click a row to open the order; hold <kbd>Ctrl</kbd> (<kbd>⌘</kbd> on a Mac) to open it in a new tab.</p>
+        <p class="text-xs text-muted mt-3 hidden-mobile">Tip: press <kbd>/</kbd> to search. Click a row to open the order; hold <kbd>Ctrl</kbd> (<kbd>⌘</kbd> on a Mac) to open it in a new tab.</p>
     @endif
 @endsection

@@ -59,7 +59,7 @@
                         <th scope="col">Price</th>
                         <th scope="col">Sale price</th>
                         <th scope="col" title="Leave blank to not track a quantity">Stock</th>
-                        <th scope="col" title="Leave on “Same as product” unless this variant is taxed differently">Tax class</th>
+                        <th scope="col" title="Leave on “Same as product” unless this variant is taxed differently" x-show="variantTax">Tax class</th>
                         <th scope="col">Active</th>
                         <th scope="col"><span class="sr-only">Remove</span></th>
                     </tr>
@@ -113,7 +113,7 @@
                                     </select>
                                 </div>
                             </td>
-                            <td>
+                            <td x-show="variantTax">
                                 <select class="select select--sm" :name="'variations[' + i + '][tax_class]'" x-model="variation.tax_class" :aria-label="'Tax class of ' + optionLabel(variation)">
                                     <option value="">Same as product</option>
                                     @foreach (\Pine\Commerce\Models\TaxClass::options() as $slug => $label)
@@ -135,6 +135,9 @@
                     </template>
                 </tbody>
             </table>
+        </div>
+        <div class="card__section variant-more" x-show="variations.length && !variantTax">
+            <button type="button" class="btn btn--sm btn--plain" @click="variantTax = true">Tax some variants differently from the product</button>
         </div>
         @if ($variantErrors->isNotEmpty())
             <div class="card__section">

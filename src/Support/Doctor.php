@@ -4,6 +4,7 @@ namespace Pine\Commerce\Support;
 
 use Illuminate\Support\Facades\DB;
 use Pine\Commerce\Commerce;
+use Pine\Commerce\Services\Admin\StoreTasks;
 use Pine\Commerce\Services\Payments\PaymentManager;
 use Throwable;
 
@@ -321,7 +322,7 @@ class Doctor
             }
             $available++;
             $notes = [];
-            if (method_exists($gateway, 'isTestMode') && $gateway->isTestMode()) {
+            if (StoreTasks::isTestMode($gateway)) { // Stripe test keys or PayPal sandbox
                 $notes[] = 'TEST mode';
             }
             if ($code === 'stripe' && ! setting('payments.stripe.webhook_secret')) {

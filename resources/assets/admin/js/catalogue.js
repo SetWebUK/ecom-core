@@ -130,6 +130,8 @@
                 bulkPrice: '',
                 bulkStock: '',
                 imagePop: null,
+                // the Tax class column only shows when a variant is taxed differently (or staff ask for it) – it rarely is
+                variantTax: (config.variations || []).some(function (v) { return !!v.tax_class; }),
                 newAttribute: '',
 
                 init: function () {

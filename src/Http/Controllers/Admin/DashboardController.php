@@ -6,8 +6,13 @@ use Pine\Commerce\Http\Controllers\Controller;
 use Pine\Commerce\Models\FormSubmission;
 use Pine\Commerce\Models\Order;
 use Pine\Commerce\Models\Product;
+use Pine\Commerce\Models\ProductVariation;
+use Pine\Commerce\Services\Admin\Catalogue\ProductFilter;
+use Pine\Commerce\Services\Admin\CatalogueTools;
 use Pine\Commerce\Services\Admin\LocalTime;
 use Pine\Commerce\Services\Admin\SalesReport;
+use Pine\Commerce\Services\Admin\StoreTasks;
+use Pine\Commerce\Support\Sql;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Pine\Commerce\Contracts\DashboardWidget;
@@ -17,8 +22,9 @@ use Pine\Commerce\Services\Recovery\AbandonedCartRecovery;
 use Throwable;
 
 /**
- * Back-office home: sales for a date range (UK time) compared with the previous period, orders waiting to be
- * fulfilled, stock warnings, best sellers and the latest contact-form messages.
+ * Back-office home: a "To do" list (Services\Admin\StoreTasks), sales for a date range (UK time) compared with the
+ * previous period, orders waiting to be fulfilled, stock warnings (per variant), best sellers and the latest
+ * contact-form messages.
  */
 class DashboardController extends Controller
 {
@@ -74,20 +80,18 @@ class DashboardController extends Controller
             ->get(['id', 'number', 'email', 'billing_first_name', 'billing_last_name', 'total', 'shipping_method_title', 'created_at']);
         $toFulfilCount = $toFulfil->count() < 6 ? $toFulfil->count() : Order::where('status', 'processing')->count();
 
-        // Stock
-        $threshold = max(0, (int) setting('inventory.low_stock_threshold', 2));
-        $lowStockQuery = Product::query()
-            ->published()
-            ->where('manage_stock', true)
-            ->where('stock_quantity', '>', 0)
-            ->whereRaw('stock_quantity <= COALESCE(low_stock_threshold, ?)', [$threshold]);
-        $lowStock = (clone $lowStockQuery)
-            ->with(['images' => fn ($q) => $q->orderBy('sort_order')->limit(1)])
-            ->orderBy('stock_quantity')->orderBy('name')
-            ->limit(5)
-            ->get(['id', 'name', 'sku', 'stock_quantity']);
-        $lowStockCount = $lowStock->count() < 5 ? $lowStock->count() : $lowStockQuery->count();
+        // Stock: the same rules as Products › Low stock / Out of stock, so the numbers match the lists they link to.
+        // Variants count too: in a shop sold by size, "5XL – 1 left" is the warning that matters.
+        $threshold = CatalogueTools::lowStockThreshold();
+        $lowStockCount = ProductFilter::applyStock(Product::query()->published(), 'low')->count();
+        $lowStock = $lowStockCount ? static::lowStockRows($threshold) : [];
         $outOfStockCount = Product::query()->published()->where('stock_status', 'outofstock')->count();
+        $soldOutVariants = ProductVariation::query()
+            ->where('is_active', true)
+            ->where('stock_status', 'outofstock')
+            ->whereHas('product', fn ($p) => $p->published()->where('type', 'variable')->where('stock_status', '<>', 'outofstock'))
+            ->selectRaw('COUNT(*) AS variants, COUNT(DISTINCT product_id) AS products')
+            ->first();
 
         // Best sellers in the range
         $top = $report->topProducts(5);
@@ -117,7 +121,9 @@ class DashboardController extends Controller
             'lowStock' => $lowStock,
             'lowStockCount' => $lowStockCount,
             'outOfStockCount' => $outOfStockCount,
+            'soldOutVariants' => ['variants' => (int) ($soldOutVariants->variants ?? 0), 'products' => (int) ($soldOutVariants->products ?? 0)],
             'threshold' => $threshold,
+            'tasks' => StoreTasks::forUser($request->user()),
             'top' => $top,
             'topProducts' => $topProducts,
             'submissions' => $submissions,
@@ -132,6 +138,39 @@ class DashboardController extends Controller
     }
 
     /** Abandoned-cart reminders card: only while reminders are on or have ever won an order back. */
+    /**
+     * The five lowest stock lines – simple products and single variants – that are at or below their low-stock
+     * threshold: [['product_id', 'name', 'variant' (e.g. "5XL") or null, 'sku', 'quantity', 'image']].
+     *
+     * @return list<array{product_id:int, name:string, variant:?string, sku:?string, quantity:int, image:?string}>
+     */
+    protected static function lowStockRows(int $threshold, int $limit = 5): array
+    {
+        $simple = Product::query()->published()
+            ->where('type', '<>', 'variable')->where('manage_stock', true)->where('stock_quantity', '>', 0)
+            ->whereRaw('stock_quantity <= COALESCE(low_stock_threshold, ?)', [$threshold])
+            ->with(['images' => fn ($q) => $q->orderBy('sort_order')->limit(1)])
+            ->orderBy('stock_quantity')->orderBy('name')->limit($limit)
+            ->get(['id', 'name', 'sku', 'stock_quantity'])
+            ->map(fn (Product $p) => ['product_id' => $p->id, 'name' => $p->name, 'variant' => null, 'sku' => $p->sku,
+                'quantity' => (int) $p->stock_quantity, 'image' => $p->images->first()?->path]);
+
+        $variants = ProductVariation::query()
+            ->join('products', 'products.id', '=', 'product_variations.product_id')
+            ->where('products.status', 'published')->where('products.type', 'variable')->whereNull('products.deleted_at')
+            ->where('product_variations.is_active', true)->where('product_variations.manage_stock', true)
+            ->where('product_variations.stock_quantity', '>', 0)
+            ->whereRaw(Sql::qualify('product_variations.stock_quantity <= COALESCE(products.low_stock_threshold, ?)', ['product_variations', 'products']), [$threshold])
+            ->with(['product' => fn ($q) => $q->select('id')->with(['images' => fn ($i) => $i->orderBy('sort_order')->limit(1)])])
+            ->orderBy('product_variations.stock_quantity')->orderBy('products.name')->limit($limit)
+            ->get(['product_variations.id', 'product_variations.product_id', 'product_variations.options', 'product_variations.sku',
+                'product_variations.stock_quantity', 'product_variations.image', 'products.name AS product_name'])
+            ->map(fn (ProductVariation $v) => ['product_id' => (int) $v->product_id, 'name' => (string) $v->product_name, 'variant' => $v->label ?: null,
+                'sku' => $v->sku, 'quantity' => (int) $v->stock_quantity, 'image' => $v->image ?: $v->product?->images->first()?->path]);
+
+        return $simple->concat($variants)->sortBy([['quantity', 'asc'], ['name', 'asc']])->take($limit)->values()->all();
+    }
+
     protected static function recovery(int $days): ?array
     {
         try {
