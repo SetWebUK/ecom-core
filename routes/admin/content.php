@@ -4,6 +4,7 @@ use Pine\Commerce\Http\Controllers\Admin\MediaController;
 use Pine\Commerce\Http\Controllers\Admin\MenuController;
 use Pine\Commerce\Http\Controllers\Admin\NewsletterController;
 use Pine\Commerce\Http\Controllers\Admin\PageController;
+use Pine\Commerce\Http\Controllers\Admin\PageDesignController;
 use Pine\Commerce\Http\Controllers\Admin\PostCategoryController;
 use Pine\Commerce\Http\Controllers\Admin\PostController;
 use Pine\Commerce\Http\Controllers\Admin\RedirectController;
@@ -32,6 +33,11 @@ Route::get('api/links', [MenuController::class, 'links'])->middleware('throttle:
 Route::post('pages/bulk', [PageController::class, 'bulk'])->name('pages.bulk');
 Route::post('pages/{page}/duplicate', [PageController::class, 'duplicate'])->name('pages.duplicate');
 Route::resource('pages', PageController::class)->except('show');
+// Visual page builder (full-screen designer; the canvas loads the shop's colours and fonts from design.css)
+Route::get('pages/design.css', [PageDesignController::class, 'css'])->name('pages.design.css');
+Route::get('pages/{page}/design', [PageDesignController::class, 'edit'])->name('pages.design');
+Route::put('pages/{page}/design', [PageDesignController::class, 'update'])->middleware('throttle:60,1')->name('pages.design.update');
+Route::delete('pages/{page}/design', [PageDesignController::class, 'destroy'])->name('pages.design.destroy');
 
 // Blog (feature switch "blog")
 Route::middleware(RequireFeature::for('blog'))->group(function () {

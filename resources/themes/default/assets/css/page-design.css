@@ -1,0 +1,92 @@
+/*
+ * Pages laid out in the visual builder (theme view pages.designed, and the builder's canvas in the admin).
+ * Sections, columns, buttons and the ready-made blocks use the theme's colours and fonts (--c-*, --font-*, --radius),
+ * so a design follows Admin › Settings › Theme. Child themes can override any of it in their own CSS.
+ * Element styles typography with :where() (no specificity), so product cards and forms inside a design keep theirs.
+ */
+.pb-page { overflow-x: clip; color: var(--c-text); line-height: 1.65; }
+.pb-page img { max-width: 100%; height: auto; }
+
+/* text */
+:where(.pb-page) h1, :where(.pb-page) h2, :where(.pb-page) h3, :where(.pb-page) h4 { font-family: var(--font-heading); line-height: 1.2; margin: 0 0 .5em; }
+:where(.pb-page) h1 { font-size: clamp(2rem, 4.5vw, 3.25rem); }
+:where(.pb-page) h2 { font-size: clamp(1.6rem, 3.2vw, 2.4rem); }
+:where(.pb-page) h3 { font-size: clamp(1.2rem, 2vw, 1.5rem); }
+:where(.pb-page) h4 { font-size: 1.1rem; }
+:where(.pb-page) p { margin: 0 0 1em; }
+:where(.pb-page) ul, :where(.pb-page) ol { margin: 0 0 1em; padding-left: 1.3em; }
+:where(.pb-page) li { margin: .3em 0; }
+/* links typed into text (not the product cards' or forms' own links) */
+:where(.pb-page) :is(p, li, blockquote, summary) > a:not([class]) { color: var(--c-primary); text-decoration: underline; text-underline-offset: 2px; }
+:where(.pb-page) > :last-child, .pb-col > :last-child, .pb-container > :last-child, .pb-card > :last-child, .pb-text > :last-child { margin-bottom: 0; }
+.pb-text table { width: 100%; border-collapse: collapse; margin: 1.5em 0; }
+.pb-text th, .pb-text td { padding: .6em .8em; border: 1px solid var(--c-border); text-align: left; }
+.pb-lead { font-size: clamp(1.1rem, 1.6vw, 1.3rem); color: var(--c-muted); }
+.pb-center { text-align: center; }
+.pb-center .pb-buttons { justify-content: center; }
+
+/* sections and layout */
+.pb-section { position: relative; padding: clamp(40px, 6vw, 80px) var(--gutter, 20px); background-position: center; background-size: cover; background-repeat: no-repeat; }
+.pb-section--tint { background-color: var(--c-surface); }
+.pb-section--brand { background-color: var(--c-primary); color: var(--c-on-primary); }
+.pb-section--dark { background-color: #111827; color: #fff; }
+.pb-section--brand :is(p, li) > a:not([class]), .pb-section--dark :is(p, li) > a:not([class]), .pb-hero :is(p, li) > a:not([class]) { color: inherit; }
+.pb-container { max-width: var(--container, 1280px); margin-inline: auto; }
+.pb-container--narrow { max-width: 760px; }
+.pb-row { display: flex; flex-wrap: wrap; gap: clamp(16px, 3vw, 40px); }
+.pb-row--middle { align-items: center; }
+.pb-col { flex: 1 1 0; min-width: 0; }
+.pb-col--wide { flex-grow: 2; }
+@media (max-width: 767px) {
+    .pb-row { flex-direction: column; }
+    .pb-col { flex-basis: auto; width: 100%; }
+    .pb-row--reverse-phone { flex-direction: column-reverse; }
+}
+.pb-spacer { height: 48px; }
+.pb-divider { border: 0; border-top: 1px solid var(--c-border); margin: 32px 0; }
+
+/* banner */
+.pb-hero { display: flex; align-items: center; min-height: clamp(340px, 48vw, 600px); color: #fff; background-color: #1f2937; isolation: isolate; }
+.pb-hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: rgba(0, 0, 0, var(--pb-overlay, .45)); }
+.pb-hero .pb-container { width: 100%; }
+.pb-hero h1, .pb-hero h2 { color: inherit; }
+.pb-hero .pb-lead, .pb-section--brand .pb-lead, .pb-section--dark .pb-lead { color: inherit; opacity: .9; }
+
+/* buttons */
+.pb-buttons { display: flex; flex-wrap: wrap; gap: 12px; margin: 1.5em 0 0; }
+.pb-btn { display: inline-flex; align-items: center; justify-content: center; gap: .5em; padding: .85em 1.7em; border: 2px solid var(--c-primary); border-radius: var(--radius, 8px);
+    background: var(--c-primary); color: var(--c-on-primary); font-weight: 600; line-height: 1.2; text-decoration: none; transition: filter .15s, transform .15s; }
+.pb-btn:hover { filter: brightness(.92); color: var(--c-on-primary); }
+.pb-btn:active { transform: translateY(1px); }
+.pb-btn--accent { background: var(--c-accent); border-color: var(--c-accent); color: var(--c-on-accent); }
+.pb-btn--accent:hover { color: var(--c-on-accent); }
+.pb-btn--outline { background: transparent; border-color: currentColor; color: inherit; }
+.pb-btn--outline:hover { color: inherit; filter: none; background: rgba(127, 127, 127, .12); }
+.pb-btn--light { background: #fff; border-color: #fff; color: #111827; }
+.pb-btn--light:hover { color: #111827; }
+
+/* pictures, video, map */
+.pb-image { display: block; border-radius: var(--radius, 8px); }
+.pb-image--full { width: 100%; }
+.pb-video, .pb-map { display: block; width: 100%; border: 0; border-radius: var(--radius, 8px); }
+.pb-video { height: auto; aspect-ratio: 16 / 9; }
+.pb-map { height: 400px; }
+
+/* cards, quotes, FAQ */
+.pb-card { padding: clamp(20px, 3vw, 32px); border-radius: var(--radius-lg, 12px); background: var(--c-bg); color: var(--c-text); box-shadow: 0 1px 3px rgba(15, 23, 42, .08), 0 8px 24px rgba(15, 23, 42, .06); }
+.pb-icon { display: inline-grid; place-items: center; width: 56px; height: 56px; margin-bottom: 16px; border-radius: 50%; background: var(--c-primary-soft); color: var(--c-primary); }
+.pb-icon svg { width: 28px; height: 28px; }
+.pb-quote { margin: 0; font-size: clamp(1.15rem, 2vw, 1.45rem); font-style: italic; line-height: 1.5; }
+.pb-quote footer { margin-top: 1em; font-size: 1rem; font-style: normal; font-weight: 600; }
+.pb-stars { color: #f5a623; font-size: 1.25rem; letter-spacing: 2px; }
+.pb-faq details { border-bottom: 1px solid var(--c-border); }
+.pb-faq summary { display: flex; justify-content: space-between; gap: 16px; padding: 18px 0; font-weight: 600; cursor: pointer; list-style: none; }
+.pb-faq summary::-webkit-details-marker { display: none; }
+.pb-faq summary::after { content: "+"; font-size: 1.4em; line-height: 1; color: var(--c-primary); }
+.pb-faq details[open] summary::after { content: "\2013"; }
+.pb-faq details > :not(summary) { margin: 0 0 18px; }
+
+/* shop blocks */
+.pb-product-grid.product-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 700px) { .pb-product-grid.product-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.pb-products + *, .pb-contact + * { margin-top: 24px; }

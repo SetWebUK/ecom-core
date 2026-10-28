@@ -9,6 +9,54 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-10-28
+
+A drag-and-drop page builder: staff who don't write code can lay out any content page with banners, columns,
+pictures, buttons, reviews, questions and live products, in the shop's own colours and fonts.
+
+### Added
+- **Visual page builder** (Content › Pages › *page* › **Design page**, or "Save and design" on a new page): a
+  full-screen designer built on [GrapesJS](https://grapesjs.com) 0.23.6 (BSD-3-Clause, vendored in
+  `resources/assets/admin/vendor/grapesjs-0.23.6`). The canvas loads the active theme's CSS, `css/page-design.css` and
+  the Admin › Settings › Theme colours and fonts, so it looks like the live page; computer / tablet / phone views; undo /
+  redo; preview; Save, and Save and publish for drafts; Ctrl+S; a warning before leaving with unsaved changes.
+  - **Blocks**: ready-made sections (banner, picture and text, text and picture, three highlights, call to action,
+    customer review, questions and answers, picture gallery, text section, products, contact), layout (section, two /
+    three / wide-and-narrow columns, space, line), basics (heading, text, list, button, picture, quote, YouTube / Vimeo
+    video, Google map) and shop blocks (**Products**: best sellers, newest, on sale, featured or a category, 4–24
+    products, 2–4 per row; **Contact form**).
+  - **Plain-language settings** for whatever is clicked: link search ("Goes to"), open in a new tab, button style,
+    section background (light panel / brand colour / dark / a picture from the media library), banner shade, picture
+    description; **Style** with brand colour swatches (saved as `var(--c-…)`, so designs follow later theme colour
+    changes), sizes in words (Small … Giant) instead of pixels, spacing, width, corners, shadow, and "More options".
+    Styles apply to the clicked part only; set in the phone or tablet view, they apply to that screen size.
+  - Pictures come from the media library (double-click a picture, or "Change picture"); links from the link search.
+  - First open: start with the page's current text, a story page, a promotion page or a blank page.
+- **`pages.design`, `pages.design_html`, `pages.design_css`** (migration `2026_10_28_000200_add_design_to_pages`):
+  the builder's project data, the cleaned page body and its styles. A designed page (`Page::isDesigned()`) shows the
+  design instead of its text, full width, whatever its template (home and blog pages can't be designed). Its text is
+  kept: **"Use the text editor instead"** on the page form removes the design and the text shows again.
+- `Content\PageDesign`: `cleanHtml()` (removes scripts, styles, event handlers, `javascript:` / `data:` links and any
+  iframe but YouTube, Vimeo and Google Maps embeds; lazy-loads pictures after the first), `cleanCss()` (scopes every
+  rule to `.pb-page`, drops `@import`, `expression()`, `javascript:` URLs and `<`), `render()`, `starter()`,
+  `products()`.
+- **`[product_grid source=best-sellers|newest|sale|featured|category category=ID limit=8 columns=4]`** shortcode and
+  `<div data-component="product-grid" …>` placeholder (theme partial `partials.product-grid`).
+- Admin routes `admin.pages.design` (GET/PUT/DELETE `pages/{page}/design`) and `admin.pages.design.css` (the theme
+  colours and fonts for the canvas).
+
+### Theme contract
+- New optional view **`page.designed`** → `pages.designed` (falls back to `pages.full-width`, then `pages.default`,
+  which get the same variables). The default theme adds `pages/designed.blade.php`, `partials/product-grid.blade.php`
+  and `assets/css/page-design.css`; child themes inherit them and can restyle the builder's `pb-*` classes.
+
+### Migrations
+- `2026_10_28_000200_add_design_to_pages` (additive: three nullable long-text columns on `pages`).
+
+### Client actions
+- None beyond the usual: `php artisan migrate`, `commerce:publish`, `commerce:theme:publish` (Admin › Updates runs
+  them all).
+
 ## [1.10.0] - 2026-10-28
 
 Easier page editing: imported pages open as readable text instead of the old page builder's code, and the editor's

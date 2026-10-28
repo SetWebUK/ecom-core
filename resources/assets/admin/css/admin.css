@@ -1260,3 +1260,11 @@ a.list__item:hover { background: var(--surface-hover); }
 .diff__add { background: var(--success-bg); color: var(--success-text); }
 .diff__del { background: var(--danger-bg); color: var(--danger-text); }
 .diff__hunk { color: var(--text-subtle); }
+
+/* Page form: the visual builder (admin/pages/form.blade.php, PageDesignController) */
+.design-card { display: flex; gap: var(--s-4); padding: var(--s-5); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--primary-soft); }
+.design-card__icon { display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; background: var(--surface); color: var(--primary); }
+.design-card__title { margin: 0 0 4px; font-weight: 700; }
+.design-card__text { margin: 0; color: var(--text-secondary); }
+.design-hint { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-3); padding: var(--s-3) var(--s-4); border: 1px dashed var(--border-strong); border-radius: var(--radius); color: var(--text-secondary); font-size: 13px; }
+.design-hint > .icon { flex-shrink: 0; color: var(--primary); }

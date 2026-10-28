@@ -48,6 +48,16 @@ Read the release notes for:
 - **theme contract** changes (new optional views, new `supports` keys) – run `php artisan commerce:theme:check`;
 - **admin view overrides** in `resources/views/vendor/commerce/…` – diff them against the new package views.
 
+### Upgrading from 1.10 to 1.11
+
+1.11 adds the visual page builder. One additive migration (`pages.design`, `design_html`, `design_css`), no config
+keys. Run `composer update pine/commerce`, `php artisan migrate`, `php artisan commerce:publish` (new admin JS/CSS and
+the GrapesJS files), `php artisan commerce:theme:publish` (the default theme's new `css/page-design.css`), then
+`php artisan optimize:clear && php artisan optimize`. Admin › Updates does all of this. Nothing changes on the
+storefront until someone designs a page. Themes that don't extend the default theme show designed pages through
+their `pages.full-width` / `pages.default` view until they add `pages.designed` (see ARCHITECTURE.md, theme contract).
+Sites overriding the admin page form should diff it. See CHANGELOG `[1.11.0]`.
+
 ### Upgrading from 1.9 to 1.10
 
 1.10 is additive: no migrations, no config keys. Run `composer update pine/commerce`, then `php artisan commerce:publish`

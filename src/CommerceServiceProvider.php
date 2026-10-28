@@ -216,6 +216,17 @@ class CommerceServiceProvider extends ServiceProvider
         });
 
         // [sitemap] (WordPress: [wp_sitemap_page]) – HTML sitemap
+        // [product_grid source=best-sellers|newest|sale|featured|category category=12 limit=8 columns=4] – the visual
+        // builder's Products block (theme partial partials.product-grid)
+        $shortcodes->register('product_grid', function (array $atts) {
+            $products = Content\PageDesign::products($atts);
+
+            return $products->isEmpty() ? '' : view('partials.product-grid', [
+                'products' => $products,
+                'columns' => max(2, min(4, (int) ($atts['columns'] ?? 4))),
+            ])->render();
+        });
+
         $shortcodes->register('sitemap', fn () => view('partials.html-sitemap')->render());
         $shortcodes->alias('wp_sitemap_page', 'sitemap');
 
