@@ -1,8 +1,39 @@
 {{-- Rendered by Pine\Commerce\View\Components\Admin\Sidebar (<x-admin.sidebar />). Edit the menu there, not here. --}}
 <aside class="sidebar" :class="{ 'is-open': sidebarOpen }" id="admin-sidebar" aria-label="Main navigation">
+    {{-- The shop itself (Services\Admin\AdminBrand): its logo on a white tile, its name, a way to the shop --}}
+    <div class="sidebar__brand">
+        <a href="{{ route('admin.dashboard') }}" class="brand-tile" aria-label="{{ $brand['name'] }} admin home">
+            @if ($brand['logo'])
+                <img src="{{ $brand['logo'] }}" alt="{{ $brand['name'] }}" class="brand-tile__logo">
+            @else
+                <span class="brand-tile__initials" aria-hidden="true">{{ $brand['initials'] }}</span>
+                <span class="brand-tile__name">{{ $brand['name'] }}</span>
+            @endif
+        </a>
+        <div class="sidebar__brand-row">
+            <a href="{{ url('/') }}" target="_blank" rel="noopener" class="sidebar__shop-link" title="Open the shop in a new tab">
+                <x-admin.icon name="building-storefront" size="sm" /><span>View shop</span><x-admin.icon name="arrow-top-right-on-square" size="sm" class="sidebar__ext" />
+            </a>
+            @if ($create)
+                <div class="dropdown" x-data="dropdown" @click.outside="close()" @keydown.escape.stop="close(true)">
+                    <button type="button" class="sidebar__create" x-ref="button" @click="toggle()" :aria-expanded="open.toString()" aria-haspopup="menu">
+                        <x-admin.icon name="plus" size="sm" /><span>Create</span>
+                    </button>
+                    <div class="dropdown__menu dropdown__menu--left" x-ref="menu" x-show="open" x-transition.opacity.duration.100ms role="menu" @keydown="nav($event)" x-cloak>
+                        @foreach ($create as $link)
+                            <a href="{{ $link['url'] }}" class="dropdown__item" role="menuitem"><x-admin.icon :name="$link['icon']" /> {{ $link['label'] }}</a>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+        </div>
+    </div>
     <nav class="sidebar__scroll">
         <ul class="nav">
             @foreach ($sections as $item)
+                @if ($item['groupLabel'])
+                    <li class="nav__group-label">{{ $item['groupLabel'] }}</li>
+                @endif
                 <li>
                     <a href="{{ $item['url'] }}"
                        @class(['nav__link', 'is-active' => $item['active'], 'is-disabled' => ! $item['exists']])

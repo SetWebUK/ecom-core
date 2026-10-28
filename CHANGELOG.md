@@ -9,6 +9,42 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-10-28
+
+The back office in the shop's own brand: the sidebar, buttons and charts take the storefront theme's colours and the
+store logo, with no set-up. (Built with 1.8.0 but released after it was tagged.)
+
+### Added
+- **Brand shell** (`Services\Admin\AdminBrand`). It takes the storefront theme's `primary_color` / `accent_color`
+  (Settings › Theme) and Settings › Store details › Logo.
+  - Full-height sidebar in the brand colour, darkened until white text reads on it (10:1). The shop's logo sits on a
+    white tile at the top (or its initials and name), with **View shop** and a **Create** menu (order, product,
+    discount, page) under it. The page you're on is marked in the accent colour, lightened in HSL until it shows (3:1).
+  - Buttons, links, focus rings and the sales charts use the brand colour when white text reads on it (4.5:1).
+    Otherwise they keep the default blue.
+  - The top bar is white and holds search and the account menu. On phones it shows the logo, and the sidebar is a
+    drawer under it.
+  - The unsaved-changes bar is in the brand colour with a white Save button. The admin login page shows the shop's
+    logo.
+- `Admin.color(token, alpha)` in admin.js gives a colour token (e.g. `--primary`) for canvas drawing.
+
+### Changed
+- Sidebar: **Analytics** moved up next to Discounts. Content and Inbox are now under a **Website** heading. Client
+  menu entries added with `after:` join that entry's section; entries without one are listed last, under **More**.
+
+### Config keys added
+- `commerce.admin.brand.color` and `commerce.admin.brand.accent` (default `null` = the theme's colours; `color: false`
+  = the neutral look). A client `config/commerce.php` that overrides the whole `admin` key gets `null` for both,
+  which is the default anyway.
+
+### Client actions
+- `php artisan commerce:publish` (admin CSS and JS changed: `admin.css`, `admin.js`, `sales.js`); `composer deploy`
+  and Admin › Updates already run it.
+- Check the back office once: it now uses the theme's colours and the store logo. Set `commerce.admin.brand.color`
+  if the storefront colour doesn't suit it.
+- Sites that override `admin/partials/sidebar`, `admin/partials/topbar`, `admin/layouts/app`, `admin/layouts/auth`,
+  `admin/dashboard/index` or `admin/reports/index` in `resources/views/vendor/commerce/` should diff them.
+
 ## [1.8.0] - 2026-10-28
 
 Back-office journeys, from a walk through the admin as a shop owner: what needs doing is on the home page, stock

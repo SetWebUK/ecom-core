@@ -27,8 +27,10 @@ return [
         'path' => 'admin',
         // public/ sub-directory the admin assets are published (copied) to by `php artisan commerce:publish`
         'assets_url' => 'vendor/commerce/admin',
-        // paths relative to public/; null = the image shipped with the admin assets
-        'brand' => ['name' => null, 'logo' => null, 'logo_light' => null, 'mark' => null, 'favicon' => null],
+        // paths relative to public/; null = the image shipped with the admin assets. The sidebar and login page use 'logo',
+        // else Settings › Store details › Logo. color / accent: the back office's colours (#rrggbb); null = the storefront
+        // theme's primary_color / accent_color, false = the neutral look (Services\Admin\AdminBrand)
+        'brand' => ['name' => null, 'logo' => null, 'logo_light' => null, 'mark' => null, 'favicon' => null, 'color' => null, 'accent' => null],
         'menu' => [],
     ],
 
