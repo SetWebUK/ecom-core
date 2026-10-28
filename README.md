@@ -43,7 +43,7 @@ php artisan commerce:install --admin-email=you@agency.test
 Existing Laravel 13 app – `composer.json`:
 
 ```json
-"repositories": [{ "type": "vcs", "url": "https://github.com/SetWebUK/ecom-core.git" }],
+"repositories": [{ "type": "vcs", "url": "https://github.com/SetWebUK/ecom-core.git", "no-api": true }],
 "require": { "pine/commerce": "^1.2" }
 ```
 

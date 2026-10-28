@@ -39,8 +39,9 @@ class ComposerProject
     }
 
     /**
-     * @return array{url:?string, type:string, source:string}
-     *   type: vcs | git | github | path | none; source: config | composer.json | default
+     * @return array{url:?string, type:string, source:string, no_api?:bool}
+     *   type: vcs | git | github | path | none; source: config | composer.json | default; no_api: the composer.json entry
+     *   has "no-api": true (composer reads a GitHub repository with git instead of the rate-limited GitHub API)
      */
     public function repository(): array
     {
@@ -63,7 +64,8 @@ class ComposerProject
                 continue;
             }
             $score = ($only ? 4 : 0) + (str_contains(strtolower($repository['url']), 'commerce') ? 2 : 0) + ($type === 'path' ? 0 : 1);
-            $candidates[] = [$score, ['url' => $repository['url'], 'type' => $type, 'source' => 'composer.json']];
+            $candidates[] = [$score, ['url' => $repository['url'], 'type' => $type, 'source' => 'composer.json',
+                'no_api' => ($repository['no-api'] ?? false) === true]];
         }
         if ($candidates) {
             usort($candidates, fn ($a, $b) => $b[0] <=> $a[0]);

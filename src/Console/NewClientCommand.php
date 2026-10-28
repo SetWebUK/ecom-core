@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 use Pine\Commerce\Commerce;
+use Pine\Commerce\Updater\ReleaseSource;
 use Pine\Commerce\Updater\Skeleton\SkeletonBaseline;
 
 /**
@@ -72,6 +73,10 @@ class NewClientCommand extends Command
         }
         if ($vcs !== '') {
             $repository = ['type' => 'vcs', 'url' => $vcs];
+            if (ReleaseSource::github($vcs) !== null) {
+                // read tags with git, not the GitHub API: 60 calls an hour per server IP without a token
+                $repository['no-api'] = true;
+            }
             $constraint = '^1.0';
         } else {
             $package = $path !== '' ? $this->absolute($path) : dirname(__DIR__, 2);

@@ -11,7 +11,7 @@ Clients install it in one of two modes (`composer.json`):
 
 | Mode | Repository | Constraint | Use |
 |---|---|---|---|
-| VCS | `{"type": "vcs", "url": "https://github.com/SetWebUK/ecom-core.git"}` (or the SSH URL `git@github.com:SetWebUK/ecom-core.git`) | `^1.2` | every committed client (staging + live); `composer.lock` pins the release |
+| VCS | `{"type": "vcs", "url": "https://github.com/SetWebUK/ecom-core.git", "no-api": true}` (or the SSH URL `git@github.com:SetWebUK/ecom-core.git`) | `^1.2` | every committed client (staging + live); `composer.lock` pins the release |
 | path | `{"type": "path", "url": "../ecom-core", "options": {"symlink": true}}` | `*@dev` | local development of the package together with a client – never committed |
 
 New clients: `commerce:new-client … --repo=<git url>` (VCS) or `--path=<dir>` (path). Switching an existing client
@@ -47,6 +47,12 @@ Read the release notes for:
   sub-key (the merge is shallow), otherwise the feature gets `null`;
 - **theme contract** changes (new optional views, new `supports` keys) – run `php artisan commerce:theme:check`;
 - **admin view overrides** in `resources/views/vendor/commerce/…` – diff them against the new package views.
+
+### Upgrading from 1.9.0 to 1.9.1
+
+No code changes on the site. Add `"no-api": true` to the pine/commerce repository in `composer.json` (by hand, then
+commit): composer reads the tags with git instead of the GitHub API, whose 60 calls an hour per server IP run out on
+shared servers and make Admin › Updates fail. See CHANGELOG `[1.9.1]`.
 
 ### Upgrading from 1.8 to 1.9
 
