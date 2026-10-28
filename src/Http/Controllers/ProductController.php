@@ -173,7 +173,7 @@ class ProductController extends Controller
         }
 
         return commerce_presenter()::activeVariations($product)->map(function (ProductVariation $v) use ($product, $labels) {
-            $price = PriceDisplay::shop($v->currentPrice(), $product, $v);
+            $price = commerce_presenter()::variationPrice($product, $v); // after any discount shown in the price
             $regular = $v->regular_price !== null ? PriceDisplay::shop((float) $v->regular_price, $product, $v) : null;
             $maxQty = $v->manage_stock && $v->stock_quantity !== null && ! in_array($product->backorders, ['notify', 'yes'], true) ? max(0, (int) $v->stock_quantity) : null;
 
@@ -183,7 +183,7 @@ class ProductController extends Controller
                 'attributes' => collect((array) $v->options)->mapWithKeys(fn ($value, $key) => [(string) $key => (string) $value])->all(),
                 'display_price' => $price,
                 'display_regular_price' => $regular ?? $price,
-                'price_html' => $price === null ? '' : ($v->isOnSale() ? commerce_presenter()::delIns((float) $regular, $price) : commerce_presenter()::amount($price)).PriceDisplay::suffixHtml($price, $product),
+                'price_html' => $price === null ? '' : (commerce_presenter()::variationSale($product, $v) ? commerce_presenter()::delIns((float) $regular, $price) : commerce_presenter()::amount($price)).PriceDisplay::suffixHtml($price, $product),
                 'is_in_stock' => $v->isInStock() && $maxQty !== 0,
                 'max_qty' => $maxQty,
                 'sku' => $v->sku ?: $product->sku,
@@ -290,7 +290,7 @@ class ProductController extends Controller
                 '@type' => 'Offer',
                 'price' => number_format($price, 2, '.', ''),
                 'priceCurrency' => 'GBP',
-                'priceValidUntil' => now()->addYear()->endOfYear()->toDateString(),
+                'priceValidUntil' => (commerce_presenter()::discountEndsAt($product) ?? now()->addYear()->endOfYear())->toDateString(),
                 'availability' => $inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
                 'itemCondition' => $condition,
                 'url' => $product->url,

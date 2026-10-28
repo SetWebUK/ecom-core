@@ -48,6 +48,14 @@ Read the release notes for:
 - **theme contract** changes (new optional views, new `supports` keys) – run `php artisan commerce:theme:check`;
 - **admin view overrides** in `resources/views/vendor/commerce/…` – diff them against the new package views.
 
+### Upgrading from 1.6 to 1.7
+
+1.7 is additive. One migration (`coupons.show_in_price`, default false). Run `composer update pine/commerce`, then
+`php artisan migrate --force`, then `php artisan optimize:clear && php artisan optimize`. Admin › Updates does all of this.
+Nothing changes in the shop until an automatic discount has "Show the reduced price in the shop" ticked. Themes that
+print `ProductPresenter::offers()` should check the new `in_price` key, and so should client presenters overriding
+`sale()`/`price()`. See CHANGELOG `[1.7.0]`.
+
 ### Upgrading from 1.5 to 1.6
 
 1.6 is additive: everything new is off or unchanged until switched on, except bug fixes. Four migrations, all adding

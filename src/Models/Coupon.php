@@ -28,6 +28,7 @@ class Coupon extends Model
         'is_active' => 'boolean',
         'auto_apply' => 'boolean',
         'show_countdown' => 'boolean',
+        'show_in_price' => 'boolean',
         'product_ids' => 'array',
         'excluded_product_ids' => 'array',
         'category_ids' => 'array',
@@ -84,6 +85,24 @@ class Coupon extends Model
     public static function flushRunning(): void
     {
         static::$running = null;
+    }
+
+    /** Types an automatic discount can show in the shop price: the same reduction on every unit it covers. */
+    public const PRICE_TYPES = ['percent', 'fixed_product'];
+
+    /**
+     * Does the shop show this discount in the price (was/now on cards and product pages) rather than only as an
+     * offer? An automatic % off or amount off each item with show_in_price ticked and nothing that depends on the
+     * basket or the customer: no minimum or maximum spend, no email list, no per-customer limit, total uses left.
+     */
+    public function showsInPrice(): bool
+    {
+        return $this->auto_apply && $this->show_in_price && in_array($this->type, self::PRICE_TYPES, true)
+            && (float) $this->amount > 0
+            && (float) $this->minimum_spend <= 0 && (float) $this->maximum_spend <= 0
+            && ! array_filter((array) $this->allowed_emails)
+            && ! $this->usage_limit_per_user
+            && ! ($this->usage_limit && (int) $this->usage_count >= (int) $this->usage_limit);
     }
 
     /** What customers see: the label of an automatic discount, else the code. */

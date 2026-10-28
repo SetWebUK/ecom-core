@@ -2,6 +2,7 @@
 
 namespace Pine\Commerce\Services\Catalog;
 
+use Pine\Commerce\Models\Coupon;
 use Pine\Commerce\Models\Product;
 use Pine\Commerce\Models\ProductSpec;
 use Pine\Commerce\Models\ProductVariation;
@@ -269,32 +270,110 @@ class ProductPresenter
 
             return $prices->isNotEmpty() ? (float) $prices->min() : PriceDisplay::shop($product->price !== null ? (float) $product->price : null, $product);
         }
-        $price = $product->currentPrice();
+        $price = static::discountedPrice($product, null, $product->currentPrice());
 
         return PriceDisplay::shop($price ?? ($product->price !== null ? (float) $product->price : null), $product);
     }
 
-    /** Current prices of the active variations as shown in the shop (Settings › Tax display). */
+    /** Current prices of the active variations as shown in the shop (Settings › Tax display, discounts in the price). */
     protected static function variationPrices(Product $product): Collection
     {
         return static::activeVariations($product)
-            ->map(fn (ProductVariation $v) => PriceDisplay::shop($v->currentPrice(), $product, $v))
+            ->map(fn (ProductVariation $v) => static::variationPrice($product, $v))
             ->filter(fn ($p) => $p !== null);
     }
 
-    /** Regular + sale pair when a simple product is on sale, else null. */
+    /** One variation's price as shown in the shop: its current price after the discounts shown in the price. */
+    public static function variationPrice(Product $product, ProductVariation $variation): ?float
+    {
+        return PriceDisplay::shop(static::discountedPrice($product, $variation, $variation->currentPrice()), $product, $variation);
+    }
+
+    /** Regular + sale pair when a simple product is on sale or a discount shown in the price covers it, else null. */
     public static function sale(Product $product): ?array
     {
-        if ($product->type === 'variable' || ! $product->isOnSale()) {
+        if ($product->type === 'variable' || $product->regular_price === null) {
             return null;
         }
-        $regular = (float) PriceDisplay::shop((float) $product->regular_price, $product);
-        $sale = (float) PriceDisplay::shop((float) $product->sale_price, $product);
+        $current = static::discountedPrice($product, null, $product->currentPrice());
+
+        return $current === null ? null : static::salePair(
+            (float) PriceDisplay::shop((float) $product->regular_price, $product),
+            (float) PriceDisplay::shop($current, $product),
+        );
+    }
+
+    /** sale() for one variation (the variant picker and the feed), else null. */
+    public static function variationSale(Product $product, ProductVariation $variation): ?array
+    {
+        $current = static::variationPrice($product, $variation);
+        if ($variation->regular_price === null || $current === null) {
+            return null;
+        }
+
+        return static::salePair((float) PriceDisplay::shop((float) $variation->regular_price, $product, $variation), $current);
+    }
+
+    /** @return array{regular:float, sale:float, saving:float, percent:int}|null */
+    protected static function salePair(float $regular, float $sale): ?array
+    {
         if ($regular <= 0 || $sale >= $regular) {
             return null;
         }
 
         return ['regular' => $regular, 'sale' => $sale, 'saving' => round($regular - $sale, 2), 'percent' => (int) round((($regular - $sale) / $regular) * 100)];
+    }
+
+    /** @var \WeakMap<Product, array{0:int, 1:list<Coupon>}>|null shopDiscounts() per product, per running list */
+    protected static ?\WeakMap $shopDiscounts = null;
+
+    /**
+     * The automatic discounts shown in the shop price (Coupon::showsInPrice(), Admin › Discounts › "Show the reduced
+     * price in the shop") that cover this product now. Worked out once per product per request.
+     *
+     * @return list<Coupon>
+     */
+    public static function shopDiscounts(Product $product): array
+    {
+        $running = Coupon::running();
+        if ($running->isEmpty() || ! \Pine\Commerce\Support\Features::enabled('coupons', false)) {
+            return [];
+        }
+        static::$shopDiscounts ??= new \WeakMap;
+        $cached = static::$shopDiscounts[$product] ?? null;
+        if ($cached && $cached[0] === spl_object_id($running)) {
+            return $cached[1];
+        }
+        $engine = app(\Pine\Commerce\Services\Checkout\CouponEngine::class);
+        $coupons = $running->filter(fn ($coupon) => $coupon->showsInPrice() && $engine->appliesToProduct($coupon, $product))->values()->all();
+        static::$shopDiscounts[$product] = [spl_object_id($running), $coupons];
+
+        return $coupons;
+    }
+
+    /**
+     * The price of one unit after the discounts shown in the price ($coupons, default shopDiscounts()), worked out by
+     * the basket's own CouponEngine on a one-item line so the shop and the basket agree to the penny. $price is the
+     * stored current price (the sale price while on sale); the result is in the same terms (PriceDisplay::shop() after).
+     *
+     * @param  list<Coupon>|null  $coupons
+     */
+    public static function discountedPrice(Product $product, ?ProductVariation $variation, ?float $price, ?array $coupons = null): ?float
+    {
+        $coupons ??= static::shopDiscounts($product);
+        if ($price === null || $price <= 0 || ! $coupons) {
+            return $price;
+        }
+        $line = new \Pine\Commerce\Services\Checkout\CartLine(null, $product, $variation, 1, round($price, 2));
+        app(\Pine\Commerce\Services\Checkout\CouponEngine::class)->apply($coupons, collect([$line]));
+
+        return round($price - $line->discount, 2);
+    }
+
+    /** When the price shown stops being valid: the earliest end of a discount shown in it (for the product schema). */
+    public static function discountEndsAt(Product $product): ?\Illuminate\Support\Carbon
+    {
+        return collect(static::shopDiscounts($product))->pluck('expires_at')->filter()->sort()->first();
     }
 
     /**
@@ -339,8 +418,7 @@ class ProductPresenter
             return $sale ? ['percent' => $sale['percent'], 'upto' => false] : null;
         }
         $percents = static::activeVariations($product)
-            ->filter(fn (ProductVariation $v) => $v->isOnSale() && (float) $v->regular_price > 0)
-            ->map(fn (ProductVariation $v) => (int) round((1 - (float) $v->sale_price / (float) $v->regular_price) * 100))
+            ->map(fn (ProductVariation $v) => static::variationSale($product, $v)['percent'] ?? 0)
             ->filter(fn (int $p) => $p > 0)->values();
         if ($percents->isEmpty()) {
             return null;
@@ -356,9 +434,10 @@ class ProductPresenter
      *  - summary  "20% off", "£5.00 off each item", "Any 2 for £25.00" …
      *  - price    the product's price after the discount when it needs nothing else (a percentage or amount off each
      *             item, no minimum spend), else null; for a product with variants, the lowest
+     *  - in_price true when the shop price already shows it (shopDiscounts()): price is then the price shown
      *  - note     the condition, e.g. "on orders over £50", or "" ; ends_at (UTC) and countdown for an end date
      *
-     * @return list<array{label:string, type:string, summary:string, price:?float, note:string, ends_at:?\Illuminate\Support\Carbon, countdown:bool}>
+     * @return list<array{label:string, type:string, summary:string, price:?float, in_price:bool, note:string, ends_at:?\Illuminate\Support\Carbon, countdown:bool}>
      */
     public static function offers(Product $product): array
     {
@@ -367,24 +446,26 @@ class ProductPresenter
             return [];
         }
         $engine = app(\Pine\Commerce\Services\Checkout\CouponEngine::class);
-        $now = static::price($product);
+        $shop = static::shopDiscounts($product);
         $out = [];
         foreach ($running as $coupon) {
             if (! $coupon->label || ! $engine->appliesToProduct($coupon, $product)) {
                 continue; // no customer-facing name: an internal rule, not advertised
             }
             $min = (float) $coupon->minimum_spend;
+            $inPrice = in_array($coupon, $shop, true);
             $price = null;
-            if ($now !== null && $min <= 0 && in_array($coupon->type, ['percent', 'fixed_product'], true)) {
-                $price = $coupon->type === 'percent'
-                    ? round($now * (1 - min(100.0, (float) $coupon->amount) / 100), 2)
-                    : max(0.0, round($now - (float) $coupon->amount, 2));
+            if ($inPrice) {
+                $price = static::price($product);
+            } elseif ($min <= 0 && in_array($coupon->type, Coupon::PRICE_TYPES, true)) {
+                $price = static::lowestPriceWith($product, [...$shop, $coupon]); // on top of the ones in the price, as the basket does
             }
             $out[] = [
                 'label' => $coupon->displayName(),
                 'type' => $coupon->type,
                 'summary' => \Pine\Commerce\Services\Admin\CouponStatus::summary($coupon),
                 'price' => $price,
+                'in_price' => $inPrice,
                 'note' => $min > 0 ? 'on orders over '.money($min) : '',
                 'ends_at' => $coupon->expires_at,
                 'countdown' => (bool) $coupon->show_countdown && $coupon->expires_at !== null,
@@ -392,6 +473,19 @@ class ProductPresenter
         }
 
         return $out;
+    }
+
+    /** The lowest price shown for the product (its active variants for a product with variants) with these discounts. */
+    protected static function lowestPriceWith(Product $product, array $coupons): ?float
+    {
+        if ($product->type !== 'variable') {
+            return PriceDisplay::shop(static::discountedPrice($product, null, $product->currentPrice(), $coupons), $product);
+        }
+        $prices = static::activeVariations($product)
+            ->map(fn (ProductVariation $v) => PriceDisplay::shop(static::discountedPrice($product, $v, $v->currentPrice(), $coupons), $product, $v))
+            ->filter(fn ($p) => $p !== null);
+
+        return $prices->isNotEmpty() ? (float) $prices->min() : null;
     }
 
     /** CSS block class of cardPriceHtml() ({class}, {class}-now, -sub, -was, -save); a client presenter may rename it. */
@@ -461,7 +555,7 @@ class ProductPresenter
                 return '<span class="woocommerce-Price-amount amount" aria-hidden="true">'.static::inner($min, $bdi).'</span> <span aria-hidden="true">&ndash;</span> <span class="woocommerce-Price-amount amount" aria-hidden="true">'.static::inner($max, $bdi).'</span><span class="screen-reader-text">Price range: '.money($min).' through '.money($max).'</span>';
             }
             $regulars = $variations->map(fn (ProductVariation $v) => $v->regular_price !== null ? PriceDisplay::shop((float) $v->regular_price, $product, $v) : null)->filter();
-            if ($variations->contains(fn ($v) => $v->isOnSale()) && $regulars->isNotEmpty() && $regulars->min() === $regulars->max() && (float) $regulars->min() > $min) {
+            if ($variations->contains(fn ($v) => static::variationSale($product, $v) !== null) && $regulars->isNotEmpty() && $regulars->min() === $regulars->max() && (float) $regulars->min() > $min) {
                 return static::delIns((float) $regulars->min(), $min, $bdi);
             }
 

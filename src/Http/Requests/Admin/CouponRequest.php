@@ -12,6 +12,8 @@ use Illuminate\Validation\Validator;
  * Create/update a discount code or an automatic discount. Controllers call $request->couponData() – never
  * $request->all() – so only these normalised fields can ever reach the model (Coupon uses $guarded = ['id']).
  * An automatic discount needs a label (what customers see); its code is generated from the label when left blank.
+ * "Show the reduced price in the shop" (show_in_price) is kept only for an automatic % off / amount off each item, and
+ * refused next to a spend, email or per-customer rule: the price shown can't depend on the basket (Coupon::showsInPrice()).
  */
 class CouponRequest extends FormRequest
 {
@@ -60,6 +62,7 @@ class CouponRequest extends FormRequest
             'auto_apply' => ['boolean'],
             'label' => [Rule::requiredIf($this->boolean('auto_apply')), 'nullable', 'string', 'max:120'],
             'show_countdown' => ['boolean'],
+            'show_in_price' => ['boolean'],
             'type' => ['required', Rule::in(array_keys(Coupon::TYPES))],
             'buy_quantity' => [Rule::requiredIf($this->input('type') === 'multibuy'), 'nullable', 'integer', 'min:2', 'max:100'],
             'amount' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:99999.99', Rule::when($this->input('type') === 'percent', ['max:100'])],
@@ -137,6 +140,17 @@ class CouponRequest extends FormRequest
                         $errors->add('expires_at', 'The end date must be after the start date.');
                     }
                 }
+                if ($this->showsInPrice() && ! $errors->hasAny(['minimum_spend', 'maximum_spend', 'allowed_emails', 'usage_limit_per_user'])) {
+                    $blocking = array_filter([
+                        (float) $this->input('minimum_spend') > 0 ? 'the minimum basket total' : null,
+                        (float) $this->input('maximum_spend') > 0 ? 'the maximum basket total' : null,
+                        $this->emails() ? 'the customer list' : null,
+                        $this->filled('usage_limit_per_user') ? 'the uses per customer' : null,
+                    ]);
+                    if ($blocking) {
+                        $errors->add('show_in_price', 'To show the reduced price in the shop, remove '.\Illuminate\Support\Arr::join($blocking, ', ', ' and ').' – the price shown can’t depend on the basket or the customer.');
+                    }
+                }
                 if (array_intersect((array) $this->input('product_ids'), (array) $this->input('excluded_product_ids'))) {
                     $errors->add('excluded_product_ids', 'A product can’t be both included and excluded.');
                 }
@@ -167,6 +181,7 @@ class CouponRequest extends FormRequest
             'description' => $this->input('description'),
             'auto_apply' => $this->boolean('auto_apply'),
             'show_countdown' => $this->boolean('show_countdown'),
+            'show_in_price' => $this->showsInPrice(),
             'type' => $this->input('type'),
             'amount' => round((float) $this->input('amount'), 2),
             'buy_quantity' => $this->input('type') === 'multibuy' ? (int) $this->input('buy_quantity') : null,
@@ -186,6 +201,12 @@ class CouponRequest extends FormRequest
             'starts_at' => LocalTime::fromInput($this->input('starts_at')),
             'expires_at' => LocalTime::fromInput($this->input('expires_at')),
         ];
+    }
+
+    /** Ticked, on an automatic discount of a type the price can show (other types ignore the box). */
+    protected function showsInPrice(): bool
+    {
+        return $this->boolean('show_in_price') && $this->boolean('auto_apply') && in_array($this->input('type'), Coupon::PRICE_TYPES, true);
     }
 
     /** @return list<string> lower-cased, de-duplicated */

@@ -118,8 +118,9 @@ class FeedController extends Controller
 
     protected function variationFields(Product $product, ProductVariation $variation, array $base): array
     {
-        $price = (float) $variation->currentPrice();
+        $price = (float) commerce_presenter()::discountedPrice($product, $variation, $variation->currentPrice());
         $regular = $variation->regular_price !== null ? (float) $variation->regular_price : $price;
+        $reduced = $price < $regular;
         $options = collect((array) $variation->options)->map(fn ($v) => ucwords(str_replace('-', ' ', (string) $v)))->implode(' / ');
 
         return array_merge($base, [
@@ -129,8 +130,8 @@ class FeedController extends Controller
             'g:link' => $product->url,
             'g:image_link' => $variation->image ? media_url($variation->image) : $base['g:image_link'],
             'g:mpn' => $variation->sku ?: $base['g:mpn'],
-            'g:price' => $this->money($variation->isOnSale() ? $regular : $price),
-            'g:sale_price' => $variation->isOnSale() ? $this->money($price) : null,
+            'g:price' => $this->money($reduced ? $regular : $price),
+            'g:sale_price' => $reduced ? $this->money($price) : null,
         ]);
     }
 

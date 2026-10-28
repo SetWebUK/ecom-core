@@ -9,6 +9,40 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-28
+
+### Added
+- Automatic discounts in the shop price: Admin › Discounts › Automatic › "Show the reduced price in the shop". While a
+  % off or amount-off-each-item discount runs, every product it covers (the whole shop, chosen categories or products,
+  minus exclusions) shows the price after it as a was/now price, like a sale price, on product cards, product
+  pages, the sticky bar, the variant picker, the Google feed (`g:sale_price`) and the product schema (`priceValidUntil` = the
+  discount's end). Badges ("SAVE 20%") follow. The basket keeps taking it off by its label, and the shown price is
+  worked out by the basket's own `CouponEngine`, so the two agree to the penny (it stacks on a sale price unless
+  "Don't discount items that are already on sale" is ticked). Only for discounts that need nothing from the basket:
+  the form refuses the option next to a minimum/maximum spend, a customer email list or a uses-per-customer limit.
+  When a total-uses limit runs out, the price goes back to normal.
+- `ProductPresenter::shopDiscounts()`, `discountedPrice()`, `variationPrice()`, `variationSale()`, `discountEndsAt()`;
+  `Coupon::showsInPrice()`, `Coupon::PRICE_TYPES`.
+
+### Changed
+- `ProductPresenter::price()`, `sale()`, `bestSaving()`, `priceHtml()`, `cardPriceHtml()`, `saveBadge()` and the
+  product page's variation data include the discounts shown in the price. Nothing changes until a discount has the
+  option ticked.
+- `ProductPresenter::offers()` items have `in_price` (true when the shop price already shows that discount; `price`
+  is then the price shown). An offer's `price` is now worked out on top of the discounts in the price, as the basket does.
+
+### Known limits
+- Sorting by price and the price filter still use the stored `products.price` (before automatic discounts).
+
+### Migrations
+- `2026_10_28_000100_add_show_in_price_to_coupons`: `coupons.show_in_price` (boolean, default false: existing
+  discounts keep showing as an offer only). **Client action:** `php artisan migrate`.
+
+### Theme contract
+- A theme that prints `offers()` with "taken off in your basket" wording should check `in_price` (the price shown
+  already includes it). Client presenters that override `sale()` or `price()` should call the parent, or use
+  `discountedPrice()`, to show discounts in the price.
+
 ## [1.6.1] - 2026-10-23
 
 ### Fixed
