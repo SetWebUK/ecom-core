@@ -122,6 +122,22 @@
         </x-slot:actions>
     </x-admin.page-header>
 
+    {{-- Just sent (OrderController::fulfil): straight on to the next parcel ---------------------- --}}
+    @if (is_array($nextToFulfil = session('next_to_fulfil')))
+        @if ($nextToFulfil['id'])
+            <x-admin.callout type="success" class="mb-4" icon="truck" data-next-to-fulfil
+                             :title="number_format($nextToFulfil['count']).' more '.\Illuminate\Support\Str::plural('order', $nextToFulfil['count']).' to send'">
+                Next is #{{ $nextToFulfil['number'] }} for {{ $nextToFulfil['name'] }}, placed {{ \Illuminate\Support\Carbon::parse($nextToFulfil['placed'])->diffForHumans() }}.
+                <div class="row mt-2">
+                    <x-admin.button size="sm" variant="primary" icon-right="arrow-right" :href="route('admin.orders.show', $nextToFulfil['id'])">Next order: #{{ $nextToFulfil['number'] }}</x-admin.button>
+                    <x-admin.button size="sm" :href="route('admin.orders.index', ['status' => 'processing'])">See all to send</x-admin.button>
+                </div>
+            </x-admin.callout>
+        @else
+            <x-admin.callout type="success" class="mb-4" icon="check-badge" title="All caught up" data-next-to-fulfil>That was the last paid order waiting to be sent.</x-admin.callout>
+        @endif
+    @endif
+
     {{-- What needs doing next ------------------------------------------------------------------ --}}
     @if ($status === 'pending')
         <x-admin.callout type="warning" class="mb-4" title="Awaiting payment" icon="clock">

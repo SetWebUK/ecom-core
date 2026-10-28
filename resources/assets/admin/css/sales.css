@@ -92,6 +92,12 @@
     .stats--8 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 639px) {
+    /* Orders list on phones: name + total, then date + status, under the order number */
+    .order-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px var(--s-3); align-items: center; margin-top: 4px; font-size: var(--text-sm); white-space: normal; }
+    .order-line__who { font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .order-line__total { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+    .order-line__when { color: var(--text-muted); font-size: var(--text-xs); }
+    .order-line > .badge { justify-self: end; }
     .line-item { grid-template-columns: 40px minmax(0, 1fr) auto; }
     .line-item .thumb { width: 40px; height: 40px; }
     .line-item__price { grid-column: 2; }

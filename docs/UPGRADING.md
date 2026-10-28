@@ -48,6 +48,14 @@ Read the release notes for:
 - **theme contract** changes (new optional views, new `supports` keys) – run `php artisan commerce:theme:check`;
 - **admin view overrides** in `resources/views/vendor/commerce/…` – diff them against the new package views.
 
+### Upgrading from 1.7 to 1.8
+
+1.8 is additive: no migrations, no config keys. Run `composer update pine/commerce`, then `php artisan commerce:publish`
+(admin CSS changed), then `php artisan optimize:clear && php artisan optimize`. Admin › Updates does all of this. The
+home page gains a "To do" card; administrators see go-live problems in it (payments off or in test mode, no delivery,
+emails not sent), so expect it on staging sites that use PayPal sandbox or `MAIL_MAILER=log`. Sites overriding the
+dashboard, order or variant admin views should diff them. See CHANGELOG `[1.8.0]`.
+
 ### Upgrading from 1.6 to 1.7
 
 1.7 is additive. One migration (`coupons.show_in_price`, default false). Run `composer update pine/commerce`, then

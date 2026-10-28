@@ -42,6 +42,35 @@
             </x-admin.callout>
         @endif
 
+        @if ($tasks)
+            {{-- Services\Admin\StoreTasks: go-live problems (administrators) first, then work waiting elsewhere --}}
+            <x-admin.card flush class="todo" data-dashboard-tasks>
+                <x-slot:header>
+                    <div class="flex-1">
+                        <h2 class="card__title">To do <x-admin.badge color="attention" class="ml-1">{{ count($tasks) }}</x-admin.badge></h2>
+                        <p class="card__subtitle">What needs you, most urgent first</p>
+                    </div>
+                </x-slot:header>
+                <ul class="list mt-2">
+                    @foreach ($tasks as $task)
+                        @php $tag = $task['url'] ? 'a' : 'div'; @endphp
+                        <li>
+                            <{{ $tag }} @if ($task['url']) href="{{ $task['url'] }}" @endif class="list__item" data-task="{{ $task['key'] }}">
+                                <span class="thumb thumb--sm todo__icon todo__icon--{{ $task['tone'] }}"><x-admin.icon :name="$task['icon']" /></span>
+                                <span class="list__main">
+                                    <span class="list__title">{{ $task['title'] }}</span>
+                                    <span class="list__sub">{{ $task['text'] }}</span>
+                                </span>
+                                @if ($task['action'])
+                                    <span class="list__meta todo__action hidden-mobile">{{ $task['action'] }} <x-admin.icon name="chevron-right" size="sm" /></span>
+                                @endif
+                            </{{ $tag }}>
+                        </li>
+                    @endforeach
+                </ul>
+            </x-admin.card>
+        @endif
+
         <div class="stats">
             <x-admin.stat label="Revenue" icon="banknotes" :value="money($stats['revenue']['value'])" :delta="$stats['revenue']['delta']" :hint="$stats['revenue']['hint']" />
             <x-admin.stat label="Orders" icon="shopping-bag" :value="number_format($stats['orders']['value'])" :delta="$stats['orders']['delta']" :hint="$stats['orders']['hint']"
@@ -167,21 +196,30 @@
                             <span class="stat__value" style="font-size:20px">{{ number_format($lowStockCount) }}</span>
                         </a>
                     </div>
-                    @if ($lowStock->isNotEmpty())
-                        <p class="text-xs text-muted mt-4 mb-2">{{ $threshold }} or fewer left</p>
+                    @if ($soldOutVariants['variants'])
+                        <p class="text-sm mt-3" data-sold-out-variants>
+                            <a href="{{ Route::has('admin.products.inventory') ? route('admin.products.inventory', ['stock' => 'outofstock']) : '#' }}">{{ number_format($soldOutVariants['variants']) }} sold-out {{ \Illuminate\Support\Str::plural('variant', $soldOutVariants['variants']) }}</a>
+                            <span class="text-muted">on {{ number_format($soldOutVariants['products']) }} {{ \Illuminate\Support\Str::plural('product', $soldOutVariants['products']) }} that {{ $soldOutVariants['products'] === 1 ? 'is' : 'are' }} still for sale.</span>
+                        </p>
+                    @endif
+                    @if ($lowStock)
+                        <p class="text-xs text-muted mt-4 mb-2">Running low – {{ $threshold }} or fewer left</p>
                         <ul class="list" style="margin:0 -16px -16px">
-                            @foreach ($lowStock as $product)
+                            @foreach ($lowStock as $row)
                                 <li>
-                                    <a href="{{ $productUrl($product->id) ?? '#' }}" class="list__item">
-                                        <x-admin.thumb :src="$product->images->first()?->path" size="sm" />
-                                        <span class="list__main"><span class="list__title" style="display:block">{{ $product->name }}</span>@if ($product->sku)<span class="list__sub" style="display:block">SKU {{ $product->sku }}</span>@endif</span>
-                                        <x-admin.badge color="warning">{{ $product->stock_quantity }} left</x-admin.badge>
+                                    <a href="{{ $productUrl($row['product_id']) ?? '#' }}" class="list__item">
+                                        <x-admin.thumb :src="$row['image']" size="sm" />
+                                        <span class="list__main">
+                                            <span class="list__title" style="display:block">{{ $row['name'] }}</span>
+                                            <span class="list__sub" style="display:block">{{ collect([$row['variant'], $row['sku'] ? 'SKU '.$row['sku'] : null])->filter()->implode(' · ') }}</span>
+                                        </span>
+                                        <x-admin.badge color="warning">{{ $row['quantity'] }} left</x-admin.badge>
                                     </a>
                                 </li>
                             @endforeach
                         </ul>
                     @else
-                        <p class="text-sm text-muted mt-4">No products are running low.</p>
+                        <p class="text-sm text-muted mt-4">Nothing is running low.</p>
                     @endif
                 </x-admin.card>
 

@@ -223,7 +223,19 @@ class OrderController extends Controller
         }
         OrderManager::fulfil($order, $request->input('tracking_carrier'), $request->input('tracking_number'));
 
-        return back()->with('success', 'Order #'.$order->number.' marked as completed.'.($order->email ? ' The customer has been emailed.' : ''));
+        // Sending a batch of parcels: the order page then offers the next order waiting (oldest first, like the home page)
+        $waiting = Order::query()->where('status', 'processing')->whereKeyNot($order->getKey());
+        $next = (clone $waiting)->oldest()->oldest('id')->first(['id', 'number', 'email', 'billing_first_name', 'billing_last_name', 'billing_company', 'created_at']);
+
+        return back()
+            ->with('success', 'Order #'.$order->number.' marked as completed.'.($order->email ? ' The customer has been emailed.' : ''))
+            ->with('next_to_fulfil', [
+                'count' => $next ? (clone $waiting)->count() : 0,
+                'id' => $next?->id,
+                'number' => $next?->number,
+                'name' => $next ? ($next->billing_name ?: ($next->billing_company ?: $next->email)) : null,
+                'placed' => $next?->created_at?->toIso8601String(),
+            ]);
     }
 
     public function address(OrderAddressRequest $request, Order $order): RedirectResponse

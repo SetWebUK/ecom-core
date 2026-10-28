@@ -343,7 +343,7 @@ kbd {
 .callout--danger { background: var(--danger-bg); color: var(--danger-text); }
 .callout--neutral { background: var(--surface-subdued); color: var(--text-secondary); box-shadow: inset 0 0 0 1px var(--border); }
 .callout__title { font-weight: 650; }
-.callout a { color: inherit; text-decoration: underline; }
+.callout a:not(.btn) { color: inherit; text-decoration: underline; }
 
 /* 6. Buttons ----------------------------------------------------------------------------------- */
 .btn {
@@ -873,6 +873,15 @@ a.list__item:hover { background: var(--surface-hover); }
 .list__sub { font-size: var(--text-xs); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .list__meta { flex-shrink: 0; text-align: right; font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
 .list__item.is-unread .list__title::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); margin-right: 6px; vertical-align: 1px; }
+
+/* Home › To do (Services\Admin\StoreTasks): coloured icon per urgency, the explanation may wrap */
+.todo .list__title, .todo .list__sub { display: block; }
+.todo .list__sub { white-space: normal; }
+.todo__icon { box-shadow: none; }
+.todo__icon--danger { background: var(--danger-bg); color: var(--danger-text); }
+.todo__icon--warning { background: var(--warning-bg); color: var(--warning-text); }
+.todo__icon--info { background: var(--info-bg); color: var(--info-text); }
+.todo__action { display: inline-flex; align-items: center; gap: 2px; color: var(--link); font-weight: 550; }
 
 .kv { display: grid; grid-template-columns: minmax(110px, auto) minmax(0, 1fr); gap: 8px var(--s-4); margin: 0; font-size: var(--text-sm); }
 .kv dt { color: var(--text-muted); }
