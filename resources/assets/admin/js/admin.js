@@ -259,6 +259,16 @@
         return window.tinymce.init(config).then(function (editors) { return editors[0] || null; });
     }
 
+    // A colour token of the admin (e.g. '--primary', which follows the shop's brand – Services\Admin\AdminBrand) for
+    // canvas drawing such as charts, optionally see-through: Admin.color('--primary', 0.08) -> 'rgba(30,55,86,0.08)'
+    function color(token, alpha) {
+        var value = getComputedStyle(document.documentElement).getPropertyValue(token).trim() || '#1976d2';
+        var m = /^#([0-9a-f]{6})$/i.exec(value);
+        if (alpha === undefined || !m) return value;
+        var n = parseInt(m[1], 16);
+        return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + alpha + ')';
+    }
+
     function openModal(name) { window.dispatchEvent(new CustomEvent('open-modal', { detail: name })); }
     function closeModal(name) { window.dispatchEvent(new CustomEvent('close-modal', { detail: name })); }
 
@@ -270,6 +280,7 @@
         csrf: csrf,
         debounce: debounce,
         money: money,
+        color: color,
         slugify: slugify,
         randomCode: randomCode,
         sortable: sortable,

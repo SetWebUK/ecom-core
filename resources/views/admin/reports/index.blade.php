@@ -90,7 +90,7 @@
                 </nav>
             </x-slot:actions>
             <div class="legend mb-2" aria-hidden="true">
-                <span class="legend__item"><span class="legend__swatch" style="background:#1976d2"></span>{{ $rangeLabel }}</span>
+                <span class="legend__item"><span class="legend__swatch" style="background:var(--primary)"></span>{{ $rangeLabel }}</span>
                 @if ($hasCompare)
                     <span class="legend__item"><span class="legend__swatch" style="background:repeating-linear-gradient(90deg,#9a9a9a 0 4px,transparent 4px 7px);height:2px;border-radius:0"></span>{{ $compareLabel }}</span>
                 @endif

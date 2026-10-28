@@ -390,7 +390,7 @@
                     var format = function (v) { return isMoney ? Sales.money(v) : (v + (v === 1 ? ' order' : ' orders')); };
                     var compact = new Intl.NumberFormat('en-GB', { notation: 'compact', maximumFractionDigits: 1 });
                     var datasets = [{
-                        label: 'This period', data: data[key[0]], borderColor: '#1976d2', backgroundColor: 'rgba(25,118,210,0.08)',
+                        label: 'This period', data: data[key[0]], borderColor: Admin.color('--primary'), backgroundColor: Admin.color('--primary', 0.08),
                         fill: 'origin', borderWidth: 2, pointRadius: data.labels.length > 45 ? 0 : 2, pointHoverRadius: 4, pointHitRadius: 12, tension: 0.3
                     }];
                     if (hasCompare) {

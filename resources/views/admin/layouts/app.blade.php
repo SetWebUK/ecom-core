@@ -34,13 +34,15 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="admin-asset-base" content="{{ rtrim(commerce_admin_asset('', false), '/') }}/">
     <meta name="robots" content="noindex, nofollow">
-    <meta name="theme-color" content="#1a1a1a">
+    <meta name="theme-color" content="{{ \Pine\Commerce\Services\Admin\AdminBrand::palette()['shell'] }}">
     {{-- @section('title', $x) already escapes $x (like @yield), so the yielded title is printed as-is here --}}
     @php $pageTitle = trim($__env->yieldContent('title')); @endphp
     <title>{!! $pageTitle !== '' ? $pageTitle.' · ' : '' !!}{{ $storeName }} admin</title>
     <link rel="icon" href="{{ commerce_admin_brand('favicon') }}" sizes="32x32">
     <link rel="preload" href="{{ commerce_admin_asset('vendor/inter/inter-latin-wght-normal.woff2', false) }}" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="{{ $assetVersion('css/admin.css') }}">
+    {{-- the shop's colours (Services\Admin\AdminBrand: hex values only) --}}
+    <style>{!! \Pine\Commerce\Services\Admin\AdminBrand::css() !!}</style>
     @stack('head')
     <script defer src="{{ commerce_admin_asset('vendor/alpinejs/collapse-3.17.4.min.js', false) }}"></script>
     <script defer src="{{ commerce_admin_asset('vendor/alpinejs/focus-3.17.4.min.js', false) }}"></script>

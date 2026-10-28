@@ -8,9 +8,13 @@
         <x-admin.icon name="bars-3" x-show="!sidebarOpen" />
         <x-admin.icon name="x-mark" x-show="sidebarOpen" x-cloak />
     </button>
+    {{-- Phones and tablets only: on wider screens the shop's logo heads the sidebar --}}
     <a href="{{ route('admin.dashboard') }}" class="topbar__brand" aria-label="{{ $storeName }} admin home">
-        <span class="topbar__mark"><img src="{{ commerce_admin_brand('mark') }}" alt="" width="24" height="24"></span>
-        <span class="topbar__store">{{ $storeName }}</span>
+        @if ($logo = \Pine\Commerce\Services\Admin\AdminBrand::logo())
+            <span class="topbar__logo"><img src="{{ $logo }}" alt=""></span>
+        @else
+            <span class="topbar__mark">{{ \Pine\Commerce\Services\Admin\AdminBrand::initials() }}</span>
+        @endif
     </a>
 
     <div class="topbar__search">
@@ -61,7 +65,7 @@
     </div>
 
     <div class="topbar__actions">
-        <a href="{{ url('/') }}" target="_blank" rel="noopener" class="btn--topbar" title="Open the shop in a new tab">
+        <a href="{{ url('/') }}" target="_blank" rel="noopener" class="btn--topbar topbar__view-store" title="Open the shop in a new tab">
             <x-admin.icon name="building-storefront" size="sm" />
             <span class="view-store-label">View store</span>
         </a>

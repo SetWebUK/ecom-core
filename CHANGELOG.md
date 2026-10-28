@@ -11,8 +11,9 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [1.8.0] - 2026-10-28
 
-Back-office journeys, from a walk through the admin as a shop owner: what needs doing is on the home page, stock
-warnings see sizes, sending a batch of orders goes from one to the next, and two screens that were hard to use are fixed.
+Back-office journeys, from a walk through the admin as a shop owner: the admin wears the shop's own brand, what
+needs doing is on the home page, stock warnings see sizes, sending a batch of orders goes from one to the next, and
+two screens that were hard to use are fixed.
 
 ### Added
 - Home › **To do** card (`Services\Admin\StoreTasks`), above the sales figures. It lists only what needs action, most
@@ -25,6 +26,18 @@ warnings see sizes, sending a batch of orders goes from one to the next, and two
     are skipped.
 - Order page: after **Mark as completed**, a "N more orders to send" box links straight to the next paid order
   waiting (oldest first, like the home page), or says "All caught up" after the last one.
+- **The back office in the shop's own brand** (`Services\Admin\AdminBrand`), with no set-up. It takes the storefront
+  theme's `primary_color` / `accent_color` (Settings › Theme) and Settings › Store details › Logo.
+  - Full-height sidebar in the brand colour, darkened until white text reads on it (10:1). The shop's logo sits on a
+    white tile at the top (or its initials and name), with **View shop** and a **Create** menu (order, product,
+    discount, page) under it. The page you're on is marked in the accent colour, lightened in HSL until it shows (3:1).
+  - Buttons, links, focus rings and the sales charts use the brand colour when white text reads on it (4.5:1).
+    Otherwise they keep the default blue.
+  - The top bar is white and holds search and the account menu. On phones it shows the logo, and the sidebar is a
+    drawer under it.
+  - The unsaved-changes bar is in the brand colour with a white Save button. The admin login page shows the shop's
+    logo.
+  - `Admin.color(token, alpha)` in admin.js gives a colour token (e.g. `--primary`) for canvas drawing.
 
 ### Changed
 - Home › Stock now uses the same rules as Products › Low stock / Out of stock, so its numbers match the lists it
@@ -36,16 +49,27 @@ warnings see sizes, sending a batch of orders goes from one to the next, and two
 - Orders list on phones: one compact card per order (number, name + total, date + status) instead of four labelled
   rows, so about twice as many orders fit on the screen. The keyboard tip under the list is hidden on phones.
 - Buttons inside a callout are no longer underlined like links (`.callout a:not(.btn)`).
+- Sidebar: **Analytics** moved up next to Discounts. Content and Inbox are now under a **Website** heading. Client
+  menu entries added with `after:` join that entry's section; entries without one are listed last, under **More**.
 
 ### Fixed
 - `commerce:doctor` (and Settings › System › Health checks) now flags PayPal in sandbox mode as "TEST mode"; it only
   recognised Stripe's test keys before.
 
+### Config keys added
+- `commerce.admin.brand.color` and `commerce.admin.brand.accent` (default `null` = the theme's colours; `color: false`
+  = the neutral look). A client `config/commerce.php` that overrides the whole `admin` key gets `null` for both,
+  which is the default anyway.
+
 ### Client actions
-- `php artisan commerce:publish` (admin CSS changed: `admin.css`, `catalogue.css`, `sales.css`); `composer deploy` and
-  Admin › Updates already run it.
-- Sites that override `admin/dashboard/index`, `admin/orders/show`, `admin/orders/index` or
-  `admin/products/partials/variants` in `resources/views/vendor/commerce/` should diff them against the new views.
+- `php artisan commerce:publish` (admin CSS and JS changed: `admin.css`, `catalogue.css`, `sales.css`, `admin.js`,
+  `catalogue.js`, `sales.js`); `composer deploy` and Admin › Updates already run it.
+- Check the back office once: it now uses the theme's colours and the store logo. Set `commerce.admin.brand.color`
+  if the storefront colour doesn't suit it.
+- Sites that override `admin/dashboard/index`, `admin/orders/show`, `admin/orders/index`,
+  `admin/products/partials/variants`, `admin/partials/sidebar`, `admin/partials/topbar`, `admin/layouts/app`,
+  `admin/layouts/auth` or `admin/reports/index` in `resources/views/vendor/commerce/` should diff them against the
+  new views.
 
 ## [1.7.0] - 2026-10-28
 
