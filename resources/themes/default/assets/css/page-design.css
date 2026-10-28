@@ -23,7 +23,6 @@
 .pb-text th, .pb-text td { padding: .6em .8em; border: 1px solid var(--c-border); text-align: left; }
 .pb-lead { font-size: clamp(1.1rem, 1.6vw, 1.3rem); color: var(--c-muted); }
 .pb-center { text-align: center; }
-.pb-center .pb-buttons { justify-content: center; }
 
 /* sections and layout */
 .pb-section { position: relative; padding: clamp(40px, 6vw, 80px) var(--gutter, 20px); background-position: center; background-size: cover; background-repeat: no-repeat; }
@@ -52,8 +51,9 @@
 .pb-hero h1, .pb-hero h2 { color: inherit; }
 .pb-hero .pb-lead, .pb-section--brand .pb-lead, .pb-section--dark .pb-lead { color: inherit; opacity: .9; }
 
-/* buttons */
-.pb-buttons { display: flex; flex-wrap: wrap; gap: 12px; margin: 1.5em 0 0; }
+/* buttons: a row of inline buttons, so it follows the "Line up" (text-align) of the row itself or of whatever it sits in */
+.pb-buttons { margin: calc(1.5em - 6px) -6px -6px; }
+.pb-buttons > * { margin: 6px; vertical-align: middle; }
 .pb-btn { display: inline-flex; align-items: center; justify-content: center; gap: .5em; padding: .85em 1.7em; border: 2px solid var(--c-primary); border-radius: var(--radius, 8px);
     background: var(--c-primary); color: var(--c-on-primary); font-weight: 600; line-height: 1.2; text-decoration: none; transition: filter .15s, transform .15s; }
 .pb-btn:hover { filter: brightness(.92); color: var(--c-on-primary); }

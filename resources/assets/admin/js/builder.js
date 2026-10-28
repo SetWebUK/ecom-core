@@ -582,6 +582,35 @@
         editor.on('update change:changesCount', refreshBar);
         // refreshBar only reads state, so refreshing after any edit (or a selection) is cheap and never marks a change itself
         editor.on('undo redo component:update component:add component:remove styleable:change', function () { setTimeout(refreshBar, 0); });
+        // "Line up" on a button or a picture moves it, not just the words inside it: a button lines up its row of buttons
+        // (.pb-buttons follows text-align), a picture or a button on its own gets auto side margins
+        var lineUp = function (c) {
+            var align = (c.getStyle() || {})['text-align'] || '';
+            var row = c.parent();
+            if (c.is('pb-button') && row && row.getClasses().indexOf('pb-buttons') !== -1) {
+                if (((row.getStyle() || {})['text-align'] || '') !== align) {
+                    if (align) row.addStyle({ 'text-align': align }); else row.removeStyle('text-align');
+                }
+            } else if (c.is('pb-button') || c.is('image')) {
+                var sides = { left: ['0', 'auto'], center: ['auto', 'auto'], right: ['auto', '0'] }[align];
+                var style = c.getStyle() || {};
+                if (sides && (style['margin-left'] !== sides[0] || style['margin-right'] !== sides[1])) {
+                    c.addStyle(Object.assign({ 'margin-left': sides[0], 'margin-right': sides[1] }, c.is('pb-button') ? { display: 'flex', width: 'fit-content' } : {}));
+                } else if (!sides && style['margin-left'] !== undefined) {
+                    ['margin-left', 'margin-right'].concat(c.is('pb-button') ? ['display', 'width'] : []).forEach(function (p) { c.removeStyle(p); });
+                }
+            }
+        };
+        editor.on('component:styleUpdate:text-align', lineUp);
+        // GrapesJS leaves "Line up" showing the last choice when the next part selected has none, and clicking that choice then
+        // does nothing: show the selected part's own value whenever the selection changes
+        editor.on('style:target', function () {
+            setTimeout(function () {
+                var prop = editor.StyleManager.getProperty('text', 'text-align');
+                var value = prop ? prop.getValue() : '';
+                document.querySelectorAll('#pb-styles input[type=radio]').forEach(function (input) { input.checked = input.value === value; });
+            }, 0);
+        });
         editor.Keymaps.add('pb:save', '⌘+s, ctrl+s', function () { save(false); }, { prevent: true });
         window.addEventListener('beforeunload', function (ev) {
             if (dirty() && !state.saving) {
@@ -594,6 +623,8 @@
             wrapper().addClass('pb-page'); // the site's .pb-page styles apply in the canvas too
             um.clear();
             markSaved();
+            // designs saved before "Line up" moved buttons and pictures: put them where they were meant to be (shows as a change to save)
+            wrapper().find('.pb-btn, img').filter(function (c) { return (c.getStyle() || {})['text-align']; }).forEach(lineUp);
             refreshBar();
             selectPanel();
             showLeft('add');
