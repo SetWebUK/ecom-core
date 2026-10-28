@@ -4,10 +4,11 @@
     or browse the media library. The raw textarea stays usable if the editor fails to load.
     <x-admin.rich-editor name="content" label="Content" :value="$page->content" height="600" />
     <x-admin.rich-editor name="description" :value="$product->description" content-css="/assets/css/site.css" />
-    Props: name, label, value, height, help, required, id, content-css (URL of CSS for the editing area), uploads (bool)
+    Props: name, label, value, height, help, required, id, content-css (URL of CSS for the editing area), uploads (bool),
+           grow (bool: the editor grows with its content from `height` up, toolbar stays on screen – for long page content)
     Store the posted value as-is (trusted staff HTML) and output it with {!! !!} on the storefront.
 --}}
-@props(['name', 'label' => null, 'value' => null, 'height' => 480, 'help' => null, 'required' => false, 'id' => null, 'contentCss' => null, 'uploads' => true, 'bodyClass' => null])
+@props(['name', 'label' => null, 'value' => null, 'height' => 480, 'help' => null, 'required' => false, 'id' => null, 'contentCss' => null, 'uploads' => true, 'bodyClass' => null, 'grow' => false])
 @php
     $key = \Pine\Commerce\View\Components\Admin\Ui::key($name);
     $id ??= \Pine\Commerce\View\Components\Admin\Ui::id($name);
@@ -16,6 +17,7 @@
         'uploadUrl' => $uploads ? route('admin.media.upload') : null,
         'contentCss' => $contentCss,
         'bodyClass' => $bodyClass,
+        'grow' => $grow ?: null,
     ], fn ($v) => $v !== null);
 @endphp
 @once('admin-tinymce')

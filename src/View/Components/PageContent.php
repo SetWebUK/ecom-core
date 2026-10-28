@@ -91,14 +91,41 @@ class PageContent extends Component
         return (string) config('commerce.content.legacy_class_prefix', 'wp-');
     }
 
+    /** Does this HTML still hold WPBakery / Impreza shortcodes ([vc_row], [us_text] ...)? */
+    public static function hasLegacyShortcodes(?string $html): bool
+    {
+        return (bool) preg_match('/\[\/?(vc_|us_)/', (string) $html);
+    }
+
+    /**
+     * Content for the admin editor without the old page builder's shortcodes: the same HTML customers are shown
+     * (cleanLegacyShortcodes), so staff edit text instead of [vc_row …] code. Null when there is nothing to tidy.
+     */
+    public static function tidyForEditor(?string $html): ?string
+    {
+        return static::hasLegacyShortcodes($html) ? static::cleanLegacyShortcodes((string) $html) : null;
+    }
+
     /** Strip WPBakery / Impreza shortcodes left in classic content (they render as raw text on the legacy site). */
     public static function cleanLegacyShortcodes(string $html): string
     {
-        if (! preg_match('/\[\/?(vc_|us_)/', $html)) {
+        if (! static::hasLegacyShortcodes($html)) {
             return $html;
         }
         $p = static::legacyClassPrefix();
         $quote = '(?:"|&quot;|&#8221;|&#8220;|&#8243;|&#8217;|&#039;|\'|”|“|″)';
+        // raw HTML blocks (base64 of the URL-encoded HTML) -> that HTML; one that doesn't decode is dropped
+        $html = preg_replace_callback('/\[(vc_raw_html|us_html)\b[^\]]*\](.*?)\[\/\1\]/su', function ($m) {
+            $decoded = base64_decode(trim(strip_tags($m[2])), true);
+
+            return $decoded === false ? '' : rawurldecode($decoded);
+        }, $html);
+        // Google map (its iframe, encoded the same way behind "#E-8_")
+        $html = preg_replace_callback('/\[vc_gmaps\b[^\]]*?link='.$quote.'#E-8_([A-Za-z0-9+\/=]+)'.$quote.'[^\]]*\]/u', function ($m) use ($p) {
+            $iframe = rawurldecode((string) base64_decode($m[1], true));
+
+            return preg_match('#^\s*<iframe\b[^>]*\bsrc="https://(www\.)?google\.[a-z.]+/maps/#i', $iframe) ? '<div class="'.$p.'legacy-map" style="max-width:100%;overflow:hidden">'.trim($iframe).'</div>' : '';
+        }, $html);
         // [us_text text="Heading" tag="h1"] -> heading
         $html = preg_replace_callback('/\[us_text\s+text='.$quote.'(.*?)'.$quote.'([^\]]*)\]/u', function ($m) use ($p) {
             $tag = preg_match('/tag=(?:"|&#8221;|”|&quot;)?(h[1-6]|p|div)/i', $m[2], $t) ? strtolower($t[1]) : 'p';
@@ -225,7 +252,9 @@ class PageContent extends Component
     /** Plain-text excerpt from HTML (for meta descriptions and cards). */
     public static function excerpt(?string $html, int $words = 30, string $end = '…'): string
     {
-        $text = html_entity_decode(strip_tags(static::cleanLegacyShortcodes((string) $html)), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        // a space where block tags end, so "<h4>Store</h4>Unit 2" reads "Store Unit 2"
+        $html = preg_replace('#<(/?(?:p|div|h[1-6]|li|br|td|th|tr|section|article|summary|details|blockquote|figcaption)\b)#i', ' <$1', static::cleanLegacyShortcodes((string) $html));
+        $text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $text = trim(preg_replace('/\s+/u', ' ', preg_replace('/\[[^\]]*\]/', ' ', $text)));
 
         return Str::words($text, $words, $end);

@@ -196,8 +196,10 @@
             min_height: 240,
             resize: true,
             plugins: 'code link lists advlist image media table autolink searchreplace visualblocks fullscreen wordcount charmap anchor',
-            toolbar: 'undo redo | blocks | bold italic underline strikethrough | forecolor | bullist numlist outdent indent | alignleft aligncenter alignright | link image media table | removeformat | visualblocks code fullscreen',
-            toolbar_mode: 'sliding',
+            // everyday buttons only, all on screen (wrapping onto a second row rather than hiding behind "•••", except on
+            // phones, where wrapping takes four rows); underline, strikethrough, colours and indents are in the Format menu
+            toolbar: 'undo redo | blocks | bold italic | link | bullist numlist | image media table | alignleft aligncenter alignright | removeformat | code fullscreen',
+            toolbar_mode: window.matchMedia('(max-width: 640px)').matches ? 'sliding' : 'wrap',
             block_formats: 'Paragraph=p; Heading 2=h2; Heading 3=h3; Heading 4=h4; Heading 5=h5; Heading 6=h6; Preformatted=pre; Div=div',
             // Keep imported HTML exactly as authored: any element, any attribute (class, style, data-*, ids…)
             valid_elements: '*[*]',
@@ -255,6 +257,16 @@
                 if (typeof options.setup === 'function') options.setup(ed);
             }
         };
+        if (options.grow) {
+            // long content: the editor is as tall as its text (one scroll bar, the page's) and the toolbar sticks under the top bar
+            config.plugins += ' autoresize';
+            config.min_height = config.height;
+            config.autoresize_bottom_margin = 24;
+            config.autoresize_overflow_padding = 16; // the plugin sets the side padding of the editing area (default 1px)
+            config.resize = false;
+            config.toolbar_sticky = true;
+            config.toolbar_sticky_offset = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h'), 10) || 0;
+        }
         Object.keys(options.config || {}).forEach(function (k) { config[k] = options.config[k]; });
         return window.tinymce.init(config).then(function (editors) { return editors[0] || null; });
     }

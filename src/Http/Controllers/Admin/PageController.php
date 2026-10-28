@@ -7,7 +7,9 @@ use Pine\Commerce\Http\Controllers\Controller;
 use Pine\Commerce\Http\Requests\Admin\Content\ContentBulkRequest;
 use Pine\Commerce\Http\Requests\Admin\Content\PageRequest;
 use Pine\Commerce\Models\Page;
+use Pine\Commerce\Models\Redirect;
 use Pine\Commerce\Services\Admin\PageBlocks;
+use Pine\Commerce\View\Components\PageContent;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -158,8 +160,21 @@ class PageController extends Controller
         $homeTaken = Page::where(fn ($q) => $q->where('template', 'home')->orWhere('path', ''))
             ->when($page->exists, fn ($q) => $q->whereKeyNot($page->id))->exists();
 
+        $tidied = PageContent::tidyForEditor($page->content);
+        // a redirect from this address sends visitors elsewhere while the page is a draft (a published page wins)
+        $redirect = $page->exists && $page->path !== '' && commerce_feature('redirects', false)
+            ? Redirect::where('from_path', strtolower($page->path))->where('is_active', true)->first()
+            : null;
+        $redirectPage = $redirect && ! preg_match('#^https?://#i', $redirect->to_url)
+            ? Page::where('path', trim((string) parse_url($redirect->to_url, PHP_URL_PATH), '/'))->whereKeyNot($page->id)->first(['id', 'title'])
+            : null;
+
         return view('commerce::admin.pages.form', [
             'page' => $page,
+            'content' => $tidied ?? $page->content,
+            'tidied' => $tidied !== null,
+            'redirect' => $redirect,
+            'redirectPage' => $redirectPage,
             'blocks' => $blocks,
             'extra' => PageBlocks::extra($blocks, $page->template),
             'parents' => $parents,

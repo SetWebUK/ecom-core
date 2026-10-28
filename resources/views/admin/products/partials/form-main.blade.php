@@ -33,7 +33,7 @@
         <x-admin.input name="subtitle" label="Subtitle" optional maxlength="255" :value="$product->subtitle" counter="120"
                        help="Short spec line shown under the name on product cards, e.g. “Intel i5 · 8GB RAM · 256GB SSD · 14-inch”." />
 
-        <x-admin.rich-editor name="short_description" label="Short description" :value="$product->short_description" height="200"
+        <x-admin.rich-editor name="short_description" label="Short description" :value="$product->short_description" height="240"
                              help="Shown next to the photos, above the Add to basket button. Keep it to a few lines." />
 
         <x-admin.rich-editor name="description" label="Description" :value="$product->description" height="480"

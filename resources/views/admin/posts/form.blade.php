@@ -26,6 +26,8 @@
         @endif
     </x-admin.page-header>
 
+    @includeWhen($tidied, 'commerce::admin.partials.legacy-code-tidied', ['noun' => 'post'])
+
     <x-admin.form id="post-form" :action="$editing ? route('admin.posts.update', $post) : route('admin.posts.store')" :method="$editing ? 'PUT' : 'POST'" dirty :save-label="$saveLabel">
         <div class="layout" x-data="postForm(@js($initial))">
             <div class="layout__main">
@@ -34,7 +36,7 @@
                         <x-admin.input name="title" label="Title" :value="$post->title" required maxlength="255" :autofocus="! $editing" />
                         <div x-data="{ changed: false }" @input="if ($event.target.name === 'content') changed = true">
                             <input type="hidden" name="content_changed" :value="changed ? 1 : 0" value="0">
-                            <x-admin.rich-editor name="content" label="Content" :value="$post->content" height="560" :content-css="$contentCss" body-class="single single-post" />
+                            <x-admin.rich-editor name="content" label="Content" :value="$content" height="560" grow :content-css="$contentCss" body-class="single single-post" />
                         </div>
                         <x-admin.textarea name="excerpt" label="Excerpt" :value="$post->excerpt" rows="3" counter="300" optional
                                           help="Short summary for the blog list and Google. Leave blank to use the start of the post." />

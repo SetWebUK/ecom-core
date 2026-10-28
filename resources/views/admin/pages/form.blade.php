@@ -52,6 +52,22 @@
         </x-admin.callout>
     @endif
 
+    @if ($redirect)
+        @php($target = $redirectPage ? $redirectPage->title.' ('.$redirect->to_url.')' : $redirect->to_url)
+        @if ($page->status === 'published')
+            <x-admin.callout type="info" class="mb-4" title="This page is shown instead of a redirect">
+                A redirect sends /{{ $page->path }}/ to {{ $target }}, but this page is published, so visitors see this page. Unpublish it to use the redirect again.
+            </x-admin.callout>
+        @else
+            <x-admin.callout type="warning" class="mb-4" :title="'Visitors to this address are sent to '.$target">
+                This page is a draft, and a redirect sends anyone who visits /{{ $page->path }}/ to {{ $redirect->to_url }}. Changes here won’t be seen there.
+                @if ($redirectPage)<a href="{{ route('admin.pages.edit', $redirectPage) }}">Edit “{{ $redirectPage->title }}”</a> instead if that’s the page you meant.@endif
+            </x-admin.callout>
+        @endif
+    @endif
+
+    @includeWhen($tidied, 'commerce::admin.partials.legacy-code-tidied', ['noun' => 'page'])
+
     <x-admin.form id="page-form" :action="$editing ? route('admin.pages.update', $page) : route('admin.pages.store')" :method="$editing ? 'PUT' : 'POST'" dirty :save-label="$saveLabel">
         <div class="layout" x-data="pageForm(@js($initial))">
             <div class="layout__main">
@@ -61,7 +77,7 @@
                         @unless ($isHome)
                             <div x-show="template !== 'home'" x-data="{ changed: false }" @input="if ($event.target.name === 'content') changed = true">
                                 <input type="hidden" name="content_changed" :value="changed ? 1 : 0" value="0">
-                                <x-admin.rich-editor name="content" label="Content" :value="$page->content" height="620" :content-css="$contentCss"
+                                <x-admin.rich-editor name="content" label="Content" :value="$content" height="620" grow :content-css="$contentCss"
                                                      :body-class="'page-template-default page elementor-page'.($page->wp_id ? ' page-id-'.$page->wp_id.' elementor-page-'.$page->wp_id : '')" />
                                 @if ($page->template === 'blog')
                                     <p class="field__help mt-2">Put <code class="mono">[{{ collect(\Pine\Commerce\Commerce::shortcodes()->tagsFor('blog_index'))->last() }}]</code> where the grid of blog posts should appear.</p>
