@@ -17,15 +17,16 @@ Online shop built on **Pine Commerce** (`pine/commerce`, Laravel 13 + Blade + Al
 
 | Mode | composer.json | Use |
 |---|---|---|
-| **VCS** (production) | `{"type": "vcs", "url": "https://github.com/SetWebUK/ecom-core.git"}` + `"pine/commerce": "^1.2"` | staging + live servers; `composer.lock` pins the exact release |
+| **VCS** (production) | `{"type": "vcs", "url": "https://github.com/SetWebUK/ecom-core.git", "no-api": true}` + `"pine/commerce": "^1.2"` | staging + live servers; `composer.lock` pins the exact release |
 | **path** (development) | `{"type": "path", "url": "../ecom-core", "options": {"symlink": true}}` + `"pine/commerce": "*@dev"` | working on the platform and this client at the same time – never committed |
 
 To switch modes, edit the two places in `composer.json` by hand (the `repositories` entry and the `pine/commerce`
 constraint – `composer config` mangles array-style repositories), then run `composer update pine/commerce` and
 commit `composer.json` + `composer.lock`. Commit only the VCS mode.
 
-`SetWebUK/ecom-core` is public: the HTTPS URL needs no credentials (an optional read-only token in
-`~/.composer/auth.json` / `COMPOSER_AUTH` lifts GitHub's API rate limit – never commit `auth.json`). With the SSH URL
+`SetWebUK/ecom-core` is public: the HTTPS URL needs no credentials. `"no-api": true` makes composer read the tags with
+git instead of the GitHub API, whose 60 calls an hour per server IP run out on shared servers (keep it; a read-only
+token in `~/.composer/auth.json` / `COMPOSER_AUTH` also works – never commit `auth.json`). With the SSH URL
 (`git@github.com:SetWebUK/ecom-core.git`) the server needs a deploy key; if you install from a **private** fork over SSH
 only, also add `"preferred-install": {"pine/commerce": "source", "*": "dist"}` to `config` so composer clones over git
 instead of downloading a zip through the GitHub API (which needs a token). Steps: `docs/PLAYBOOK.md` part 1.6 in the

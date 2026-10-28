@@ -59,8 +59,17 @@ class NewClientCommandTest extends TestCase
             ->expectsOutputToContain('VCS')
             ->assertSuccessful();
         $composer = json_decode(File::get($this->target.'/composer.json'), true);
-        $this->assertSame([['type' => 'vcs', 'url' => 'git@github.com:SetWebUK/ecom-core.git']], $composer['repositories']);
+        $this->assertSame([['type' => 'vcs', 'url' => 'git@github.com:SetWebUK/ecom-core.git', 'no-api' => true]], $composer['repositories'],
+            'GitHub is read with git, not the rate-limited API');
         $this->assertSame('^1.0', $composer['require']['pine/commerce']);
+    }
+
+    public function test_a_repository_outside_github_keeps_composers_defaults(): void
+    {
+        $this->artisan('commerce:new-client', ['path' => $this->target, '--name' => 'Acme', '--repo' => 'https://git.example.com/pine/ecom-core.git'])
+            ->assertSuccessful();
+        $composer = json_decode(File::get($this->target.'/composer.json'), true);
+        $this->assertSame([['type' => 'vcs', 'url' => 'https://git.example.com/pine/ecom-core.git']], $composer['repositories']);
     }
 
     public function test_path_option_and_custom_constraint(): void

@@ -89,7 +89,7 @@ cat >> "$TMP/skeleton/README.md" <<EOF
 
 This is the **base system** of Pine Commerce: a plain Laravel 13 application that pulls in the platform,
 [\`pine/commerce\`](https://github.com/SetWebUK/ecom-core), through composer (\`composer.json\` → \`repositories\`:
-\`{"type": "vcs", "url": "$REPO"}\`, \`"pine/commerce": "$CONSTRAINT"\`). The shop itself – storefront, back office,
+\`{"type": "vcs", "url": "$REPO", "no-api": true}\`, \`"pine/commerce": "$CONSTRAINT"\`). The shop itself – storefront, back office,
 default theme, WordPress importer – lives in \`vendor/pine/commerce\` and is upgraded with
 \`composer update pine/commerce\`. Everything a client changes lives in this app: \`config/commerce*.php\`,
 \`themes/\`, \`app/Providers/ClientServiceProvider.php\`, \`app/Import/\`.
@@ -108,8 +108,8 @@ Try it locally (SQLite, PHP 8.3+):
 ### Installing pine/commerce: public HTTPS (default) or SSH
 
 - **HTTPS** (\`https://github.com/SetWebUK/ecom-core.git\`, the default): the repository is public, so no credentials
-  are needed and composer downloads release zips (\`preferred-install: dist\`). Add a read-only GitHub token to
-  \`~/.composer/auth.json\` only if you hit GitHub's anonymous API rate limit.
+  are needed and composer downloads release zips (\`preferred-install: dist\`). \`"no-api": true\` reads the tags with
+  git, so GitHub's API limit (60 calls an hour per server IP) never applies.
 - **SSH** (\`git@github.com:SetWebUK/ecom-core.git\`): needs a key GitHub accepts (deploy key or your own). For a
   **private** copy of the core reached over SSH only, also set
   \`"config": {"preferred-install": {"pine/commerce": "source", "*": "dist"}}\` so composer clones over git instead

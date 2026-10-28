@@ -223,7 +223,23 @@ class UpdateRunnerTest extends TestCase
         $update = $this->approved();
         $this->assertFalse(app(UpdateRunner::class)->run($update));
         $update->refresh();
-        $this->assertSame('composer update exited with code 100: Could not authenticate against github.com', (string) $update->error);
+        $this->assertStringStartsWith('composer update exited with code 100: Could not authenticate against github.com – GitHub refused composer',
+            (string) $update->error);
+        $this->assertStringContainsString('"no-api": true', (string) $update->error, 'the error says how to fix it');
+        $this->assertStringContainsString('WARNING: composer reads https://github.com/SetWebUK/ecom-core.git through the GitHub API', (string) $update->log);
+    }
+
+    public function test_no_rate_limit_warning_once_composer_reads_github_with_git(): void
+    {
+        $composer = json_decode(File::get($this->project.'/composer.json'), true);
+        $composer['repositories'][0]['no-api'] = true;
+        File::put($this->project.'/composer.json', json_encode($composer, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        $this->runner->on('composer-test update', fn () => new ProcessResult(1, "In Git.php line 659:\n  Failed to clone https://github.com/SetWebUK/ecom-core.git"));
+        $update = $this->approved();
+        $this->assertFalse(app(UpdateRunner::class)->run($update));
+        $update->refresh();
+        $this->assertSame('composer update exited with code 1: Failed to clone https://github.com/SetWebUK/ecom-core.git', (string) $update->error);
+        $this->assertStringNotContainsString('GitHub API', (string) $update->log);
     }
 
     public function test_only_one_update_runs_at_a_time(): void

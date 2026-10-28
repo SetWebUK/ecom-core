@@ -111,8 +111,10 @@ If an old WordPress install shares the project directory, its files must be git-
 ### 1.6 Composer access to repo A on servers
 
 Repo A is **public**: with the HTTPS URL (`https://github.com/SetWebUK/ecom-core.git`) composer needs no credentials.
-Anonymous GitHub API requests are rate-limited (60 per hour per IP), which is plenty for `composer update
-pine/commerce`; on busy CI runners add a read-only token (below) to lift the limit. Never commit credentials: they
+Anonymous GitHub API requests are limited to 60 an hour per IP, and on a shared server other sites use them up, so
+client `composer.json` files add `"no-api": true` to the repository (`commerce:new-client` writes it): composer then
+reads the tags with git and needs no API calls. Without it, composer falls back to an SSH clone when the limit runs
+out, which fails on a server without a key. A read-only token (below) also lifts the limit. Never commit credentials: they
 live in the server user's home directory.
 
 **Token (optional, also for a private fork).** A *fine-grained personal access token* (GitHub › Settings › Developer

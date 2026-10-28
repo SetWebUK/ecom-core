@@ -139,6 +139,10 @@ class UpdateRunner
         if ($repository['type'] === 'path') {
             throw new RuntimeException('pine/commerce comes from a path repository – update a development checkout with git, not from the admin.');
         }
+        if ($this->readsGithubApi($repository)) {
+            $this->log('WARNING: composer reads '.$repository['url'].' through the GitHub API (60 calls an hour per server IP without a token).'
+                .' Add "no-api": true to that repository in composer.json so it uses git instead (docs/UPGRADING.md, 1.9.1).');
+        }
         $installed = $this->project->installedVersion();
         $to = (string) $this->update->to_version;
         if ($installed !== $this->update->from_version) {
@@ -236,7 +240,16 @@ class UpdateRunner
             $command[] = '--no-dev';
         }
         $this->state['composer'] = true;
-        $this->command('composer update', $command, (int) config('commerce.updater.timeout', 900));
+        try {
+            $this->command('composer update', $command, (int) config('commerce.updater.timeout', 900));
+        } catch (RuntimeException $e) {
+            // GitHub refusing the API (rate limit) makes composer fall back to an SSH clone, which fails without a key
+            if (str_contains($e->getMessage(), 'github.com') && $this->readsGithubApi($this->project->repository())) {
+                throw new RuntimeException($e->getMessage().' – GitHub refused composer, usually its limit of 60 API calls an hour per server IP:'
+                    .' add "no-api": true to the pine/commerce repository in composer.json (docs/UPGRADING.md, 1.9.1).', 0, $e);
+            }
+            throw $e;
+        }
         $installed = $this->project->installedVersion();
         if ($installed !== $this->update->to_version) {
             throw new RuntimeException("composer finished, but pine/commerce is {$installed} instead of {$this->update->to_version}.");
@@ -424,6 +437,13 @@ class UpdateRunner
     protected function failing(array $checks): array
     {
         return array_keys(array_filter($checks, fn ($status) => $status === 'fail'));
+    }
+
+    /** A GitHub repository in composer.json without "no-api": true (composer then needs the rate-limited GitHub API). */
+    protected function readsGithubApi(array $repository): bool
+    {
+        return $repository['source'] === 'composer.json' && ReleaseSource::github($repository['url']) !== null
+            && ! ($repository['no_api'] ?? false);
     }
 
     protected function runDirectory(): string

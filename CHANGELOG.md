@@ -9,6 +9,25 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-10-28
+
+Updates no longer depend on GitHub's API rate limit.
+
+### Fixed
+- `commerce:new-client` (and so the client skeleton) adds `"no-api": true` to a GitHub `vcs` repository. Composer then
+  reads the release tags with git instead of the GitHub API, which allows 60 calls an hour per server IP without a
+  token. On a shared server that limit ran out, composer fell back to an SSH clone with no key, and Admin › Updates
+  failed with "Could not authenticate against github.com" or "Permission denied (publickey)". Release zips download
+  as before.
+- Admin › Updates: the pre-flight log warns when `composer.json` still reads GitHub through the API, and a failed
+  `composer update` that mentions github.com says how to fix it.
+
+### Client actions
+- Existing sites: add `"no-api": true` by hand to the pine/commerce entry under `repositories` in `composer.json`, e.g.
+  `{"type": "vcs", "url": "https://github.com/SetWebUK/ecom-core.git", "no-api": true}`, and commit it
+  (`composer config` mangles array-style repositories). `composer validate` then says the lock file is out of date
+  until the next `composer update pine/commerce` rewrites it; that is harmless.
+
 ## [1.9.0] - 2026-10-28
 
 The back office in the shop's own brand: the sidebar, buttons and charts take the storefront theme's colours and the
