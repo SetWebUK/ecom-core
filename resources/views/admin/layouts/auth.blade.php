@@ -15,6 +15,7 @@
     <link rel="icon" href="{{ commerce_admin_brand('favicon') }}" sizes="32x32">
     <link rel="preload" href="{{ commerce_admin_asset('vendor/inter/inter-latin-wght-normal.woff2', false) }}" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="{{ $assetVersion('css/admin.css') }}">
+    <style>{!! \Pine\Commerce\Services\Admin\AdminBrand::css() !!}</style>
     <script defer src="{{ $assetVersion('js/admin.js') }}"></script>
     <script defer src="{{ commerce_admin_asset('vendor/alpinejs/alpine-3.17.4.min.js', false) }}"></script>
 </head>
@@ -22,7 +23,11 @@
     <main class="auth">
         <div class="auth__card">
             <div class="auth__brand">
-                <img src="{{ commerce_admin_brand('logo') }}" alt="{{ $storeName }}" width="171" height="44">
+                @if ($shopLogo = \Pine\Commerce\Services\Admin\AdminBrand::logo())
+                    <img src="{{ $shopLogo }}" alt="{{ $storeName }}" class="auth__logo">
+                @else
+                    <img src="{{ commerce_admin_brand('logo') }}" alt="{{ $storeName }}" width="171" height="44">
+                @endif
             </div>
             <div class="auth__panel">
                 @yield('content')

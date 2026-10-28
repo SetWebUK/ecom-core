@@ -88,7 +88,7 @@
                 </div>
             </x-slot:actions>
             <div class="legend mb-2" aria-hidden="true">
-                <span class="legend__item"><span class="legend__swatch" style="background:#1976d2"></span>{{ $range === 'today' ? 'Today' : 'Last '.$config['days'].' days' }}</span>
+                <span class="legend__item"><span class="legend__swatch" style="background:var(--primary)"></span>{{ $range === 'today' ? 'Today' : 'Last '.$config['days'].' days' }}</span>
                 <span class="legend__item"><span class="legend__swatch" style="background:repeating-linear-gradient(90deg,#9a9a9a 0 4px,transparent 4px 7px);height:2px;border-radius:0"></span>{{ ucfirst($compare) }}</span>
             </div>
             <div class="chart-box">
@@ -313,7 +313,7 @@
                             data: {
                                 labels: data.labels,
                                 datasets: [
-                                    { label: 'This period', data: revenue ? data.revenue : data.orders, borderColor: '#1976d2', backgroundColor: 'rgba(25,118,210,0.08)', fill: 'origin', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, pointHitRadius: 12, tension: 0.3 },
+                                    { label: 'This period', data: revenue ? data.revenue : data.orders, borderColor: Admin.color('--primary'), backgroundColor: Admin.color('--primary', 0.08), fill: 'origin', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, pointHitRadius: 12, tension: 0.3 },
                                     { label: 'Previous period', data: revenue ? data.previousRevenue : data.previousOrders, borderColor: '#9a9a9a', borderDash: [4, 3], borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 3, pointHitRadius: 12, fill: false, tension: 0.3 }
                                 ]
                             },

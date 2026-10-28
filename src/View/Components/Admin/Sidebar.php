@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\View\Component;
 use Illuminate\View\View;
 use Pine\Commerce\Extensions\AdminMenu;
+use Pine\Commerce\Services\Admin\AdminBrand;
 use Pine\Commerce\Support\Features;
 use Throwable;
 
@@ -21,6 +22,11 @@ use Throwable;
  */
 class Sidebar extends Component
 {
+    /** Core routes that start a menu section, and the section headings. */
+    protected const GROUP_STARTS = ['admin.dashboard' => 'store', 'admin.pages.index' => 'website'];
+
+    protected const GROUP_LABELS = ['website' => 'Website', 'more' => 'More'];
+
     public function render(): View
     {
         $counts = $this->counts();
@@ -46,6 +52,7 @@ class Sidebar extends Component
             ]),
             $e('Customers', 'user-group', 'admin.customers.index', ['admin.customers.*']),
             $e('Discounts', 'receipt-percent', 'admin.coupons.index', ['admin.coupons.*'], 'coupons'),
+            $e('Analytics', 'chart-bar', 'admin.reports.index', ['admin.reports.*'], 'reports'),
             $e('Content', 'document-text', 'admin.pages.index', ['admin.pages.*', 'admin.posts.*', 'admin.post-categories.*', 'admin.menus.*', 'admin.media.*', 'admin.redirects.*'], null, [
                 $e('Pages', null, 'admin.pages.index', ['admin.pages.*']),
                 $e('Blog posts', null, 'admin.posts.index', ['admin.posts.*'], 'blog'),
@@ -58,15 +65,63 @@ class Sidebar extends Component
                 $e('Form submissions', null, 'admin.form-submissions.index', ['admin.form-submissions.*'], 'contact_form', [], $counts['inbox'], 'Unread'),
                 $e('Newsletter', null, 'admin.newsletter.index', ['admin.newsletter.*'], 'newsletter'),
             ], $counts['inbox'], 'Unread form submissions'),
-            $e('Analytics', 'chart-bar', 'admin.reports.index', ['admin.reports.*'], 'reports'),
         ];
 
-        $sections = array_values(array_filter(array_map(fn (array $entry) => $this->resolveEntry($entry), $this->extend($menu))));
+        $sections = $this->labelGroups(array_values(array_filter(array_map(
+            fn (array $entry) => ($item = $this->resolveEntry($entry)) ? $item + ['group' => $entry['group']] : null,
+            $this->group($this->extend($menu))
+        ))));
 
         $settings = $this->item('Settings', 'cog-6-tooth', 'admin.settings.index', ['admin.settings.*', 'admin.staff.*', 'admin.shipping.*', 'admin.payments.*']);
 
         return view('commerce::admin.partials.sidebar', ['sections' => $sections, 'settings' => $settings, 'updates' => $this->updates(),
-            'import' => $this->import()]);
+            'import' => $this->import(), 'brand' => ['name' => AdminBrand::name(), 'logo' => AdminBrand::logo(), 'initials' => AdminBrand::initials()],
+            'create' => $this->createLinks()]);
+    }
+
+    /**
+     * Sections of the menu: the shop's daily work first (no heading), then "Website" from Content on. Client entries
+     * placed with `after:` join that entry's section; the others are listed last under "More".
+     */
+    protected function group(array $menu): array
+    {
+        $group = 'store';
+        foreach ($menu as $i => $entry) {
+            $group = match (true) {
+                isset(self::GROUP_STARTS[$entry['route']]) => self::GROUP_STARTS[$entry['route']],
+                array_key_exists('after', $entry) && $entry['after'] === null => 'more',
+                default => $group,
+            };
+            $menu[$i]['group'] = $group;
+        }
+
+        return $menu;
+    }
+
+    /** The first visible item of each section after the first carries its heading ('groupLabel'). */
+    protected function labelGroups(array $sections): array
+    {
+        $previous = null;
+        foreach ($sections as $i => $item) {
+            $sections[$i]['groupLabel'] = $previous !== null && $item['group'] !== $previous ? (self::GROUP_LABELS[$item['group']] ?? null) : null;
+            $previous = $item['group'];
+        }
+
+        return $sections;
+    }
+
+    /** Sidebar › Create: the "new …" pages this user can open. @return list<array{label:string, icon:string, url:string}> */
+    protected function createLinks(): array
+    {
+        $links = [
+            ['Order', 'inbox-stack', 'admin.orders.create', null],
+            ['Product', 'tag', 'admin.products.create', null],
+            ['Discount', 'receipt-percent', 'admin.coupons.create', 'coupons'],
+            ['Page', 'document-text', 'admin.pages.create', null],
+        ];
+
+        return array_values(array_map(fn ($l) => ['label' => $l[0], 'icon' => $l[1], 'url' => route($l[2])], array_filter($links,
+            fn ($l) => Route::has($l[2]) && ! app(AdminMenu::class)->isRemoved($l[2]) && ($l[3] === null || Features::enabled($l[3], false)))));
     }
 
     /** Admin › Updates (administrators, feature "updater"), with a badge while a newer release is available. */

@@ -48,6 +48,14 @@ Read the release notes for:
 - **theme contract** changes (new optional views, new `supports` keys) – run `php artisan commerce:theme:check`;
 - **admin view overrides** in `resources/views/vendor/commerce/…` – diff them against the new package views.
 
+### Upgrading from 1.8 to 1.9
+
+1.9 is additive: no migrations; two optional config keys (`commerce.admin.brand.color` / `accent`, default null). Run
+`composer update pine/commerce`, then `php artisan commerce:publish` (admin CSS/JS changed), then
+`php artisan optimize:clear && php artisan optimize`. Admin › Updates does all of this. The back office then takes the
+shop's theme colours and store logo; set `commerce.admin.brand.color` (or `false`) if they don't suit it. Sites
+overriding the sidebar, top bar or admin layouts should diff them. See CHANGELOG `[1.9.0]`.
+
 ### Upgrading from 1.7 to 1.8
 
 1.8 is additive: no migrations, no config keys. Run `composer update pine/commerce`, then `php artisan commerce:publish`
