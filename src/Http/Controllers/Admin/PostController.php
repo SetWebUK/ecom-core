@@ -9,6 +9,7 @@ use Pine\Commerce\Http\Requests\Admin\Content\PostRequest;
 use Pine\Commerce\Models\Post;
 use Pine\Commerce\Models\PostCategory;
 use Pine\Commerce\Models\User;
+use Pine\Commerce\View\Components\PageContent;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -139,6 +140,8 @@ class PostController extends Controller
     {
         return view('commerce::admin.posts.form', [
             'post' => $post,
+            'content' => PageContent::tidyForEditor($post->content) ?? $post->content,
+            'tidied' => PageContent::hasLegacyShortcodes($post->content),
             'categories' => PostCategory::query()->orderBy('name')->pluck('name', 'id')->all(),
             'authors' => User::query()->whereIn('role', ['admin', 'manager'])->orderBy('name')->get(['id', 'name', 'first_name', 'last_name', 'email'])
                 ->mapWithKeys(fn (User $u) => [$u->id => $u->full_name])->all(),

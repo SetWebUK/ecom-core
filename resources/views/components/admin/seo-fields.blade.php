@@ -20,7 +20,8 @@
         'title' => (string) old($titleKey, $title),
         'description' => (string) old($descriptionKey, $description),
         'fallbackTitle' => (string) $fallbackTitle,
-        'fallbackDescription' => \Illuminate\Support\Str::limit(trim(preg_replace('/\s+/', ' ', strip_tags((string) $fallbackDescription))), 300, ''),
+        // plain text as the storefront builds it: no tags, entities or shortcodes ([vc_row …], [contact_form])
+        'fallbackDescription' => \Illuminate\Support\Str::limit(\Pine\Commerce\View\Components\PageContent::excerpt((string) $fallbackDescription, 80, ''), 300, ''),
         'titleSource' => $titleSource,
         'descriptionSource' => $descriptionSource,
         'suffix' => (string) setting('seo.title_suffix', '| '.$siteName),

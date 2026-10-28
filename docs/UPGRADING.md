@@ -48,6 +48,14 @@ Read the release notes for:
 - **theme contract** changes (new optional views, new `supports` keys) – run `php artisan commerce:theme:check`;
 - **admin view overrides** in `resources/views/vendor/commerce/…` – diff them against the new package views.
 
+### Upgrading from 1.9 to 1.10
+
+1.10 is additive: no migrations, no config keys. Run `composer update pine/commerce`, then `php artisan commerce:publish`
+(admin JS changed), then `php artisan optimize:clear && php artisan optimize`. Admin › Updates does all of this. Pages
+imported with WPBakery/Impreza shortcodes then open in the editor without that code; nothing changes on the storefront
+until someone edits and saves such a page, and then only the stored HTML gets tidier. Sites overriding the page or post
+admin forms, or `components/admin/rich-editor`, should diff them. See CHANGELOG `[1.10.0]`.
+
 ### Upgrading from 1.9.0 to 1.9.1
 
 No code changes on the site. Add `"no-api": true` to the pine/commerce repository in `composer.json` (by hand, then

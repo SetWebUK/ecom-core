@@ -9,6 +9,45 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-10-28
+
+Easier page editing: imported pages open as readable text instead of the old page builder's code, and the editor's
+everyday buttons are always on screen.
+
+### Added
+- **Old page-builder code hidden in the editor.** Pages and blog posts imported with WPBakery / Impreza shortcodes
+  (`[vc_row bg_type=”no_bg” …]`, `[vc_column_text]`, `[us_text]` …) open in Content › Pages / Blog posts as the
+  HTML customers already see (`PageContent::tidyForEditor()`, the storefront's `cleanLegacyShortcodes()`), with a
+  note saying so. The tidy version is stored the first time the content is changed and saved; the storefront output
+  is the same before and after. Saving only the title or SEO fields leaves the stored content alone, as before.
+- **Redirect notice on a page.** When an active redirect rule starts at a page's own address, the page form says
+  so: a draft page is skipped and visitors are sent to the target (with a link to edit that page instead), and a
+  published page is shown instead of the redirect. Typical case: an imported copy of the contact page whose old
+  address now redirects to `/contact/`.
+
+### Changed
+- **Rich-text toolbar** (`<x-admin.rich-editor>`, everywhere): only the everyday buttons (paragraph/heading, bold,
+  italic, link, bullet and numbered lists, image, video, table, alignment, clear formatting, source code, full
+  screen), wrapping onto a second row instead of hiding behind "•••" (phones keep one row with "•••"). Underline,
+  strikethrough, colours and indents are in the Format menu, visual blocks in View. The product short description
+  editor is 40px taller to make up for the second row.
+- Page and blog post content editors **grow with the text** (new `grow` prop / `Admin.editor({grow: true})`:
+  TinyMCE `autoresize`, from the given `height` up), so the page has a single scroll bar, and the toolbar stays
+  under the top bar while scrolling.
+- `PageContent::cleanLegacyShortcodes()` unpacks the old builder's encoded blocks instead of leaving their code as
+  text: `[vc_raw_html]` / `[us_html]` (base64 of URL-encoded HTML) become that HTML, and `[vc_gmaps]` becomes its
+  Google Maps iframe (in `<div class="wp-legacy-map">`; only `google.*/maps/` embeds are kept).
+
+### Fixed
+- The Google preview in the SEO fields (pages, posts, products, categories) showed shortcode code and HTML entities
+  (`[vc_row bg_type=&#8221;no_bg&#8221;…`) as the description when the meta description was blank. It now uses the
+  same plain text as the storefront (`PageContent::excerpt()`).
+- `PageContent::excerpt()` (storefront meta descriptions, cards) no longer runs words together across block tags
+  (`<h4>Store</h4>Unit 2` read "StoreUnit 2").
+
+### Client actions
+- None. Run `php artisan commerce:publish` after updating (admin JS changed); Admin › Updates does it.
+
 ## [1.9.1] - 2026-10-28
 
 Updates no longer depend on GitHub's API rate limit.
