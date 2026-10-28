@@ -59,6 +59,10 @@
                         <div x-show="auto === '1'" @if ($initial['auto'] !== '1') x-cloak @endif>
                             <x-admin.input name="label" label="Name customers see" maxlength="120" :value="$initial['label']" x-model="label"
                                            help="In the basket and on the product pages it covers, e.g. “Any 2 tees for £25” or “20% off knitwear”." />
+                            <div class="mt-4" x-show="type === 'percent' || type === 'fixed_product'" @if (! in_array($initial['type'], \Pine\Commerce\Models\Coupon::PRICE_TYPES, true)) x-cloak @endif>
+                                <x-admin.checkbox name="show_in_price" label="Show the reduced price in the shop" :checked="(bool) old('show_in_price', $coupon->show_in_price)" error="show_in_price"
+                                                  help="Product listings and pages show the price after this discount as a was/now price, like a sale, while customers browse. For a percentage or an amount off each item, with no spend limits, customer list or uses per customer." />
+                            </div>
                         </div>
                         <x-admin.field label="Code" for="f-code" error="code"
                                        help="Customers type this in the basket or at checkout. Letters, numbers and dashes – capitals don’t matter. For an automatic discount it is only a reference for reports (left blank, it is made from the name).">
