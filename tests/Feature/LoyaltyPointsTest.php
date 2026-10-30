@@ -132,8 +132,8 @@ class LoyaltyPointsTest extends TestCase
         $this->assertFalse(Loyalty::canSpend());
         $this->assertSame(0, Loyalty::usable($bob->id, 30.0));
         $this->postJson(route('cart.points'), ['context' => 'checkout'])->assertStatus(422)->assertJson(['ok' => false]);
-        $this->get(route('checkout'))->assertOk()->assertSee('You have 600 points. Using them at checkout is paused for now', false)->assertDontSee('Use my points');
-        $this->get(route('account.points'))->assertOk()->assertSee('paused for now')->assertDontSee('at checkout.</li>', false);
+        $this->get(route('checkout'))->assertOk()->assertSee('You have 600 points. Using them at checkout is paused for now – you still earn points on this order.', false)->assertDontSee('Use my points')->assertDontSee('@endif', false);
+        $this->get(route('account.points'))->assertOk()->assertSee('paused for now')->assertSee('40 points = £1.00 off.</li>', false)->assertDontSee('@endif', false);
 
         $this->checkout()->assertOk();
         $order = Order::latest('id')->first();

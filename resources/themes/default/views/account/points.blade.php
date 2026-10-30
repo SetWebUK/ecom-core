@@ -18,7 +18,7 @@
 </div>
 <ul class="points-rules">
     <li>Earn {{ rtrim(rtrim(number_format($L::earnRate(), 2), '0'), '.') }} {{ \Illuminate\Support\Str::plural(rtrim($label, 's'), (int) ceil($L::earnRate())) }} for every £1 you spend, added when your order is paid.</li>
-    <li>{{ number_format($L::redeemRate()) }} {{ $label }} = {{ money(1) }} off@if ($L::canSpend()) – choose “Use my {{ $label }}” at checkout@endif.</li>
+    <li>{{ number_format($L::redeemRate()) }} {{ $label }} = {{ money(1) }} off{{ $L::canSpend() ? ' – choose “Use my '.$label.'” at checkout' : '' }}.</li>
     @if ($L::signupPoints() > 0)<li>New accounts get {{ number_format($L::signupPoints()) }} {{ $label }} to start with.</li>@endif
 </ul>
 @if ($history->isNotEmpty())

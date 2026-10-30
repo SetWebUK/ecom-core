@@ -47,7 +47,7 @@
                 @endif
             </div>
         @elseif ($pointsBalance > 0 && ! $L::canSpend())
-            <p class="points-box points-box--note muted">You have {{ number_format($pointsBalance) }} {{ $L::label() }}. Using them at checkout is paused for now@if ($L::earnRate() > 0) – you still earn {{ $L::label() }} on this order@endif.</p>
+            <p class="points-box points-box--note muted">You have {{ number_format($pointsBalance) }} {{ $L::label() }}. Using them at checkout is paused for now{{ $L::earnRate() > 0 ? ' – you still earn '.$L::label().' on this order' : '' }}.</p>
         @elseif ($pointsBalance > 0)
             <p class="points-box points-box--note muted">You have {{ number_format($pointsBalance) }} {{ $L::label() }}@if ($L::minRedeem() > $pointsBalance) – you can use them from {{ number_format($L::minRedeem()) }}@endif.</p>
         @endif
