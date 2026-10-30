@@ -62,10 +62,10 @@ class CatalogController extends Controller
             'category' => $category,
             'baseUrl' => $category->url,
             'heading' => $category->name,
-            'title' => $category->meta_title ?: Seo::title($category->name.' Archives'),
-            // only the default "%term% Archives %page% %sep% %sitename%" title carries the page number
-            'pagedTitle' => ! $category->meta_title || $category->meta_title === Seo::title($category->name.' Archives')
-                ? fn (int $n, int $last) => Seo::title($category->name.' Archives | Page '.$n.' of '.$last) : null,
+            'title' => $category->meta_title ?: Seo::title($default = $this->categoryTitle($category->name)),
+            // only the default title (Settings › SEO › Category page title) carries the page number
+            'pagedTitle' => ! $category->meta_title || $category->meta_title === Seo::title($default ??= $this->categoryTitle($category->name))
+                ? fn (int $n, int $last) => Seo::title($default.' | Page '.$n.' of '.$last) : null,
             'description' => $category->meta_description ?: Text::plain($category->description), // Rank Math %term_description% (untruncated)
             'bodyClass' => 'archive tax-product_cat term-'.$category->slug.' term-'.$termId.' woocommerce woocommerce-page woocommerce-no-js',
             'breadcrumbs' => $crumbs,
@@ -184,5 +184,13 @@ class CatalogController extends Controller
         $query = $request->getQueryString();
 
         return $query ? $url.'?'.$query : $url;
+    }
+
+    /** A category page's default title before the Title ending: Settings › SEO › Category page title, "%name% Archives" (WordPress/Yoast) by default, "%name%" as Rank Math. */
+    protected function categoryTitle(string $name): string
+    {
+        $pattern = trim((string) setting('seo.category_title', '%name% Archives')) ?: '%name% Archives';
+
+        return trim(str_replace('%name%', $name, $pattern));
     }
 }

@@ -532,6 +532,8 @@ class StoreSettings
                     'drives' => 'Site name shown by Google and in shared links.'],
                 ['key' => 'seo.title_suffix', 'label' => 'Title ending', 'type' => 'text', 'default' => '| '.setting('seo.site_name', setting('store.name', config('app.name'))), 'max' => 80,
                     'drives' => 'Added after every page title, e.g. “Summer Sale | Your Store”.'],
+                ['key' => 'seo.category_title', 'label' => 'Category page title', 'type' => 'text', 'default' => '%name% Archives', 'max' => 120,
+                    'drives' => 'Title of category pages without their own SEO title, before the title ending. %name% is the category name: “%name% Archives” as WordPress and Yoast, “%name%” as Rank Math.'],
                 ['key' => 'seo.default_description', 'label' => 'Default meta description', 'type' => 'textarea', 'rows' => 2, 'max' => 320,
                     'drives' => 'Used for pages that have no description of their own.'],
                 ['key' => 'seo.default_image', 'label' => 'Default sharing image', 'type' => 'image',

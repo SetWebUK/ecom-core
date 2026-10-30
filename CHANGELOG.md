@@ -55,6 +55,9 @@ can be saved again.
   (value, currency, SKUs, the order number as `eventID`). The Google Ads tag loads through gtag.js under Consent Mode
   and counts each paid order once, with its value and order number. The cookie banner's "auto" mode shows when either
   is set. The tracking head moved to `partials.tracking` (used by `layouts.app` and `checkout.layout`).
+- **Settings › SEO › Category page title** (`seo.category_title`): the default title of category pages without their
+  own SEO title, `%name% Archives` (WordPress / Yoast, as before) or e.g. `%name%` (Rank Math), before the title ending.
+  Later pages of a category keep "| Page n of m".
 - **`MAIL_MAILER=smtp2go`**: email through SMTP2GO's web API (`Mail\Support\Smtp2GoTransport`) with `SMTP2GO_API_KEY`
   (a key allowed to send emails; config `commerce.mail.smtp2go`). Attachments such as invoice PDFs, inline images,
   Cc / Bcc, Reply-To and `X-` / `List-Unsubscribe` headers are sent; a refused message throws like a failed SMTP send.
