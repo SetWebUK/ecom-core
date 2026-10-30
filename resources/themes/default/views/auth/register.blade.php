@@ -1,5 +1,6 @@
 {{--
     /my-account/register/: create an account (only when registration is enabled). $registration (always true), $redirect.
+    ?email= pre-fills the email (e.g. from a "create an account" box elsewhere); with loyalty on, the lead names the welcome points.
     POST route('register'): email, password, first_name, last_name (optional), redirect. Validation errors return here.
 --}}
 @extends('auth.partials.shell')
@@ -9,7 +10,12 @@
 @section('auth_card')
     <header class="auth-card__head">
         <h1 class="auth-card__title">Create an account</h1>
-        <p class="auth-card__lead">Track orders, save your addresses and check out faster.</p>
+        @php($L = \Pine\Commerce\Services\Loyalty\Loyalty::class)
+        @if ($L::enabled() && $L::signupPoints() > 0)
+            <p class="auth-card__lead">Get {{ number_format($L::signupPoints()) }} {{ $L::label() }} – worth {{ money($L::value($L::signupPoints())) }} off your first order – then track orders, save your addresses and check out faster.</p>
+        @else
+            <p class="auth-card__lead">Track orders, save your addresses and check out faster.</p>
+        @endif
     </header>
 
     @if ($errors->any())
@@ -37,7 +43,7 @@
         </div>
         <div class="field auth-field {{ $errors->has('email') ? 'is-invalid' : '' }}">
             <label for="reg_email">Email address <span class="req" aria-hidden="true">*</span></label>
-            <input type="email" name="email" id="reg_email" autocomplete="email" value="{{ old('email') }}" required aria-required="true" maxlength="190" autocapitalize="off" spellcheck="false"
+            <input type="email" name="email" id="reg_email" autocomplete="email" value="{{ old('email', is_string($e = request()->query('email')) ? mb_substr($e, 0, 190) : '') }}" required aria-required="true" maxlength="190" autocapitalize="off" spellcheck="false"
                 @error('email') aria-invalid="true" aria-describedby="reg_email-error" @enderror>
             @error('email')<p class="field__error" id="reg_email-error">{{ preg_replace('/^Error:\s*/', '', $message) }}</p>@enderror
         </div>
