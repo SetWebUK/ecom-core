@@ -45,6 +45,14 @@ pictures, buttons, reviews, questions and live products, in the shop's own colou
 - Admin routes `admin.pages.design` (GET/PUT/DELETE `pages/{page}/design`) and `admin.pages.design.css` (the theme
   colours and fonts for the canvas).
 
+### Fixed
+- **Products imported through the WooCommerce REST API can be saved again.** The API shows a variation that has no
+  SKU of its own with its parent's SKU, and the importer stored that copy on every size, so the admin refused to save
+  the product ("The SKU … is used more than once"). The importer now leaves such variations without a SKU, and
+  migration `2026_10_30_000100_clear_copied_variant_skus` clears the copies already imported. Orders, emails and
+  reports fall back to the product's SKU, as WooCommerce did. Imports read straight from the WordPress database were
+  not affected.
+
 ### Theme contract
 - New optional view **`page.designed`** → `pages.designed` (falls back to `pages.full-width`, then `pages.default`,
   which get the same variables). The default theme adds `pages/designed.blade.php`, `partials/product-grid.blade.php`
@@ -52,6 +60,8 @@ pictures, buttons, reviews, questions and live products, in the shop's own colou
 
 ### Migrations
 - `2026_10_28_000200_add_design_to_pages` (additive: three nullable long-text columns on `pages`).
+- `2026_10_30_000100_clear_copied_variant_skus` (data: clears a variation's SKU where it equals its product's; not
+  reversible, the values were copies).
 
 ### Client actions
 - None beyond the usual: `php artisan migrate`, `commerce:publish`, `commerce:theme:publish` (Admin › Updates runs

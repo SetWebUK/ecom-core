@@ -497,6 +497,11 @@ trait ImportsCatalog
         $rows = [];
         foreach ($variations as $v) {
             $mapped = ApiMap::variation($v, $termSlug, $this->attributeSlugs ?? []);
+            // The API shows a variation without its own SKU with the parent's (WooCommerce SKUs are unique, so a match
+            // is never the variation's own); stored on every size, the admin refused to save the product.
+            if ($mapped['meta']['_sku'] !== '' && $mapped['meta']['_sku'] === (string) ($p['sku'] ?? '')) {
+                $mapped['meta']['_sku'] = '';
+            }
             $image = $mapped['image'] ? $this->image($entity, $remoteId.'/'.$mapped['wp_id'], $mapped['image']) : null;
             $row = ProductRows::variationRow(['wp_id' => $mapped['wp_id'], 'product_id' => 0, 'status' => $mapped['status'],
                 'menu_order' => $mapped['menu_order'], 'date_gmt' => $mapped['date_gmt'], 'modified_gmt' => $mapped['modified_gmt'],

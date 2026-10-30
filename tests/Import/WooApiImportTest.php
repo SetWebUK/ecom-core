@@ -336,6 +336,20 @@ class WooApiImportTest extends TestCase
         $this->assertSame([], $shop->calls('wc/v3/products/100/variations'));
     }
 
+    public function test_a_variation_without_its_own_sku_does_not_copy_the_parent_sku(): void
+    {
+        // the REST API shows an empty variation SKU as the parent's; stored on every size, no size could be saved in admin
+        $shop = FakeWooShop::fake();
+        $variations = json_decode((string) file_get_contents(dirname(__DIR__).'/Fixtures/woo-api/wc-v3/products-110-variations.json'), true);
+        $variations[1]['sku'] = 'POLO';
+        $shop->override['wc/v3/products/110/variations'] = $variations;
+
+        $this->assertSame(0, $this->import(['--only' => 'categories,products', '--no-images' => true]), $this->lastOutput);
+        $polo = DB::table('products')->where('wp_id', 110)->first();
+        $this->assertSame('POLO', $polo->sku);
+        $this->assertSame(['POLO-R', null], DB::table('product_variations')->where('product_id', $polo->id)->orderBy('sort_order')->pluck('sku')->all());
+    }
+
     public function test_an_image_alt_longer_than_the_column_is_shortened(): void
     {
         // a product description pasted into an image alt (573 characters on a live shop) stopped the import on MySQL

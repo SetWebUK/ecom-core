@@ -58,6 +58,10 @@ storefront until someone designs a page. Themes that don't extend the default th
 their `pages.full-width` / `pages.default` view until they add `pages.designed` (see ARCHITECTURE.md, theme contract).
 Sites overriding the admin page form should diff it. See CHANGELOG `[1.11.0]`.
 
+A second migration, `2026_10_30_000100_clear_copied_variant_skus`, clears variant SKUs that equal their product's SKU
+(copies left by the WooCommerce REST importer, which stopped the admin saving those products). It changes data and
+can't be undone; nothing a customer sees changes.
+
 ### Upgrading from 1.9 to 1.10
 
 1.10 is additive: no migrations, no config keys. Run `composer update pine/commerce`, then `php artisan commerce:publish`
