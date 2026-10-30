@@ -48,6 +48,8 @@ class SettingsRequest extends FormRequest
         return [
             'tracking__gtm_id.regex' => 'A Tag Manager ID looks like GTM-ABC1234.',
             'tracking__ga4_id.regex' => 'A Google Analytics 4 ID looks like G-ABC123DEF4.',
+            'tracking__meta_pixel_id.regex' => 'A Pixel ID is a number, e.g. 1234567890123456 (Meta Events Manager › Data sources).',
+            'tracking__google_ads_conversion.regex' => 'Paste the conversion’s “send_to” value, e.g. AW-123456789/AbCdEfGhIjk (Google Ads › Goals › Conversions › Tag setup).',
             '*.url' => 'Enter a full web address starting with https://',
             '*.regex' => 'This doesn’t look right – check the format.',
         ];

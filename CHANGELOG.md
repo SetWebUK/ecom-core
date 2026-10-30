@@ -9,10 +9,12 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
-## [1.11.0] - 2026-10-28
+## [1.11.0] - 2026-10-30
 
 A drag-and-drop page builder: staff who don't write code can lay out any content page with banners, columns,
-pictures, buttons, reviews, questions and live products, in the shop's own colours and fonts.
+pictures, buttons, reviews, questions and live products, in the shop's own colours and fonts. Also: Meta Pixel and
+Google Ads purchase conversions, purchases tracked from the order-received page, and imported products with sizes
+can be saved again.
 
 ### Added
 - **Visual page builder** (Content › Pages › *page* › **Design page**, or "Save and design" on a new page): a
@@ -45,7 +47,21 @@ pictures, buttons, reviews, questions and live products, in the shop's own colou
 - Admin routes `admin.pages.design` (GET/PUT/DELETE `pages/{page}/design`) and `admin.pages.design.css` (the theme
   colours and fonts for the canvas).
 
+- **Meta Pixel and Google Ads purchase conversions** (Admin › Settings › SEO & tracking: "Facebook (Meta) Pixel ID",
+  "Google Ads purchase conversion" as the event snippet's `send_to`, `AW-…/label`). The Pixel loads only once a visitor
+  accepts marketing cookies (on load, or straight from the cookie banner) and sends PageView, ViewContent (from the
+  product page's Product JSON-LD, so any theme), AddToCart (app.js's new `store:added-to-cart` event) and Purchase
+  (value, currency, SKUs, the order number as `eventID`). The Google Ads tag loads through gtag.js under Consent Mode
+  and counts each paid order once, with its value and order number. The cookie banner's "auto" mode shows when either
+  is set. The tracking head moved to `partials.tracking` (used by `layouts.app` and `checkout.layout`).
+- With a GA4 ID set, the order-received page also sends GA4's `purchase` event through gtag.js (it was only pushed to
+  Tag Manager's dataLayer, which nothing read without Tag Manager).
+
 ### Fixed
+- **Purchases are tracked again: the order-received page loads Tag Manager / Analytics.** `checkout.layout` loaded no
+  tracking at all, so the `purchase` dataLayer event on the order-received page never reached Tag Manager or GA4. That
+  page now gets `partials.tracking`; the checkout and order-pay pages, where card details are entered, still load no
+  third-party scripts.
 - **Products imported through the WooCommerce REST API can be saved again.** The API shows a variation that has no
   SKU of its own with its parent's SKU, and the importer stored that copy on every size, so the admin refused to save
   the product ("The SKU … is used more than once"). The importer now leaves such variations without a SKU, and
@@ -54,6 +70,10 @@ pictures, buttons, reviews, questions and live products, in the shop's own colou
   not affected.
 
 ### Theme contract
+- New partial **`partials.tracking`** (`['part' => 'body']` for the noscript frame). Child themes overriding
+  `layouts.app` or `checkout.layout` should include it in place of their own Tag Manager / GA4 snippet; the layouts
+  no longer compute `$gtmId` / `$ga4Id`. `app.js` dispatches `store:added-to-cart` (detail: the cart response) after
+  a successful add to basket.
 - New optional view **`page.designed`** → `pages.designed` (falls back to `pages.full-width`, then `pages.default`,
   which get the same variables). The default theme adds `pages/designed.blade.php`, `partials/product-grid.blade.php`
   and `assets/css/page-design.css`; child themes inherit them and can restyle the builder's `pb-*` classes.

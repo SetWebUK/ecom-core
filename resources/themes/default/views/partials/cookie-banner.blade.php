@@ -1,7 +1,7 @@
 {{-- Cookie consent (Settings › SEO & tracking › Cookie banner). Stores "store_consent" = comma list of granted categories. --}}
 @php
     $mode = (string) setting('tracking.cookie_banner', 'auto');
-    $hasTracking = filled(setting('tracking.gtm_id')) || filled(setting('tracking.ga4_id'));
+    $hasTracking = filled(setting('tracking.gtm_id')) || filled(setting('tracking.ga4_id')) || filled(setting('tracking.meta_pixel_id')) || filled(setting('tracking.google_ads_conversion'));
     $show = $mode === 'always' || ($mode === 'auto' && $hasTracking);
 @endphp
 @if ($show)

@@ -623,6 +623,9 @@ leave; after the first delay run `php artisan commerce:schedule:task carts.aband
       `/feeds/google-shopping.xml` if used (feature `google_feed`), structured data (Google Rich Results Test on a
       product page), the 404 page, old `?add-to-cart=` links.
 - [ ] Analytics / Tag Manager id in Settings › SEO & tracking.
+- [ ] Meta Pixel ID and Google Ads purchase conversion ("send_to", `AW-…/label`) in Settings › SEO & tracking, if the
+      old shop had them (WooCommerce: PixelYourSite, Facebook for WooCommerce, Google Listings & Ads). Set them at go-live,
+      not on staging, so test orders don't count as sales.
 
 ### Step 13 – QA checklist (staging)
 

@@ -24,10 +24,18 @@
     <link rel="stylesheet" href="{{ theme_asset('css/app.css') }}">
     <style>{!! $S::cssVariables() !!}</style>
     @foreach ($childCss as $href)<link rel="stylesheet" href="{{ $href }}">@endforeach
-    <script>window.dataLayer = window.dataLayer || [];</script>
+    {{-- tracking on the order-received page only: no third-party scripts where card details are entered --}}
+    @if ($tracking = request()->routeIs('checkout.thankyou'))
+        @include('partials.tracking')
+    @else
+        <script>window.dataLayer = window.dataLayer || [];</script>
+    @endif
     @stack('head')
 </head>
 <body class="theme-{{ theme()->slug }} layout-checkout @yield('body_class')">
+@if ($tracking)
+    @include('partials.tracking', ['part' => 'body'])
+@endif
 <header class="checkout-header">
     <div class="container checkout-header__inner">
         <a class="site-logo" href="{{ url('/') }}/">

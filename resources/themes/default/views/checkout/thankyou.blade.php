@@ -100,17 +100,38 @@
     </aside>
 </div>
 @if ($isPaid)
+    @php
+        // once per order (localStorage): Tag Manager's dataLayer, plus GA4, the Google Ads conversion and the Meta Pixel
+        // when they're set in Admin › Settings › SEO & tracking (partials.tracking loads them on this page)
+        $json = fn ($v) => json_encode($v, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        $purchase = [
+            'transaction_id' => (string) $order->number, 'value' => (float) $order->total, 'tax' => (float) $order->tax_total,
+            'shipping' => (float) $order->shipping_total, 'currency' => $order->currency ?: config('commerce.currency.code', 'GBP'), 'coupon' => (string) $order->coupon_code,
+            'items' => $order->items->map(fn ($i) => ['item_id' => (string) ($i->sku ?: $i->product_id), 'item_name' => $i->name, 'price' => (float) $i->unit_price, 'quantity' => (int) $i->quantity])->values()->all(),
+        ];
+        $ga4Id = preg_match('/^G-[A-Z0-9]+$/', $g = strtoupper(trim((string) setting('tracking.ga4_id', '')))) ? $g : null;
+        $adsSendTo = preg_match('/^AW-\d+\/[A-Za-z0-9_-]+$/', $a = trim((string) setting('tracking.google_ads_conversion', ''))) ? $a : null;
+        $pixel = ['value' => $purchase['value'], 'currency' => $purchase['currency'], 'content_type' => 'product',
+            'content_ids' => array_values(array_unique(array_column($purchase['items'], 'item_id'))), 'num_items' => (int) array_sum(array_column($purchase['items'], 'quantity'))];
+    @endphp
     <script>
         (function () {
             var key = 'store_purchase_{{ $order->id }}';
             try { if (window.localStorage && localStorage.getItem(key)) { return; } } catch (e) {}
             window.dataLayer = window.dataLayer || [];
             window.dataLayer.push({ ecommerce: null });
-            window.dataLayer.push({!! json_encode(['event' => 'purchase', 'ecommerce' => [
-                'transaction_id' => (string) $order->number, 'value' => (float) $order->total, 'tax' => (float) $order->tax_total,
-                'shipping' => (float) $order->shipping_total, 'currency' => $order->currency ?: config('commerce.currency.code', 'GBP'), 'coupon' => (string) $order->coupon_code,
-                'items' => $order->items->map(fn ($i) => ['item_id' => (string) ($i->sku ?: $i->product_id), 'item_name' => $i->name, 'price' => (float) $i->unit_price, 'quantity' => (int) $i->quantity])->values(),
-            ]], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!});
+            window.dataLayer.push({!! $json(['event' => 'purchase', 'ecommerce' => $purchase]) !!});
+            if (typeof window.gtag === 'function') {
+                @if ($ga4Id)
+                    gtag('event', 'purchase', {!! $json($purchase + ['send_to' => $ga4Id]) !!});
+                @endif
+                @if ($adsSendTo)
+                    gtag('event', 'conversion', {!! $json(['send_to' => $adsSendTo, 'value' => $purchase['value'], 'currency' => $purchase['currency'], 'transaction_id' => $purchase['transaction_id']]) !!});
+                @endif
+            }
+            if (typeof window.fbq === 'function') {
+                fbq('track', 'Purchase', {!! $json($pixel) !!}, { eventID: {!! $json('order-'.$order->number) !!} });
+            }
             try { localStorage.setItem(key, '1'); } catch (e) {}
         })();
     </script>
