@@ -54,6 +54,8 @@ can be saved again.
   (value, currency, SKUs, the order number as `eventID`). The Google Ads tag loads through gtag.js under Consent Mode
   and counts each paid order once, with its value and order number. The cookie banner's "auto" mode shows when either
   is set. The tracking head moved to `partials.tracking` (used by `layouts.app` and `checkout.layout`).
+- **Page sections: picture help.** A theme's `image` block field can carry `'help'` (e.g. the size it needs: "Square,
+  at least 800 × 800 px"); the page editor shows it under the picture, in sections and list items.
 - **Register page**: `?email=` pre-fills the email (for "create an account" boxes elsewhere on a theme), and with
   loyalty on and welcome points set, the lead names them ("Get 200 points – worth £5.00 off your first order – …").
 - With a GA4 ID set, the order-received page also sends GA4's `purchase` event through gtag.js (it was only pushed to

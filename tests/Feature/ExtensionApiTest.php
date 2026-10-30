@@ -261,6 +261,22 @@ class ExtensionApiTest extends TestCase
         $this->assertStringContainsString('Landing page', $this->get(route('admin.pages.edit', $page))->assertOk()->getContent());
     }
 
+    public function test_a_picture_field_shows_its_help_in_the_page_editor(): void
+    {
+        // e.g. the size a theme needs, so staff upload a picture that fits
+        Commerce::pageTemplate('landing', ['label' => 'Landing page', 'view' => 'fixture::landing'], [
+            'hero' => ['object', ['image' => ['image', ['label' => 'Banner', 'help' => 'Landscape, at least 2400 × 1600 px.']]], ['label' => 'Hero']],
+            'tiles' => ['list', ['image' => ['image', ['label' => 'Tile', 'help' => 'Square, at least 800 × 800 px.']], 'title' => 'text'], ['label' => 'Tiles']],
+        ]);
+        $page = Page::forceCreate(['title' => 'Spring sale', 'slug' => 'spring-sale', 'path' => 'spring-sale', 'template' => 'landing',
+            'status' => 'published', 'content' => '', 'blocks' => ['tiles' => [['image' => '', 'title' => 'Shirts']]]]);
+
+        $html = $this->actingAs($this->neutralAdmin())->get(route('admin.pages.edit', $page))->assertOk()->getContent();
+
+        $this->assertStringContainsString('<p class="field__help">Landscape, at least 2400 × 1600 px.</p>', $html);
+        $this->assertStringContainsString('<p class="field__help">Square, at least 800 × 800 px.</p>', $html, 'list items too');
+    }
+
     public function test_shortcodes_and_menu_locations(): void
     {
         Commerce::shortcode('store_hours', fn (array $atts) => '<p class="hours">Open '.e($atts['days'] ?? 'daily').'</p>');

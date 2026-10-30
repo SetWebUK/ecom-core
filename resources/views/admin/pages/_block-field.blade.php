@@ -36,6 +36,9 @@
             <input type="hidden" :name="{{ $n }}" :value="{{ $m }}">
         </div>
         <p class="field__error" x-show="err({{ $e }})" x-cloak><x-admin.icon name="exclamation-circle" variant="mini" /><span x-text="err({{ $e }})"></span></p>
+        @if (! empty($fmeta['help']))
+            <p class="field__help">{{ $fmeta['help'] }}</p>
+        @endif
     </div>
 @elseif ($ftype === 'html')
     <div class="field">
