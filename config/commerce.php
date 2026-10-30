@@ -176,6 +176,9 @@ return [
 
     'feeds' => ['google' => ['default_category' => null, 'default_condition' => 'new', 'condition_map' => ['used' => 'used']]],
 
+    // MAIL_MAILER=smtp2go: email through SMTP2GO's web API (Mail\Support\Smtp2GoTransport) with an API key allowed to send
+    'mail' => ['smtp2go' => ['key' => env('SMTP2GO_API_KEY'), 'endpoint' => env('SMTP2GO_API_URL', 'https://api.smtp2go.com/v3')]],
+
     'documents' => ['logo' => null],             // fallback logo of printed invoices / packing slips when Settings has no store logo
 
     /*

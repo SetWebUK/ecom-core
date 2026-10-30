@@ -55,6 +55,10 @@ can be saved again.
   (value, currency, SKUs, the order number as `eventID`). The Google Ads tag loads through gtag.js under Consent Mode
   and counts each paid order once, with its value and order number. The cookie banner's "auto" mode shows when either
   is set. The tracking head moved to `partials.tracking` (used by `layouts.app` and `checkout.layout`).
+- **`MAIL_MAILER=smtp2go`**: email through SMTP2GO's web API (`Mail\Support\Smtp2GoTransport`) with `SMTP2GO_API_KEY`
+  (a key allowed to send emails; config `commerce.mail.smtp2go`). Attachments such as invoice PDFs, inline images,
+  Cc / Bcc, Reply-To and `X-` / `List-Unsubscribe` headers are sent; a refused message throws like a failed SMTP send.
+  The skeleton's `.env.example` lists the key.
 - **Page sections: picture help.** A theme's `image` block field can carry `'help'` (e.g. the size it needs: "Square,
   at least 800 × 800 px"); the page editor shows it under the picture, in sections and list items.
 - **Register page**: `?email=` pre-fills the email (for "create an account" boxes elsewhere on a theme), and with
