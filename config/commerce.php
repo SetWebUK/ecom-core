@@ -132,6 +132,7 @@ return [
     // Loyalty points defaults (feature "loyalty"; Admin › Settings › Loyalty points overrides each key)
     'loyalty' => [
         'earn_per_pound' => 1,        // points per £1 of items (after discounts, VAT included, delivery not)
+        'spending' => true,           // false pauses spending points at checkout (they are still earned)
         'points_per_pound' => 100,    // points that make £1 off
         'signup_points' => 0,         // welcome bonus for a new account
         'min_redeem' => 0,            // points needed before any can be spent

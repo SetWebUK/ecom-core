@@ -74,6 +74,11 @@ can be saved again.
   at least 800 × 800 px"); the page editor shows it under the picture, in sections and list items.
 - **Register page**: `?email=` pre-fills the email (for "create an account" boxes elsewhere on a theme), and with
   loyalty on and welcome points set, the lead names them ("Get 200 points – worth £5.00 off your first order – …").
+- **Loyalty points: pause spending** (Admin › Settings › Loyalty points › Spending › **Customers can spend points**,
+  `loyalty.spending`, config `commerce.loyalty.spending`, default on; `Loyalty::canSpend()`). Untick it and customers
+  still earn points (paid orders, welcome bonus) and see their balance, but can't use them: checkout says using them is
+  paused for now, My account › Points and the register page stop promising money off, `POST /cart/points` refuses, and
+  points chosen in a basket before the pause are not taken off.
 - With a GA4 ID set, the order-received page also sends GA4's `purchase` event through gtag.js (it was only pushed to
   Tag Manager's dataLayer, which nothing read without Tag Manager).
 
@@ -90,6 +95,8 @@ can be saved again.
   not affected.
 
 ### Theme contract
+- Child themes overriding `checkout.partials.summary`, `account.points` or `auth.register` can check
+  `Loyalty::canSpend()` to word the paused state; points can't be spent while it is off whatever the view shows.
 - New partial **`partials.tracking`** (`['part' => 'body']` for the noscript frame). Child themes overriding
   `layouts.app` or `checkout.layout` should include it in place of their own Tag Manager / GA4 snippet; the layouts
   no longer compute `$gtmId` / `$ga4Id`. `app.js` dispatches `store:added-to-cart` (detail: the cart response) after

@@ -12,7 +12,7 @@
         <h1 class="auth-card__title">Create an account</h1>
         @php($L = \Pine\Commerce\Services\Loyalty\Loyalty::class)
         @if ($L::enabled() && $L::signupPoints() > 0)
-            <p class="auth-card__lead">Get {{ number_format($L::signupPoints()) }} {{ $L::label() }} – worth {{ money($L::value($L::signupPoints())) }} off your first order – then track orders, save your addresses and check out faster.</p>
+            <p class="auth-card__lead">Get {{ number_format($L::signupPoints()) }} {{ $L::label() }}@if ($L::canSpend()) – worth {{ money($L::value($L::signupPoints())) }} off your first order –@else to start with,@endif then track orders, save your addresses and check out faster.</p>
         @else
             <p class="auth-card__lead">Track orders, save your addresses and check out faster.</p>
         @endif

@@ -618,6 +618,8 @@ class StoreSettings
                     'drives' => 'Given when a customer creates an account (0 = none).'],
             ]],
             ['title' => 'Spending', 'fields' => [
+                ['key' => 'loyalty.spending', 'label' => 'Customers can spend points', 'type' => 'bool', 'default' => $c('spending', true),
+                    'drives' => 'Untick to pause spending: customers still earn points and see their balance, and checkout tells them using points is paused for now.'],
                 ['key' => 'loyalty.points_per_pound', 'label' => 'Points for £1 off', 'type' => 'int', 'default' => $c('points_per_pound', 100), 'min' => 1, 'max' => 1000000,
                     'drives' => 'e.g. 40 = every 40 points take £1 off. Customers choose “Use my points” at checkout.'],
                 ['key' => 'loyalty.min_redeem', 'label' => 'Points needed before they can be used', 'type' => 'int', 'default' => $c('min_redeem', 0), 'min' => 0, 'max' => 1000000],

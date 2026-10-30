@@ -118,6 +118,34 @@ class LoyaltyPointsTest extends TestCase
         $this->assertSame(400, Loyalty::balance($bob->id), 'the spent points come back, the earned ones go');
     }
 
+    public function test_spending_can_be_paused_while_points_are_still_earned(): void
+    {
+        $bob = $this->customer();
+        Loyalty::add($bob->id, 400, 'import', null, 'Old website balance'); // + 200 welcome bonus = 600
+        $this->actingAs($bob);
+        $this->post(route('cart.add'), ['product_id' => $this->product(30)->id, 'quantity' => 1], ['Accept' => 'application/json'])->assertOk();
+        $this->postJson(route('cart.points'), ['context' => 'checkout'])->assertOk(); // chosen before the pause
+
+        Setting::set('loyalty.spending', false, 'loyalty');
+        Cart::flush();
+        app(Cart::class)->reset(); // a new request in real life
+        $this->assertFalse(Loyalty::canSpend());
+        $this->assertSame(0, Loyalty::usable($bob->id, 30.0));
+        $this->postJson(route('cart.points'), ['context' => 'checkout'])->assertStatus(422)->assertJson(['ok' => false]);
+        $this->get(route('checkout'))->assertOk()->assertSee('You have 600 points. Using them at checkout is paused for now', false)->assertDontSee('Use my points');
+        $this->get(route('account.points'))->assertOk()->assertSee('paused for now')->assertDontSee('at checkout.</li>', false);
+
+        $this->checkout()->assertOk();
+        $order = Order::latest('id')->first();
+        $this->assertSame('30.00', (string) $order->total, 'the points chosen before the pause are not taken off');
+        $this->assertSame(600, Loyalty::balance($bob->id));
+        $order->updateStatus('processing');
+        $this->assertSame(630, Loyalty::balance($bob->id), 'a paid order still earns');
+
+        Setting::set('loyalty.spending', true, 'loyalty');
+        $this->assertSame(630, Loyalty::usable($bob->id, 100.0), 'switched back on, the whole balance can be used');
+    }
+
     public function test_the_minimum_and_the_maximum_share_are_respected(): void
     {
         Setting::set('loyalty.min_redeem', 500, 'loyalty');

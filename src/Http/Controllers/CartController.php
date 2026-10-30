@@ -135,6 +135,9 @@ class CartController extends Controller
         if (! $request->user()) {
             return $this->respond($request, false, 'Please sign in to use your '.\Pine\Commerce\Services\Loyalty\Loyalty::label().'.', 401);
         }
+        if (! \Pine\Commerce\Services\Loyalty\Loyalty::canSpend()) {
+            return $this->respond($request, false, 'Using '.\Pine\Commerce\Services\Loyalty\Loyalty::label().' at checkout is paused for now.', 422);
+        }
         $points = $this->cart->setLoyaltyPoints(PHP_INT_MAX);
         if ($points <= 0) {
             $this->cart->setLoyaltyPoints(0);

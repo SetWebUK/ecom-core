@@ -10,11 +10,15 @@
 <h1 class="page-title">Your {{ $label }}</h1>
 <div class="card points-balance">
     <p class="points-balance__value"><strong>{{ number_format($balance) }}</strong> {{ $label }}</p>
+    @if (! $L::canSpend())
+    <p class="muted">Worth {{ money($L::value($balance)) }}. Using {{ $label }} at checkout is paused for now – your balance is kept and you keep earning.</p>
+    @else
     <p class="muted">Worth {{ money($L::value($balance)) }} off your next order.@if ($L::minRedeem() > 0 && $balance < $L::minRedeem()) You can use them once you have {{ number_format($L::minRedeem()) }}.@endif</p>
+    @endif
 </div>
 <ul class="points-rules">
     <li>Earn {{ rtrim(rtrim(number_format($L::earnRate(), 2), '0'), '.') }} {{ \Illuminate\Support\Str::plural(rtrim($label, 's'), (int) ceil($L::earnRate())) }} for every £1 you spend, added when your order is paid.</li>
-    <li>{{ number_format($L::redeemRate()) }} {{ $label }} = {{ money(1) }} off – choose “Use my {{ $label }}” at checkout.</li>
+    <li>{{ number_format($L::redeemRate()) }} {{ $label }} = {{ money(1) }} off@if ($L::canSpend()) – choose “Use my {{ $label }}” at checkout@endif.</li>
     @if ($L::signupPoints() > 0)<li>New accounts get {{ number_format($L::signupPoints()) }} {{ $label }} to start with.</li>@endif
 </ul>
 @if ($history->isNotEmpty())
