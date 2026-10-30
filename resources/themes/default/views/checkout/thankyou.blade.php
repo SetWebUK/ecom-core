@@ -110,7 +110,8 @@
             'items' => $order->items->map(fn ($i) => ['item_id' => (string) ($i->sku ?: $i->product_id), 'item_name' => $i->name, 'price' => (float) $i->unit_price, 'quantity' => (int) $i->quantity])->values()->all(),
         ];
         $ga4Id = preg_match('/^G-[A-Z0-9]+$/', $g = strtoupper(trim((string) setting('tracking.ga4_id', '')))) ? $g : null;
-        $adsSendTo = preg_match('/^AW-\d+\/[A-Za-z0-9_-]+$/', $a = trim((string) setting('tracking.google_ads_conversion', ''))) ? $a : null;
+        preg_match_all('/AW-\d+\/[A-Za-z0-9_-]+/', (string) setting('tracking.google_ads_conversion', ''), $m);
+        $adsSendTo = array_values(array_unique($m[0]));
         $pixel = ['value' => $purchase['value'], 'currency' => $purchase['currency'], 'content_type' => 'product',
             'content_ids' => array_values(array_unique(array_column($purchase['items'], 'item_id'))), 'num_items' => (int) array_sum(array_column($purchase['items'], 'quantity'))];
     @endphp
@@ -125,9 +126,9 @@
                 @if ($ga4Id)
                     gtag('event', 'purchase', {!! $json($purchase + ['send_to' => $ga4Id]) !!});
                 @endif
-                @if ($adsSendTo)
-                    gtag('event', 'conversion', {!! $json(['send_to' => $adsSendTo, 'value' => $purchase['value'], 'currency' => $purchase['currency'], 'transaction_id' => $purchase['transaction_id']]) !!});
-                @endif
+                @foreach ($adsSendTo as $sendTo)
+                    gtag('event', 'conversion', {!! $json(['send_to' => $sendTo, 'value' => $purchase['value'], 'currency' => $purchase['currency'], 'transaction_id' => $purchase['transaction_id']]) !!});
+                @endforeach
             }
             if (typeof window.fbq === 'function') {
                 fbq('track', 'Purchase', {!! $json($pixel) !!}, { eventID: {!! $json('order-'.$order->number) !!} });

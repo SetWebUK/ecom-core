@@ -65,7 +65,7 @@ class MarketingTagsTest extends TestCase
     {
         [$product, , $order] = $this->catalogue();
         $this->tags(['tracking.gtm_id' => 'GTM-PW4MPNTM', 'tracking.ga4_id' => 'G-S8HFLB54V4', 'tracking.meta_pixel_id' => '3917378625191016',
-            'tracking.google_ads_conversion' => 'AW-11320443036/I0ySCO_R-7kbEJyBgZYq']);
+            'tracking.google_ads_conversion' => 'AW-11320443036/I0ySCO_R-7kbEJyBgZYq, AW-11509923982/B62QCICKkPoZEI6BrvAq']);
 
         $this->post(route('cart.add'), ['product_id' => $product->id, 'quantity' => 1], ['Accept' => 'application/json'])->assertOk();
         $checkout = $this->get(route('checkout'))->assertOk()->getContent();
@@ -82,6 +82,8 @@ class MarketingTagsTest extends TestCase
         $this->assertStringContainsString('gtag(\'event\', \'purchase\', {"transaction_id":"'.$order->number.'"', $html);
         $this->assertStringContainsString('"send_to":"G-S8HFLB54V4"', $html);
         $this->assertStringContainsString('gtag(\'event\', \'conversion\', {"send_to":"AW-11320443036\/I0ySCO_R-7kbEJyBgZYq","value":'.json_encode((float) $order->total), $html);
+        $this->assertStringContainsString('gtag(\'event\', \'conversion\', {"send_to":"AW-11509923982\/B62QCICKkPoZEI6BrvAq","value":'.json_encode((float) $order->total), $html, 'every account (e.g. an agency\'s) counts the sale');
+        $this->assertStringContainsString("gtag('config', 'G-S8HFLB54V4'); gtag('config', 'AW-11320443036'); gtag('config', 'AW-11509923982');", $html);
         $this->assertStringContainsString("fbq('track', 'Purchase', {\"value\":".json_encode((float) $order->total), $html);
         $this->assertStringContainsString('{ eventID: "order-'.$order->number.'" }', $html);
     }
@@ -93,10 +95,13 @@ class MarketingTagsTest extends TestCase
         $this->put(route('admin.settings.update', 'seo'), ['tracking__meta_pixel_id' => 'fb-123', 'tracking__google_ads_conversion' => 'AW-11320443036'])
             ->assertSessionHasErrors(['tracking__meta_pixel_id', 'tracking__google_ads_conversion']);
 
-        $this->put(route('admin.settings.update', 'seo'), ['tracking__meta_pixel_id' => ' 3917378625191016 ', 'tracking__google_ads_conversion' => 'AW-11320443036/I0ySCO_R-7kbEJyBgZYq'])
+        $this->put(route('admin.settings.update', 'seo'), ['tracking__google_ads_conversion' => 'AW-11320443036/I0ySCO_R-7kbEJyBgZYq; AW-1'])
+            ->assertSessionHasErrors(['tracking__google_ads_conversion']);
+
+        $this->put(route('admin.settings.update', 'seo'), ['tracking__meta_pixel_id' => ' 3917378625191016 ', 'tracking__google_ads_conversion' => 'AW-11320443036/I0ySCO_R-7kbEJyBgZYq,AW-11509923982/B62QCICKkPoZEI6BrvAq'])
             ->assertSessionHasNoErrors();
         Setting::flushMemo();
         $this->assertSame('3917378625191016', setting('tracking.meta_pixel_id'));
-        $this->assertSame('AW-11320443036/I0ySCO_R-7kbEJyBgZYq', setting('tracking.google_ads_conversion'));
+        $this->assertSame('AW-11320443036/I0ySCO_R-7kbEJyBgZYq,AW-11509923982/B62QCICKkPoZEI6BrvAq', setting('tracking.google_ads_conversion'));
     }
 }

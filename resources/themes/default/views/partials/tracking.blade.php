@@ -11,8 +11,9 @@
     $ga4Id = strtoupper(trim((string) setting('tracking.ga4_id', '')));
     $ga4Id = preg_match('/^G-[A-Z0-9]+$/', $ga4Id) ? $ga4Id : null;
     $pixelId = preg_match('/^\d{8,20}$/', $p = trim((string) setting('tracking.meta_pixel_id', ''))) ? $p : null;
-    $adsId = preg_match('/^(AW-\d+)\/[A-Za-z0-9_-]+$/', trim((string) setting('tracking.google_ads_conversion', '')), $m) ? $m[1] : null;
-    $gtagIds = array_values(array_filter([$ga4Id, $adsId]));
+    // Google Ads accounts of the purchase conversions ("AW-1/a, AW-2/b"): each gets the tag, purchases come from checkout/thankyou
+    preg_match_all('/(AW-\d+)\/[A-Za-z0-9_-]+/', (string) setting('tracking.google_ads_conversion', ''), $m);
+    $gtagIds = array_values(array_unique(array_filter([$ga4Id, ...$m[1]])));
 @endphp
 @if (($part ?? 'head') === 'body')
     @if ($gtmId)

@@ -48,7 +48,8 @@ can be saved again.
   colours and fonts for the canvas).
 
 - **Meta Pixel and Google Ads purchase conversions** (Admin › Settings › SEO & tracking: "Facebook (Meta) Pixel ID",
-  "Google Ads purchase conversion" as the event snippet's `send_to`, `AW-…/label`). The Pixel loads only once a visitor
+  "Google Ads purchase conversions" as the event snippets' `send_to`, `AW-…/label`, comma-separated for several
+  accounts, e.g. the shop's own and an agency's: each account gets the tag and counts the sale). The Pixel loads only once a visitor
   accepts marketing cookies (on load, or straight from the cookie banner) and sends PageView, ViewContent (from the
   product page's Product JSON-LD, so any theme), AddToCart (app.js's new `store:added-to-cart` event) and Purchase
   (value, currency, SKUs, the order number as `eventID`). The Google Ads tag loads through gtag.js under Consent Mode
