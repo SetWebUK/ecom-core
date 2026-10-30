@@ -55,6 +55,16 @@ class Importer
         'media' => 'Media library images',
     ];
 
+    /**
+     * existing = "keep" (go-live sync, --keep-local): what an item imported before still takes from the shop. Products
+     * and their variations only take these (the old shop's latest stock and prices) and keep everything edited here;
+     * orders update as usual; every other item imported before is left as it is; shipping and tax are not read.
+     */
+    public const KEEP_LOCAL_FIELDS = [
+        'products' => ['regular_price', 'sale_price', 'sale_starts_at', 'sale_ends_at', 'price', 'manage_stock', 'stock_quantity', 'stock_status', 'backorders'],
+        'product_variations' => ['regular_price', 'sale_price', 'sale_starts_at', 'sale_ends_at', 'manage_stock', 'stock_quantity', 'stock_status'],
+    ];
+
     /** Choices the key-less Store API can serve. */
     public const STORE_CHOICES = ['categories', 'attributes', 'products', 'content', 'media'];
 
@@ -112,6 +122,12 @@ class Importer
             foreach ($this->run->entities() as $entity) {
                 $state = $this->progress['entities'][$entity]['status'] ?? 'waiting';
                 if (in_array($state, ['done', 'skipped'], true)) {
+                    continue;
+                }
+                if ($this->keepingLocal() && in_array($entity, ['tax', 'shipping'], true)) {
+                    $this->entity($entity, 'skipped');
+                    $this->log->info(self::LABELS[$entity].' not read: a go-live sync keeps them as set up on this site.');
+
                     continue;
                 }
                 $this->entity($entity, 'running');
@@ -239,9 +255,26 @@ class Importer
     }
 
     /** "existing = skip": drop rows whose key already exists (counted as skipped). */
+    /** A go-live sync (existing = "keep"): see KEEP_LOCAL_FIELDS. */
+    protected function keepingLocal(): bool
+    {
+        return $this->option('existing', 'update') === 'keep';
+    }
+
+    /** The columns of $rows an update must not touch when only $fields may change. */
+    protected function allBut(array $rows, array $fields): array
+    {
+        $columns = [];
+        foreach ($rows as $row) {
+            $columns += array_flip(array_keys($row));
+        }
+
+        return array_values(array_diff(array_keys($columns), $fields));
+    }
+
     protected function withoutExisting(string $entity, string $table, array $rows, string $key = 'wp_id'): array
     {
-        if ($this->option('existing', 'update') !== 'skip' || ! $rows) {
+        if (! in_array($this->option('existing', 'update'), ['skip', 'keep'], true) || ! $rows) {
             return $rows;
         }
         [$existing] = $this->u->plan($table, $rows, $key);

@@ -55,6 +55,14 @@ can be saved again.
   (value, currency, SKUs, the order number as `eventID`). The Google Ads tag loads through gtag.js under Consent Mode
   and counts each paid order once, with its value and order number. The cookie banner's "auto" mode shows when either
   is set. The tracking head moved to `partials.tracking` (used by `layouts.app` and `checkout.layout`).
+- **Go-live sync** (WooCommerce API import: "Items imported before" › **Keep this site's changes**, `--keep-local`;
+  the default once a shop has had a completed import). For syncs after the first import and the last one before the
+  switch-over: new products, customers, orders and coupons come in, orders take the shop's latest status, products and
+  variations only its latest stock and prices (`Importer::KEEP_LOCAL_FIELDS`). Everything edited on the new site stays:
+  product names, descriptions, SKUs, pictures, categories, linked products and added sizes, categories, customers,
+  coupons, pages and posts; Shipping and Tax are not read (that step overwrote delivery prices even with "Leave them
+  alone"). The import page warns when orders placed on the new site (test orders) hold order numbers the shop's own
+  orders need.
 - **Settings › SEO › Category page title** (`seo.category_title`): the default title of category pages without their
   own SEO title, `%name% Archives` (WordPress / Yoast, as before) or e.g. `%name%` (Rank Math), before the title ending.
   Later pages of a category keep "| Page n of m".

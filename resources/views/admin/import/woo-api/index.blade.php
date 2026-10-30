@@ -134,10 +134,15 @@
                     <div class="field"><x-admin.toggle name="images" label="Download images" :checked="true" help="Product, category, variation and post images (and the media library) into this shop, with the image sizes." /></div>
                     <div class="field"><x-admin.toggle name="notes" label="Order notes" :checked="true" help="One extra request per order." /></div>
                 </div>
-                <x-admin.radio-cards name="existing" label="Items imported before" value="update" :options="[
-                    'update' => ['label' => 'Update them', 'help' => 'Re-import overwrites them with the shop’s current data.'],
+                {{-- after a first import, keeping this site's changes is the safe choice: updating overwrites what was edited here --}}
+                <x-admin.radio-cards name="existing" label="Items imported before" :value="$lastCompleted ? 'keep' : 'update'" :options="[
+                    'keep' => ['label' => 'Keep this site’s changes (go-live sync)', 'help' => 'For syncs after the first import, and the last one before switching over. New products, customers, orders and coupons come in; orders take the shop’s latest status, products its latest stock and prices. Everything edited here stays as it is: product descriptions, SKUs, pictures and linked products, categories, pages, delivery and tax.'],
+                    'update' => ['label' => 'Update them', 'help' => 'Re-import overwrites them with the shop’s current data, including anything edited here.'],
                     'skip' => ['label' => 'Leave them alone', 'help' => 'Only new items are added.'],
                 ]" />
+                @if ($localOrders)
+                    <div class="notice notice--warning" role="status">{{ $localOrders }} {{ $localOrders === 1 ? 'order was' : 'orders were' }} placed on this site (test orders?). They use the shop’s next order numbers, so the shop’s own orders with the same numbers can’t be imported. Delete them before the final sync.</div>
+                @endif
                 <div class="form-grid">
                     <x-admin.input name="orders_after" label="Only orders placed from" type="date" optional help="Leave empty for every order." />
                     <x-admin.input name="since" label="Only items changed since" type="datetime-local" optional :value="null"

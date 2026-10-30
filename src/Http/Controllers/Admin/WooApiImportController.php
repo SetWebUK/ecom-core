@@ -49,6 +49,9 @@ class WooApiImportController extends Controller
             'sameSite' => $stored->url !== '' && SameSite::matches($stored),
             'importedSite' => SameSite::importedSiteUrl(),
             'lastCompleted' => $lastCompleted,
+            // orders placed here (e.g. test orders) in a shop that also has imported ones: they take the shop's order numbers
+            'localOrders' => \Pine\Commerce\Models\Order::query()->whereNotNull('wp_id')->exists()
+                ? \Pine\Commerce\Models\Order::query()->whereNull('wp_id')->count() : 0,
             'history' => WooApiImport::query()->latest('id')->paginate(15),
             'labels' => Importer::LABELS,
         ]);
@@ -104,7 +107,7 @@ class WooApiImportController extends Controller
             'entities' => ['required', 'array', 'min:1'],
             'entities.*' => [Rule::in(array_keys(Importer::CHOICES))],
             'images' => ['nullable', 'boolean'],
-            'existing' => ['required', Rule::in(['update', 'skip'])],
+            'existing' => ['required', Rule::in(['update', 'skip', 'keep'])],
             'orders_after' => ['nullable', 'date_format:Y-m-d'],
             'since' => ['nullable', 'date'],
             'notes' => ['nullable', 'boolean'],

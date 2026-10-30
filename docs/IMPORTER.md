@@ -385,6 +385,7 @@ php artisan commerce:import-woo-api --store --url=https://shop.example.com      
 | `--since=` | Only products, orders, coupons, pages and posts modified after this date (`modified_after`). |
 | `--orders-after=` | Only orders placed after this date. |
 | `--skip-existing` | Leave items imported before untouched (only new ones are added). |
+| `--keep-local` | **Go-live sync** (admin: "Keep this site's changes", the default after a first import): new products, customers, orders and coupons come in; orders imported before take the shop's latest status; products and variations imported before take only stock and prices (`Importer::KEEP_LOCAL_FIELDS`) and keep everything edited on the new site (names, descriptions, SKUs, images, categories, linked products, new sizes added here); other items imported before (categories, customers, coupons, pages, posts) are left alone; Shipping and Tax are not read. |
 | `--no-images` / `--no-notes` | Do not download images / do not read order notes. |
 | `--same-site` | 12.5. |
 | `--test` | Test the connection (store, versions, counts, permission problems) and exit. |

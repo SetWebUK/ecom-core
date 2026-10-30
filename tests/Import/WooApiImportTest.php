@@ -336,6 +336,53 @@ class WooApiImportTest extends TestCase
         $this->assertSame([], $shop->calls('wc/v3/products/100/variations'));
     }
 
+    public function test_a_go_live_sync_keeps_this_sites_changes_and_takes_new_items_stock_and_prices(): void
+    {
+        $shop = FakeWooShop::fake();
+        $this->assertSame(0, $this->import(['--no-images' => true]), $this->lastOutput);
+        $shirtId = (int) DB::table('products')->where('wp_id', 100)->value('id');
+
+        // edited on the new site after the first import
+        DB::table('products')->where('id', $shirtId)->update(['name' => 'Linen Shirt (ours)', 'description' => '<p>Written here</p>']);
+        DB::table('product_variations')->where('wp_id', 111)->update(['sku' => 'POLO-RED-OURS']);
+        DB::table('related_products')->where('product_id', $shirtId)->delete();
+        DB::table('categories')->where('wp_id', 11)->update(['name' => 'Shirts (ours)']);
+        $method = DB::table('shipping_methods')->orderBy('id')->first();
+        DB::table('shipping_methods')->where('id', $method->id)->update(['cost' => 9.99]);
+        $page = DB::table('pages')->whereNotNull('wp_id')->orderBy('id')->first();
+        DB::table('pages')->where('id', $page->id)->update(['content' => '<p>Our page</p>']);
+        $customer = DB::table('users')->whereNotNull('wp_id')->orderBy('id')->first();
+        DB::table('users')->where('id', $customer->id)->update(['first_name' => 'Ours']);
+
+        // the old shop since then: new stock and prices, and a new product
+        $products = json_decode((string) file_get_contents(dirname(__DIR__).'/Fixtures/woo-api/wc-v3/products.json'), true);
+        $products[0]['stock_quantity'] = 2;
+        $products[0]['regular_price'] = '55';
+        $products[] = array_merge($products[0], ['id' => 130, 'name' => 'Linen Shorts', 'slug' => 'linen-shorts', 'sku' => 'LSH-1', 'permalink' => FakeWooShop::BASE.'/clothing/linen-shorts/']);
+        $shop->override['wc/v3/products'] = $products;
+        $variations = json_decode((string) file_get_contents(dirname(__DIR__).'/Fixtures/woo-api/wc-v3/products-110-variations.json'), true);
+        $variations[0]['stock_quantity'] = 7;
+        $variations[0]['regular_price'] = '21';
+        $shop->override['wc/v3/products/110/variations'] = $variations;
+
+        $this->assertSame(0, $this->import(['--keep-local' => true, '--no-images' => true]), $this->lastOutput);
+        $run = WooApiImport::query()->latest('id')->first();
+        $this->assertSame(['completed', 'skipped', 'skipped'], [$run->status, $run->entityProgress('shipping')['status'], $run->entityProgress('tax')['status']]);
+
+        $shirt = DB::table('products')->where('id', $shirtId)->first();
+        $this->assertSame(['Linen Shirt (ours)', '<p>Written here</p>'], [$shirt->name, $shirt->description], 'edited here: kept');
+        $this->assertEquals([2, 55], [$shirt->stock_quantity, $shirt->regular_price], 'stock and price: from the shop');
+        $red = DB::table('product_variations')->where('wp_id', 111)->first();
+        $this->assertSame('POLO-RED-OURS', $red->sku);
+        $this->assertEquals([7, 21], [$red->stock_quantity, $red->regular_price]);
+        $this->assertSame(0, DB::table('related_products')->where('product_id', $shirtId)->count(), 'linked products as set here');
+        $this->assertSame('Shirts (ours)', DB::table('categories')->where('wp_id', 11)->value('name'));
+        $this->assertEquals(9.99, DB::table('shipping_methods')->where('id', $method->id)->value('cost'));
+        $this->assertSame('<p>Our page</p>', DB::table('pages')->where('id', $page->id)->value('content'));
+        $this->assertSame('Ours', DB::table('users')->where('id', $customer->id)->value('first_name'));
+        $this->assertSame('LSH-1', DB::table('products')->where('wp_id', 130)->value('sku'), 'a product new at the shop comes in');
+    }
+
     public function test_a_variation_without_its_own_sku_does_not_copy_the_parent_sku(): void
     {
         // the REST API shows an empty variation SKU as the parent's; stored on every size, no size could be saved in admin

@@ -58,7 +58,7 @@ class RunManager
             'options' => [
                 'entities' => $entities,
                 'images' => (bool) ($options['images'] ?? true),
-                'existing' => ($options['existing'] ?? 'update') === 'skip' ? 'skip' : 'update',
+                'existing' => in_array($options['existing'] ?? 'update', ['skip', 'keep'], true) ? $options['existing'] : 'update',
                 'orders_after' => ($options['orders_after'] ?? null) ?: null,
                 'since' => ($options['since'] ?? null) ?: null,
                 'notes' => (bool) ($options['notes'] ?? true),

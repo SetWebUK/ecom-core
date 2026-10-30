@@ -156,7 +156,11 @@ class WooApiImportAdminTest extends TestCase
         $this->assertStringNotContainsString(FakeWooShop::SECRET, $content);
         $this->assertStringNotContainsString(FakeWooShop::KEY, $content);
 
-        $this->get(route('admin.import.woo.index'))->assertOk()->assertSee('#'.$run->id)->assertSee('Completed');
+        $index = $this->get(route('admin.import.woo.index'))->assertOk()->assertSee('#'.$run->id)->assertSee('Completed')->getContent();
+        // after a first import, the safe choice is the default: keep what was edited here (go-live sync)
+        $this->assertMatchesRegularExpression('/name="existing"[^>]*value="keep"[^>]*checked/', $index);
+        $this->post(route('admin.import.woo.start'), ['entities' => ['products', 'orders'], 'existing' => 'keep', 'images' => '0', 'notes' => '1'])->assertSessionHasNoErrors();
+        $this->assertSame('keep', WooApiImport::query()->latest('id')->first()->option('existing'));
     }
 
     public function test_cancel_and_resume(): void
