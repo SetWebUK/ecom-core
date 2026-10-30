@@ -11,6 +11,7 @@ use Pine\Commerce\Models\StockNotification;
 use Pine\Commerce\Services\Catalog\Categories;
 use Pine\Commerce\Services\Catalog\ProductPresenter;
 use Pine\Commerce\Services\Catalog\Text;
+use Pine\Commerce\Services\Marketing\Ecommerce;
 use Pine\Commerce\Theme\ThemeManager;
 use Pine\Commerce\View\Components\Seo;
 use Illuminate\Http\Request;
@@ -47,6 +48,7 @@ class ProductController extends Controller
         $crumbs[] = ['label' => Text::title($product->name), 'url' => $product->url];
 
         $variationData = $this->variationData($product);
+        app(Ecommerce::class)->product($product);
         $image = $product->images->first();
         $title = $product->meta_title ?: Seo::title($product->name);
         // Rank Math: SEO description, else the whole short description, else an excerpt of the description

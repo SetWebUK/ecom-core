@@ -213,6 +213,7 @@
 
     function applyCart(data) {
         if (!data) { return; }
+        if (data.tracking_cart) { d.dispatchEvent(new CustomEvent('store:cart-updated', { detail: data })); } // partials.tracking
         if (typeof data.count === 'number') { setCount(data.count); }
         var body = sideCart ? $('[data-side-cart-content]', sideCart) : null;
         if (body && typeof data.html === 'string') { body.innerHTML = data.html; cartLoaded = true; }

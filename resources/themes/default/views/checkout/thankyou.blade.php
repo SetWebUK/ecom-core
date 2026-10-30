@@ -11,7 +11,6 @@
         return implode('<br>', array_map(fn ($v) => e($v === $country ? ($countries[$v] ?? $v) : $v), $lines));
     };
     $trackingUrl = \Pine\Commerce\Mail\CustomerCompletedOrder::trackingUrl($order->tracking_carrier, $order->tracking_number);
-    $isPaid = in_array($order->status, ['processing', 'completed', 'on-hold'], true);
     $payUrl = route('checkout.pay', ['order' => $order->number, 'key' => $order->order_key]);
 @endphp
 
@@ -99,42 +98,5 @@
         </div>
     </aside>
 </div>
-@if ($isPaid)
-    @php
-        // once per order (localStorage): Tag Manager's dataLayer, plus GA4, the Google Ads conversion and the Meta Pixel
-        // when they're set in Admin › Settings › SEO & tracking (partials.tracking loads them on this page)
-        $json = fn ($v) => json_encode($v, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-        $purchase = [
-            'transaction_id' => (string) $order->number, 'value' => (float) $order->total, 'tax' => (float) $order->tax_total,
-            'shipping' => (float) $order->shipping_total, 'currency' => $order->currency ?: config('commerce.currency.code', 'GBP'), 'coupon' => (string) $order->coupon_code,
-            'items' => $order->items->map(fn ($i) => ['item_id' => (string) ($i->sku ?: $i->product_id), 'item_name' => $i->name, 'price' => (float) $i->unit_price, 'quantity' => (int) $i->quantity])->values()->all(),
-        ];
-        $ga4Id = preg_match('/^G-[A-Z0-9]+$/', $g = strtoupper(trim((string) setting('tracking.ga4_id', '')))) ? $g : null;
-        preg_match_all('/AW-\d+\/[A-Za-z0-9_-]+/', (string) setting('tracking.google_ads_conversion', ''), $m);
-        $adsSendTo = array_values(array_unique($m[0]));
-        $pixel = ['value' => $purchase['value'], 'currency' => $purchase['currency'], 'content_type' => 'product',
-            'content_ids' => array_values(array_unique(array_column($purchase['items'], 'item_id'))), 'num_items' => (int) array_sum(array_column($purchase['items'], 'quantity'))];
-    @endphp
-    <script>
-        (function () {
-            var key = 'store_purchase_{{ $order->id }}';
-            try { if (window.localStorage && localStorage.getItem(key)) { return; } } catch (e) {}
-            window.dataLayer = window.dataLayer || [];
-            window.dataLayer.push({ ecommerce: null });
-            window.dataLayer.push({!! $json(['event' => 'purchase', 'ecommerce' => $purchase]) !!});
-            if (typeof window.gtag === 'function') {
-                @if ($ga4Id)
-                    gtag('event', 'purchase', {!! $json($purchase + ['send_to' => $ga4Id]) !!});
-                @endif
-                @foreach ($adsSendTo as $sendTo)
-                    gtag('event', 'conversion', {!! $json(['send_to' => $sendTo, 'value' => $purchase['value'], 'currency' => $purchase['currency'], 'transaction_id' => $purchase['transaction_id']]) !!});
-                @endforeach
-            }
-            if (typeof window.fbq === 'function') {
-                fbq('track', 'Purchase', {!! $json($pixel) !!}, { eventID: {!! $json('order-'.$order->number) !!} });
-            }
-            try { localStorage.setItem(key, '1'); } catch (e) {}
-        })();
-    </script>
-@endif
+{{-- the purchase (GA4, Google Ads, Meta, Tag Manager) is sent by partials.tracking, from Services\Marketing\Ecommerce::purchase() --}}
 @endsection

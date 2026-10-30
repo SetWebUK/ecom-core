@@ -54,9 +54,9 @@ class MarketingTagsTest extends TestCase
 
         $this->assertStringContainsString("fbq('init', '3917378625191016')", $html);
         $this->assertStringContainsString("indexOf('marketing') > -1) { w.storeStartMarketing(); }", $html, 'the pixel waits for marketing consent');
-        $this->assertStringContainsString("j['@type'] === 'Product'", $html, 'product views read the Product JSON-LD');
+        $this->assertStringContainsString('"page":"product"', $html, 'the product view comes from the page’s tracking data');
         $this->assertStringContainsString('gtag/js?id=AW-11320443036', $html);
-        $this->assertStringContainsString("gtag('config', 'AW-11320443036');", $html);
+        $this->assertStringContainsString("storeGtag('config', 'AW-11320443036');", $html);
         $this->assertStringNotContainsString('I0ySCO_R-7kbEJyBgZYq', $html, 'the conversion label is only used for purchases');
         $this->assertStringContainsString('data-cookie-banner', $html, 'auto banner: shown once marketing tags are set');
     }
@@ -78,14 +78,11 @@ class MarketingTagsTest extends TestCase
 
         $this->assertStringContainsString("'dataLayer','GTM-PW4MPNTM'", $html);
         $this->assertStringContainsString('ns.html?id=GTM-PW4MPNTM', $html);
-        $this->assertStringContainsString('"event":"purchase"', $html);
-        $this->assertStringContainsString('gtag(\'event\', \'purchase\', {"transaction_id":"'.$order->number.'"', $html);
-        $this->assertStringContainsString('"send_to":"G-S8HFLB54V4"', $html);
-        $this->assertStringContainsString('gtag(\'event\', \'conversion\', {"send_to":"AW-11320443036\/I0ySCO_R-7kbEJyBgZYq","value":'.json_encode((float) $order->total), $html);
-        $this->assertStringContainsString('gtag(\'event\', \'conversion\', {"send_to":"AW-11509923982\/B62QCICKkPoZEI6BrvAq","value":'.json_encode((float) $order->total), $html, 'every account (e.g. an agency\'s) counts the sale');
-        $this->assertStringContainsString("gtag('config', 'G-S8HFLB54V4'); gtag('config', 'AW-11320443036'); gtag('config', 'AW-11509923982');", $html);
-        $this->assertStringContainsString("fbq('track', 'Purchase', {\"value\":".json_encode((float) $order->total), $html);
-        $this->assertStringContainsString('{ eventID: "order-'.$order->number.'" }', $html);
+        $this->assertStringContainsString('"page":"purchase","transaction_id":"'.$order->number.'"', $html);
+        $this->assertStringContainsString('ga4 = "G-S8HFLB54V4"', $html);
+        $this->assertStringContainsString('conversions = ["AW-11320443036\/I0ySCO_R-7kbEJyBgZYq","AW-11509923982\/B62QCICKkPoZEI6BrvAq"]', $html, 'every account (e.g. an agency\'s) counts the sale');
+        $this->assertStringContainsString("storeGtag('config', 'G-S8HFLB54V4'); storeGtag('config', 'AW-11320443036'); storeGtag('config', 'AW-11509923982');", $html);
+        $this->assertStringContainsString("fbq('track', 'Purchase', p, { eventID: 'order-' + T.transaction_id });", $html);
     }
 
     public function test_the_settings_reject_ids_in_the_wrong_format(): void

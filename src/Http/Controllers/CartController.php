@@ -7,6 +7,7 @@ use Pine\Commerce\Models\ProductVariation;
 use Pine\Commerce\Services\Cart;
 use Pine\Commerce\Services\Checkout\CartException;
 use Pine\Commerce\Services\Checkout\CheckoutFragments;
+use Pine\Commerce\Services\Marketing\Ecommerce;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -69,12 +70,13 @@ class CartController extends Controller
 
         try {
             $variation = $product->type === 'variable' ? $this->resolveVariation($product, $request) : null;
-            $this->cart->add($product, (int) ($data['quantity'] ?? 1), $variation, (array) ($data['options'] ?? []));
+            $added = $this->cart->add($product, (int) ($data['quantity'] ?? 1), $variation, (array) ($data['options'] ?? []));
         } catch (CartException $e) {
             return $this->respond($request, false, $e->getMessage(), 422);
         }
 
-        return $this->respond($request, true, sprintf('“%s” has been added to your basket.', $product->name), 200, true);
+        return $this->respond($request, true, sprintf('“%s” has been added to your basket.', $product->name), 200, true,
+            fn () => ['tracking' => Ecommerce::added($this->cart, $added, $product, $variation, (int) ($data['quantity'] ?? 1))]);
     }
 
     /** POST /cart/update - item_id + quantity, or cart[{item_id}][qty] for several lines. */
@@ -207,14 +209,15 @@ class CartController extends Controller
         return $match ?? throw new CartException('Sorry, no products matched your selection. Please choose a different combination.');
     }
 
-    protected function respond(Request $request, bool $ok, string $message, int $status = 200, bool $open = false): JsonResponse|RedirectResponse
+    /** @param  (callable(): array)|null  $extra  more JSON keys (only built for JSON requests) */
+    protected function respond(Request $request, bool $ok, string $message, int $status = 200, bool $open = false, ?callable $extra = null): JsonResponse|RedirectResponse
     {
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json(array_merge([
                 'ok' => $ok,
                 'message' => $message,
                 'open' => $open && $ok,
-            ], CheckoutFragments::cart($this->cart, $request->input('context') === 'checkout')), $ok ? 200 : $status)
+            ], CheckoutFragments::cart($this->cart, $request->input('context') === 'checkout'), $extra ? $extra() : []), $ok ? 200 : $status)
                 ->header('Cache-Control', 'no-store, private');
         }
 

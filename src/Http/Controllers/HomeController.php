@@ -5,6 +5,7 @@ namespace Pine\Commerce\Http\Controllers;
 use Pine\Commerce\Models\Page;
 use Pine\Commerce\View\Components\Seo;
 use Pine\Commerce\Models\Product;
+use Pine\Commerce\Services\Marketing\Ecommerce;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -37,6 +38,7 @@ class HomeController extends Controller
         $page = Page::where('template', 'home')->where('status', 'published')->first()
             ?? Page::where('path', '')->where('status', 'published')->first();
         $blocks = static::blocks($page?->blocks ?? []);
+        app(Ecommerce::class)->home();
 
         return theme_view(['home', 'pages.home'], [
             'page' => $page,

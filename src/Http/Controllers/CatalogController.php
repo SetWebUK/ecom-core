@@ -9,6 +9,7 @@ use Pine\Commerce\Services\Catalog\Categories;
 use Pine\Commerce\Services\Catalog\Facets;
 use Pine\Commerce\Services\Catalog\ProductListing;
 use Pine\Commerce\Services\Catalog\Text;
+use Pine\Commerce\Services\Marketing\Ecommerce;
 use Pine\Commerce\View\Components\Seo;
 use Illuminate\Http\Request;
 
@@ -107,6 +108,7 @@ class CatalogController extends Controller
             return redirect()->to(($last > 1 ? $base.'/page/'.$last.'/' : $base.'/').($query !== '' ? '?'.$query : ''), 301);
         }
         $products->appends($this->cleanQuery($request));
+        app(Ecommerce::class)->listing($products->items(), $this->listName($meta));
 
         $facets = Facets::build($listing);
         $pageUrl = $pageNumber > 1 ? $base.'/page/'.$pageNumber.'/' : $base.'/';
@@ -187,6 +189,17 @@ class CatalogController extends Controller
     }
 
     /** A category page's default title before the Title ending: Settings › SEO › Category page title, "%name% Archives" (WordPress/Yoast) by default, "%name%" as Rank Math. */
+    /** GA4 item_list_name: "Search results", the category's name, "Shop", else the heading. */
+    protected function listName(array $meta): string
+    {
+        return match (true) {
+            $meta['context'] === 'search' => 'Search results',
+            ($meta['category'] ?? null) instanceof Category => (string) $meta['category']->name,
+            $meta['context'] === 'shop' => 'Shop',
+            default => trim(strip_tags((string) ($meta['heading'] ?? ''))) ?: ucfirst((string) $meta['context']),
+        };
+    }
+
     protected function categoryTitle(string $name): string
     {
         $pattern = trim((string) setting('seo.category_title', '%name% Archives')) ?: '%name% Archives';

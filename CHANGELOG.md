@@ -74,6 +74,27 @@ can be saved again.
   at least 800 × 800 px"); the page editor shows it under the picture, in sections and list items.
 - **Register page**: `?email=` pre-fills the email (for "create an account" boxes elsewhere on a theme), and with
   loyalty on and welcome points set, the lead names them ("Get 200 points – worth £5.00 off your first order – …").
+- **Shop events for GA4, Google Ads remarketing, the Meta Pixel and Tag Manager, like for like with a WooCommerce
+  shop's plugins** (Google Analytics for WooCommerce, Pixel Manager, GTM Kit). `Services\Marketing\Ecommerce` (set by
+  the controllers) feeds `partials.tracking`: `view_item_list` (shop, categories, search and theme listings through
+  `CatalogController::render`), `view_item`, `add_to_cart` (the add-to-basket JSON's `tracking`), `begin_checkout` (a
+  click on a link to the checkout; every basket JSON carries `tracking_cart`) and `purchase` (moved from
+  `checkout.thankyou`, once per order). Each goes to Tag Manager's dataLayer (GA4 ecommerce format), to GA4 (item_id =
+  the SKU, else "#" + the product ID, as the WooCommerce plugin's "product SKU" setting), to the Google Ads accounts
+  with **Settings › SEO & tracking › Google Ads dynamic remarketing** (items with the feed's IDs and
+  `google_business_vertical: retail`, as Pixel Manager), and to the Meta Pixel (ViewContent, AddToCart,
+  InitiateCheckout, Purchase; `content_ids` are now the feed's IDs, not SKUs, so they match a catalogue built from the
+  feed). Each is also the document event `store:track` for a theme's own tags.
+- **`Services\Marketing\ProductIds`**: one product ID for the Google Shopping feed and every tag. An imported product
+  keeps its WordPress post ID (catalogues, audiences and history built on the old shop still match); one made on this
+  site uses its own ID, with a "p" in front in a shop that has imported products, where a plain number could be an old
+  product's ID (feed `g:id` too); a variation its WordPress ID, else "v" + its ID.
+- **Settings › SEO & tracking › Send page views to Google Analytics** (`tracking.ga4_page_views`, default on): untick
+  when Tag Manager already sends GA4 page views; the shop's events still go to the GA4 ID.
+- With Tag Manager on the page too, the shop's gtag.js keeps its own queue (`storeGtagLayer`, `window.storeGtag()`), as
+  WooCommerce's plugins did with `dataLayerPYS`, so neither library reads the other's commands and no conversion can be
+  counted twice; consent and `set` commands go to both. With Google Ads set, `url_passthrough` keeps ad clicks
+  attributed when a visitor declines cookies.
 - **Loyalty points: pause spending** (Admin › Settings › Loyalty points › Spending › **Customers can spend points**,
   `loyalty.spending`, config `commerce.loyalty.spending`, default on; `Loyalty::canSpend()`). Untick it and customers
   still earn points (paid orders, welcome bonus) and see their balance, but can't use them: checkout says using them is
@@ -95,6 +116,10 @@ can be saved again.
   not affected.
 
 ### Theme contract
+- Optional view **`partials.tracking-page`** (`$tracking`, `$trackingOrder`, `$adsAccounts`) for a theme's own tags,
+  included before the shop's events are sent (listen for `store:track`); send Google tags through `window.storeGtag()`.
+  `checkout.thankyou` no longer sends the purchase itself: a child theme overriding it must drop its copy of that
+  script, or purchases are sent twice.
 - Child themes overriding `checkout.partials.summary`, `account.points` or `auth.register` can check
   `Loyalty::canSpend()` to word the paused state; points can't be spent while it is off whatever the view shows.
 - New partial **`partials.tracking`** (`['part' => 'body']` for the noscript frame). Child themes overriding

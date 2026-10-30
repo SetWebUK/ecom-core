@@ -98,7 +98,7 @@ class FeedController extends Controller
         $identifierExists = filled($product->gtin) || filled($product->mpn);
 
         return [
-            'g:id' => (string) ($product->wp_id ?: $product->id),
+            'g:id' => \Pine\Commerce\Services\Marketing\ProductIds::product($product),
             'g:title' => mb_substr(html_entity_decode(Text::title($product->name), ENT_QUOTES, 'UTF-8'), 0, 150),
             'g:description' => mb_substr($description, 0, 5000),
             'g:link' => $product->url,
@@ -124,7 +124,7 @@ class FeedController extends Controller
         $options = collect((array) $variation->options)->map(fn ($v) => ucwords(str_replace('-', ' ', (string) $v)))->implode(' / ');
 
         return array_merge($base, [
-            'g:id' => (string) ($variation->wp_id ?: 'v'.$variation->id),
+            'g:id' => \Pine\Commerce\Services\Marketing\ProductIds::variation($variation),
             'g:item_group_id' => $base['g:id'],
             'g:title' => mb_substr($base['g:title'].($options !== '' ? ' - '.$options : ''), 0, 150),
             'g:link' => $product->url,

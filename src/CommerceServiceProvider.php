@@ -65,6 +65,8 @@ class CommerceServiceProvider extends ServiceProvider
         );
 
         $this->app->singleton(Cart::class);
+        // what partials.tracking reports about the page (set by the controllers) – one per request
+        $this->app->scoped(Services\Marketing\Ecommerce::class);
         // Admin › Updates: external programs (composer, git, mysqldump, artisan) – tests bind a fake runner
         $this->app->bindIf(Updater\ProcessRunner::class, Updater\SystemProcessRunner::class);
         // extension API state (Commerce::gateway(), ::adminMenu(), ::settings() …) – one per application instance
