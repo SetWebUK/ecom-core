@@ -175,7 +175,10 @@ return [
         'default_carrier' => null,                // pre-selected on Ready to send (a name from 'carriers'; null = none)
     ],
 
-    'feeds' => ['google' => ['default_category' => null, 'default_condition' => 'new', 'condition_map' => ['used' => 'used']]],
+    'feeds' => ['google' => ['default_category' => null, 'default_condition' => 'new', 'condition_map' => ['used' => 'used'],
+        // attribute slugs read for the clothing fields (g:color, g:size + its fitting/length, g:gender, g:age_group)
+        'colour_attributes' => ['colour', 'color'], 'size_attributes' => ['size', 'shoe-size'], 'size_extra_attributes' => ['fitting', 'length', 'leg-length'],
+        'gender_attributes' => ['gender'], 'age_attributes' => ['age', 'age-group']]],
 
     // MAIL_MAILER=smtp2go: email through SMTP2GO's web API (Mail\Support\Smtp2GoTransport) with an API key allowed to send
     'mail' => ['smtp2go' => ['key' => env('SMTP2GO_API_KEY'), 'endpoint' => env('SMTP2GO_API_URL', 'https://api.smtp2go.com/v3')]],

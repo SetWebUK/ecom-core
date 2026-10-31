@@ -567,8 +567,16 @@ class StoreSettings
             ['title' => 'Google Shopping feed', 'feed' => true, 'feature' => 'google_feed', 'fields' => [
                 ['key' => 'feeds.google_product_category', 'label' => 'Default Google product category', 'type' => 'text', 'default' => config('commerce.feeds.google.default_category'), 'max' => 255,
                     'drives' => 'Used for products without their own category (Google taxonomy ID or path, e.g. 222 = Electronics).'],
+                ['key' => 'feeds.include_shipping', 'label' => 'Send the delivery cost in the feed', 'type' => 'bool', 'default' => true,
+                    'drives' => 'Untick to leave delivery to your Google Merchant Center delivery settings (e.g. free over a certain spend, which a feed can’t say).'],
                 ['key' => 'feeds.shipping_price', 'label' => 'Shipping price in the feed', 'type' => 'money', 'default' => 0, 'max' => 1000,
                     'drives' => 'Delivery cost Google shows next to your products.'],
+                ['key' => 'feeds.google_gender', 'label' => 'Gender (clothing)', 'type' => 'select', 'default' => '',
+                    'options' => ['' => 'Not sent', 'male' => 'Male', 'female' => 'Female', 'unisex' => 'Unisex'],
+                    'drives' => 'Google requires it for clothing. Used for products without a gender attribute.'],
+                ['key' => 'feeds.google_age_group', 'label' => 'Age group (clothing)', 'type' => 'select', 'default' => '',
+                    'options' => ['' => 'Not sent', 'adult' => 'Adult', 'kids' => 'Kids', 'toddler' => 'Toddler', 'infant' => 'Infant', 'newborn' => 'Newborn'],
+                    'drives' => 'Google requires it for clothing. Used for products without an age attribute.'],
             ]],
         ];
     }

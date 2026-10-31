@@ -95,6 +95,14 @@ can be saved again.
   WooCommerce's plugins did with `dataLayerPYS`, so neither library reads the other's commands and no conversion can be
   counted twice; consent and `set` commands go to both. With Google Ads set, `url_passthrough` keeps ad clicks
   attributed when a visitor declines cookies.
+- **Google Shopping feed: clothing fields, clean descriptions, delivery left to Merchant Center.** Google requires
+  colour, size, gender and age group for clothing: `g:color` comes from the colour attribute, `g:size` from a
+  variation's size option plus its fitting / length option ("+2XL Short", so sizes of one product don't look like
+  duplicates), `g:gender` / `g:age_group` from the product's gender / age attributes, else the new **Settings › SEO &
+  tracking › Google Shopping feed › Gender / Age group** (config `commerce.feeds.google.*_attributes` names the
+  attributes). Descriptions lose page-builder shortcodes (`[vc_row]` …) as well as HTML. **Send the delivery cost in
+  the feed** (`feeds.include_shipping`, default on): untick to leave delivery to Merchant Center's delivery settings
+  (e.g. free over a certain spend, which a per-item feed price can't say).
 - **Loyalty points: pause spending** (Admin › Settings › Loyalty points › Spending › **Customers can spend points**,
   `loyalty.spending`, config `commerce.loyalty.spending`, default on; `Loyalty::canSpend()`). Untick it and customers
   still earn points (paid orders, welcome bonus) and see their balance, but can't use them: checkout says using them is
