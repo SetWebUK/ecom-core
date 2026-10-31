@@ -22,6 +22,7 @@ class CheckoutFragments
             'subtotal' => money($totals['subtotal_display'] ?? $totals['subtotal']),
             'total' => money($totals['total']),
             'html' => theme_view('cart.side-cart', ['cart' => $cart, 'totals' => $totals, 'notices' => $notices, 'error' => $error])->render(),
+            'tracking_cart' => \Pine\Commerce\Services\Marketing\Ecommerce::basket($cart), // partials.tracking: "checkout started"
         ];
         if ($withCheckout) {
             $data['checkout'] = static::checkout($cart, $notices);

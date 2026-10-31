@@ -213,6 +213,7 @@
 
     function applyCart(data) {
         if (!data) { return; }
+        if (data.tracking_cart) { d.dispatchEvent(new CustomEvent('store:cart-updated', { detail: data })); } // partials.tracking
         if (typeof data.count === 'number') { setCount(data.count); }
         var body = sideCart ? $('[data-side-cart-content]', sideCart) : null;
         if (body && typeof data.html === 'string') { body.innerHTML = data.html; cartLoaded = true; }
@@ -242,6 +243,7 @@
             if (button) { button.disabled = false; button.classList.remove('is-busy'); }
             applyCart(data);
             if (data.ok) {
+                d.dispatchEvent(new CustomEvent('store:added-to-cart', { detail: data }));
                 if (data.open !== false) { openCart(); }
                 if (!sideCart) { toast(data.message); }
                 var modal = $('#quick-view'); if (modal && modal.open) { modal.close(); }
@@ -554,6 +556,7 @@
                 var g = all ? 'granted' : 'denied';
                 window.gtag('consent', 'update', { analytics_storage: g, ad_storage: g, ad_user_data: g, ad_personalization: g, personalization_storage: g });
             }
+            if (all && typeof window.storeStartMarketing === 'function') { window.storeStartMarketing(); }
             banner.hidden = true;
             recordAttribution();
         });

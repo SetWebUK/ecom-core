@@ -296,9 +296,16 @@ trait ImportsCatalog
             }
         }
 
-        $rows = $this->withoutExisting($entity, 'products', array_values($rows));
+        // go-live sync: products imported before stay in (their stock and prices update), the rest of them is kept
+        $keep = $this->keepingLocal();
+        $rows = $keep ? array_values($rows) : $this->withoutExisting($entity, 'products', array_values($rows));
         // a slug another shop's product already uses gets a suffix (and the old URL a redirect)
         [$own] = $this->u->plan('products', $rows);
+        $kept = $keep ? $own : [];
+        if ($kept) {
+            // their up-sells / cross-sells as set here, too
+            $this->checkpoint['related'] = array_values(array_filter((array) ($this->checkpoint['related'] ?? []), fn ($pair) => ! isset($kept[$pair[0]])));
+        }
         $foreign = $this->foreign('products', 'slug', array_column($rows, 'slug'));
         foreach ($rows as $i => $row) {
             if (! isset($own[$row['wp_id']]) && isset($foreign[$row['slug']])) {
@@ -311,17 +318,22 @@ trait ImportsCatalog
         $variations = [];
         foreach ($rows as $row) {
             $id = $row['wp_id'];
-            $resolved[$id] = $this->productChildren($id, $children[$id], $l);
+            if (! isset($kept[$id])) { // images, categories, tags, attributes: only for products new here
+                $resolved[$id] = $this->productChildren($id, $children[$id], $l);
+            }
             if (isset($variable[$id])) {
                 $variations[$id] = $this->fetchVariations($id, $variable[$id], $l);
             }
         }
 
-        $this->transaction(function () use ($entity, $rows, $resolved, $variations, $sources, $l) {
+        $this->transaction(function () use ($entity, $rows, $resolved, $variations, $sources, $l, $kept) {
             if (! $this->dryRun) {
                 $this->u->adopt('products', $rows, 'slug');
             }
-            $map = $this->saveRows($entity, 'products', $rows, 'wp_id', ['created_at']);
+            $keptRows = array_values(array_filter($rows, fn ($row) => isset($kept[$row['wp_id']])));
+            $newRows = array_values(array_filter($rows, fn ($row) => ! isset($kept[$row['wp_id']])));
+            $map = $this->saveRows($entity, 'products', $newRows, 'wp_id', ['created_at'])
+                + $this->saveRows($entity, 'products', $keptRows, 'wp_id', $this->allBut($keptRows, self::KEEP_LOCAL_FIELDS['products']));
             if (! $this->dryRun) {
                 $resolved = array_intersect_key($resolved, $map);
                 $counts = ProductChildren::write($resolved, $map, $this->now(), $this->u);
@@ -330,11 +342,11 @@ trait ImportsCatalog
             foreach ($rows as $row) {
                 $id = $row['wp_id'];
                 $path = ($row['primary_category_id'] && isset($l['catPath'][$row['primary_category_id']]) ? $l['catPath'][$row['primary_category_id']].'/' : 'product/').$row['slug'];
-                if (isset($map[$id]) && ($sources[$id] ?? null) !== null && $sources[$id] !== $path && $sources[$id] !== 'product/'.$row['slug']) {
+                if (isset($map[$id]) && ! isset($kept[$id]) && ($sources[$id] ?? null) !== null && $sources[$id] !== $path && $sources[$id] !== 'product/'.$row['slug']) {
                     $this->redirect($sources[$id], $path);
                 }
                 if (isset($variations[$id])) {
-                    $this->saveVariations($map[$id] ?? null, $variations[$id]);
+                    $this->saveVariations($map[$id] ?? null, $variations[$id], isset($kept[$id]));
                 }
             }
         });
@@ -497,6 +509,11 @@ trait ImportsCatalog
         $rows = [];
         foreach ($variations as $v) {
             $mapped = ApiMap::variation($v, $termSlug, $this->attributeSlugs ?? []);
+            // The API shows a variation without its own SKU with the parent's (WooCommerce SKUs are unique, so a match
+            // is never the variation's own); stored on every size, the admin refused to save the product.
+            if ($mapped['meta']['_sku'] !== '' && $mapped['meta']['_sku'] === (string) ($p['sku'] ?? '')) {
+                $mapped['meta']['_sku'] = '';
+            }
             $image = $mapped['image'] ? $this->image($entity, $remoteId.'/'.$mapped['wp_id'], $mapped['image']) : null;
             $row = ProductRows::variationRow(['wp_id' => $mapped['wp_id'], 'product_id' => 0, 'status' => $mapped['status'],
                 'menu_order' => $mapped['menu_order'], 'date_gmt' => $mapped['date_gmt'], 'modified_gmt' => $mapped['modified_gmt'],
@@ -514,8 +531,12 @@ trait ImportsCatalog
         return $rows;
     }
 
-    /** Save a product's variations; variations gone from the shop are switched off (never deleted – orders point at them). */
-    protected function saveVariations(?int $productId, array $rows): void
+    /**
+     * Save a product's variations; variations gone from the shop are switched off (never deleted – orders point at them).
+     * $keep (go-live sync, a product imported before): its variations only take stock and prices, new ones are added and
+     * none is switched off.
+     */
+    protected function saveVariations(?int $productId, array $rows, bool $keep = false): void
     {
         if ($this->dryRun || ! $productId || ! $rows) {
             return;
@@ -524,6 +545,15 @@ trait ImportsCatalog
             $rows[$i]['product_id'] = $productId;
         }
         $rows = ProductRows::normaliseVariationOrder($rows);
+        if ($keep) {
+            [$existing] = $this->u->plan('product_variations', $rows);
+            $old = array_values(array_filter($rows, fn ($row) => isset($existing[$row['wp_id']])));
+            $this->u->save('product_variations', $old, 'wp_id', $this->allBut($old, self::KEEP_LOCAL_FIELDS['product_variations']));
+            $this->u->save('product_variations', array_values(array_filter($rows, fn ($row) => ! isset($existing[$row['wp_id']]))), 'wp_id', ['created_at']);
+            Product::query()->find($productId)?->refreshVariablePrice();
+
+            return;
+        }
         $map = $this->u->save('product_variations', $rows, 'wp_id', ['created_at']);
         $this->u->owned('product_variations')->where('product_id', $productId)->whereNotIn('wp_id', array_keys($map) ?: [0])->update(['is_active' => false]);
         Product::query()->find($productId)?->refreshVariablePrice();

@@ -17,6 +17,7 @@ class ThemeContract
         'page' => ['pages.default'],
         'page.contact' => ['pages.contact', 'pages.default'],
         'page.faq' => ['pages.faq', 'pages.default'],
+        'page.designed' => ['pages.designed', 'pages.full-width', 'pages.default'],
         'catalog' => ['catalog.archive'],
         'catalog.results' => ['catalog.partials.results'],
         'catalog.filters' => ['partials.filters'],

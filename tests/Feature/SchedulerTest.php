@@ -16,6 +16,7 @@ use Pine\Commerce\Models\Setting;
 use Pine\Commerce\Models\StockNotification;
 use Pine\Commerce\Scheduling\Scheduler;
 use Pine\Commerce\Scheduling\Tasks\PruneStaleData;
+use Pine\Commerce\Services\Admin\StoreTasks;
 use Pine\Commerce\Services\Checkout\CheckoutService;
 use Pine\Commerce\Support\Doctor;
 use Pine\Commerce\Tests\Concerns\InstallsNeutralStore;
@@ -390,6 +391,11 @@ class SchedulerTest extends TestCase
         $this->assertStringContainsString('No cron detected', $check()['message']);
         $this->assertStringContainsString('schedule:run', $check()['message']);
 
+        $this->app['env'] = 'production';
+        $this->assertSame(Doctor::WARN, $check()['status'], 'a live shop without cron: a warning even with the web fallback');
+        $this->assertStringContainsString('cPanel', $check()['fix']);
+        $this->app['env'] = 'testing';
+
         config(['commerce.scheduler.web_fallback' => false]);
         $this->assertSame(Doctor::WARN, $check()['status']);
         $this->assertStringContainsString('cPanel', $check()['fix']);
@@ -397,6 +403,75 @@ class SchedulerTest extends TestCase
         Scheduler::beat();
         $this->assertSame(Doctor::PASS, $check()['status']);
         $this->assertStringContainsString('Cron is running', $check()['message']);
+    }
+
+    public function test_health_lists_failed_tasks_and_overdue_ones_while_cron_runs(): void
+    {
+        $this->travelTo(\Illuminate\Support\Carbon::parse('2026-11-02 10:02:00', 'UTC')); // London = UTC in November
+        $ok = ['status' => 'ok', 'summary' => '', 'ms' => 1, 'via' => 'cron'];
+        Scheduler::record('catalog.sale-prices', $ok); // every 5 minutes: next due 10:05
+        Scheduler::record('maintenance.prune', ['status' => 'failed', 'summary' => 'disk full', 'ms' => 1, 'via' => 'web']);
+
+        $health = Scheduler::health();
+        $this->assertFalse($health['running']);
+        $this->assertSame(['maintenance.prune'], array_column($health['failed'], 'key'), 'a failure counts with or without cron');
+        $this->assertSame([], $health['overdue'], 'no cron: the cron warning covers it, nothing is "overdue"');
+
+        $this->travel(17)->minutes(); // 10:19 – 14 minutes past 10:05, within the grace
+        Scheduler::beat();
+        $this->assertSame([], Scheduler::health()['overdue']);
+
+        $this->travel(2)->minutes(); // 10:21
+        Scheduler::beat();
+        $health = Scheduler::health();
+        $this->assertTrue($health['running']);
+        $this->assertSame(['catalog.sale-prices'], array_column($health['overdue'], 'key'), 'tasks that never ran are not overdue; prune is next due at 03:40');
+        $this->assertSame('10:05', $health['overdue'][0]['due']->format('H:i'));
+        $this->assertSame('10:05', collect(Scheduler::status())->firstWhere('key', 'catalog.sale-prices')['overdue']->format('H:i'));
+
+        Scheduler::run('catalog.sale-prices', 'cron');
+        $this->assertSame([], Scheduler::health()['overdue']);
+        $this->assertNull(collect(Scheduler::status())->firstWhere('key', 'catalog.sale-prices')['overdue']);
+    }
+
+    public function test_a_live_shop_warns_about_background_jobs_in_the_doctor_and_on_the_home_page(): void
+    {
+        $this->travelTo(\Illuminate\Support\Carbon::parse('2026-11-02 10:02:00', 'UTC'));
+        $todo = fn () => collect(StoreTasks::problems())->whereIn('key', ['scheduler', 'scheduler-tasks'])->values();
+        $this->assertCount(0, $todo(), 'only live (production) shops get the To do entry');
+
+        $this->app['env'] = 'production';
+        $this->assertSame('Background jobs aren’t set up', $todo()->sole()['title']);
+        $this->assertSame(route('admin.settings.edit', 'automation'), $todo()->sole()['url']);
+
+        Scheduler::beat();
+        $this->assertCount(0, $todo(), 'cron is checking in and nothing failed');
+
+        Scheduler::record('catalog.sale-prices', ['status' => 'ok', 'summary' => '', 'ms' => 1, 'via' => 'cron']);
+        Scheduler::record('maintenance.prune', ['status' => 'failed', 'summary' => 'disk full', 'ms' => 1, 'via' => 'cron']);
+        $this->travel(19)->minutes();
+        Scheduler::beat();
+        $entry = $todo()->sole();
+        $this->assertSame('scheduler-tasks', $entry['key']);
+        $this->assertSame('2 background jobs need a look', $entry['title']);
+        $this->assertStringContainsString('“Tidy up old data” didn’t finish last time. “Scheduled sale prices” is running late.', $entry['text']);
+
+        $doctor = collect((new Doctor)->run());
+        $this->assertSame(Doctor::PASS, $doctor->firstWhere('title', 'Scheduler')['status']);
+        $failed = $doctor->firstWhere('title', 'Task: Tidy up old data');
+        $this->assertSame([Doctor::WARN, 'Server'], [$failed['status'], $failed['group']]);
+        $this->assertStringContainsString('disk full', $failed['message']);
+        $this->assertStringContainsString('commerce:schedule:task maintenance.prune', $failed['fix']);
+        $this->assertStringContainsString('was due', $doctor->firstWhere('title', 'Task: Scheduled sale prices')['message']);
+
+        $this->actingAs($this->neutralAdmin());
+        $this->get(route('admin.dashboard'))->assertOk()->assertSee('data-task="scheduler-tasks"', false)->assertSee('2 background jobs need a look');
+        $this->get(route('admin.settings.edit', 'automation'))->assertOk()->assertSee('Cron is running')->assertSee('Late')->assertSee('Failed: disk full');
+
+        $this->travel(6)->minutes(); // no heartbeat for 6 minutes
+        $this->assertSame('Background jobs have stopped', $todo()->sole()['title']);
+        $this->assertStringContainsString('last checked in 6 minutes ago', $todo()->sole()['text']);
+        $this->assertStringContainsString('Ask your developer or host to check it', $todo()->sole()['text']);
     }
 
     // ------------------------------------------------------------------ admin

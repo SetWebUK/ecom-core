@@ -12,10 +12,6 @@
     $S = \Pine\Commerce\Theme\Storefront::class;
     $store = $S::store();
     $cartCount = $S::cartCount();
-    $gtmId = strtoupper(trim((string) setting('tracking.gtm_id', '')));
-    $gtmId = preg_match('/^GTM-[A-Z0-9]+$/', $gtmId) ? $gtmId : null;
-    $ga4Id = strtoupper(trim((string) setting('tracking.ga4_id', '')));
-    $ga4Id = preg_match('/^G-[A-Z0-9]+$/', $ga4Id) ? $ga4Id : null;
     $favicon = setting('store.favicon');
     $faviconUrl = $favicon ? media_url($favicon) : null;
     $childCss = [];
@@ -49,32 +45,11 @@
     @foreach ($childCss as $href)
         <link rel="stylesheet" href="{{ $href }}">
     @endforeach
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('consent', 'default', {ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'denied', personalization_storage: 'denied', functionality_storage: 'granted', security_storage: 'granted', wait_for_update: 500});
-        (function () {
-            try {
-                var m = document.cookie.match(/(?:^|; )store_consent=([^;]*)/);
-                if (!m) { return; }
-                var c = decodeURIComponent(m[1]).split(','), has = function (k) { return c.indexOf(k) > -1 ? 'granted' : 'denied'; };
-                gtag('consent', 'update', {analytics_storage: has('statistics'), ad_storage: has('marketing'), ad_user_data: has('marketing'), ad_personalization: has('marketing'), personalization_storage: has('preferences')});
-            } catch (e) {}
-        })();
-    </script>
-    @if ($ga4Id)
-        <script async src="https://www.googletagmanager.com/gtag/js?id={{ $ga4Id }}"></script>
-        <script>gtag('js', new Date()); gtag('config', '{{ $ga4Id }}');</script>
-    @endif
-    @if ($gtmId)
-        <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','{{ $gtmId }}');</script>
-    @endif
+    @include('partials.tracking')
     @stack('head')
 </head>
 <body class="theme-{{ theme()->slug }} header-{{ theme_setting('header_style', 'light') === 'brand' ? 'brand' : 'light' }} @yield('body_class')">
-@if ($gtmId)
-    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ $gtmId }}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-@endif
+@include('partials.tracking', ['part' => 'body'])
 <a class="skip-link" href="#main">Skip to content</a>
 
 @include('partials.header')

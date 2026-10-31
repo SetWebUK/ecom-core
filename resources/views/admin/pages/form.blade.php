@@ -22,6 +22,8 @@
         'templates' => collect(PageBlocks::templates())->map(fn ($t) => $t['help'])->all(),
     ];
     $showTitle = (bool) old('blocks.show_title', $blocks['show_title'] ?? false);
+    // the visual builder (PageDesignController) lays out any page but the home page and the blog index
+    $designable = $editing && ! $isHome && ! in_array($page->template, ['home', 'blog'], true) && ! in_array($page->path, ['', 'blog'], true);
 @endphp
 
 @section('title', $editing ? $page->title.' · Pages' : 'Add page')
@@ -35,6 +37,9 @@
             </x-slot:badges>
             <x-slot:actions>
                 <x-admin.button :href="$page->url" icon="eye" target="_blank" rel="noopener">{{ $page->status === 'published' ? 'View page' : 'Preview' }}</x-admin.button>
+                @if ($designable)
+                    <x-admin.button :href="route('admin.pages.design', $page)" icon="paint-brush" :variant="$page->isDesigned() ? 'primary' : 'secondary'">Design page</x-admin.button>
+                @endif
                 <x-admin.dropdown label="More actions" icon="ellipsis-horizontal" icon-only>
                     @unless ($isHome)
                         <x-admin.dropdown-item :href="route('admin.pages.create', ['parent' => $page->id])" icon="document-plus">Add a sub-page</x-admin.dropdown-item>
@@ -74,7 +79,31 @@
                 <x-admin.card>
                     <div class="stack-fields">
                         <x-admin.input name="title" label="Title" :value="$page->title" required maxlength="255" :autofocus="! $editing" />
-                        @unless ($isHome)
+                        @if ($editing && $page->isDesigned())
+                            <div class="design-card" x-show="template !== 'home' && template !== 'blog'">
+                                <span class="design-card__icon"><x-admin.icon name="paint-brush" /></span>
+                                <div class="flex-1">
+                                    <p class="design-card__title">Designed with the visual builder</p>
+                                    <p class="design-card__text">Customers see the design, so the text editor is switched off. Open the builder to change pictures, text, buttons and sections.</p>
+                                    <div class="row mt-3">
+                                        <x-admin.button :href="route('admin.pages.design', $page)" variant="primary" icon="paint-brush">Open the visual builder</x-admin.button>
+                                        <x-admin.button :href="$page->url" icon="eye" target="_blank" rel="noopener">{{ $page->status === 'published' ? 'View page' : 'Preview' }}</x-admin.button>
+                                        <x-admin.button type="button" variant="ghost" @click="$dispatch('open-modal', 'remove-design')">Use the text editor instead</x-admin.button>
+                                    </div>
+                                </div>
+                            </div>
+                        @elseif (! $isHome)
+                            @if ($designable || ! $editing)
+                                <div class="design-hint" x-show="template !== 'home' && template !== 'blog'" x-cloak>
+                                    <x-admin.icon name="paint-brush" />
+                                    <span class="flex-1">Want banners, columns, pictures and buttons? Lay this page out by dragging blocks in – no code needed.</span>
+                                    @if ($editing)
+                                        <x-admin.button :href="route('admin.pages.design', $page)" size="sm" icon="paint-brush">Design this page</x-admin.button>
+                                    @else
+                                        <x-admin.button type="submit" name="after" value="design" size="sm" icon="paint-brush">Save and design</x-admin.button>
+                                    @endif
+                                </div>
+                            @endif
                             <div x-show="template !== 'home'" x-data="{ changed: false }" @input="if ($event.target.name === 'content') changed = true">
                                 <input type="hidden" name="content_changed" :value="changed ? 1 : 0" value="0">
                                 <x-admin.rich-editor name="content" label="Content" :value="$content" height="620" grow :content-css="$contentCss"
@@ -83,7 +112,7 @@
                                     <p class="field__help mt-2">Put <code class="mono">[{{ collect(\Pine\Commerce\Commerce::shortcodes()->tagsFor('blog_index'))->last() }}]</code> where the grid of blog posts should appear.</p>
                                 @endif
                             </div>
-                        @endunless
+                        @endif
                         <template x-if="template === 'home' && savedTemplate !== 'home'">
                             <x-admin.callout type="info" title="Save the page to build the home page">The home page is made of sections (banner, category tiles, best sellers, FAQ …). They appear here after you save.</x-admin.callout>
                         </template>
@@ -219,6 +248,17 @@
 
     @if ($editing && ! $isHome)
         <form id="duplicate-page" method="POST" action="{{ route('admin.pages.duplicate', $page) }}" hidden>@csrf</form>
+    @endif
+    @if ($editing && $page->isDesigned())
+        <x-admin.modal name="remove-design" title="Use the text editor instead?">
+            <p>The design is removed and customers see the page’s text again – the text that was there before it was designed. This can’t be undone.</p>
+            <x-slot:footer>
+                <x-admin.button type="button" @click="$dispatch('close-modal', 'remove-design')">Keep the design</x-admin.button>
+                <form method="POST" action="{{ route('admin.pages.design.destroy', $page) }}">@csrf @method('DELETE')
+                    <x-admin.button type="submit" variant="danger">Remove the design</x-admin.button>
+                </form>
+            </x-slot:footer>
+        </x-admin.modal>
     @endif
 
     <div class="form-actions">

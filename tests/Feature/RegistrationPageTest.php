@@ -52,6 +52,22 @@ class RegistrationPageTest extends TestCase
         $this->assertStringContainsString('noindex', $html);
     }
 
+    public function test_the_email_can_be_prefilled_and_the_welcome_points_are_named(): void
+    {
+        $html = $this->get(route('register.show', ['email' => 'ada@example.test']))->assertOk()->getContent();
+        $this->assertStringContainsString('value="ada@example.test"', $html);
+        $this->assertStringContainsString('Track orders, save your addresses and check out faster.', $html);
+        $this->assertStringNotContainsString('off your first order', $html, 'no loyalty, no points promise');
+
+        config(['commerce.features.loyalty' => true]);
+        Setting::set('loyalty.points_per_pound', 40, 'loyalty');
+        Setting::set('loyalty.signup_points', 200, 'loyalty');
+        Setting::flushMemo();
+        $html = $this->get(route('register.show', ['email' => ['not', 'a string']]))->assertOk()->getContent();
+        $this->assertStringContainsString('Get 200 points – worth £5.00 off your first order', $html);
+        $this->assertStringContainsString('id="reg_email" autocomplete="email" value=""', $html);
+    }
+
     public function test_sign_in_page_is_sign_in_only_and_links_to_the_register_page(): void
     {
         $html = $this->get(route('account'))->assertOk()->getContent();

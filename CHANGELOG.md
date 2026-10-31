@@ -9,6 +9,157 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-10-30
+
+A drag-and-drop page builder: staff who don't write code can lay out any content page with banners, columns,
+pictures, buttons, reviews, questions and live products, in the shop's own colours and fonts. Also: Meta Pixel and
+Google Ads purchase conversions, purchases tracked from the order-received page, imported products with sizes can be
+saved again, and a live shop's back office says when its background jobs (cron) stop.
+
+### Added
+- **Visual page builder** (Content › Pages › *page* › **Design page**, or "Save and design" on a new page): a
+  full-screen designer built on [GrapesJS](https://grapesjs.com) 0.23.6 (BSD-3-Clause, vendored in
+  `resources/assets/admin/vendor/grapesjs-0.23.6`). The canvas loads the active theme's CSS, `css/page-design.css` and
+  the Admin › Settings › Theme colours and fonts, so it looks like the live page; computer / tablet / phone views; undo /
+  redo; preview; Save, and Save and publish for drafts; Ctrl+S; a warning before leaving with unsaved changes.
+  - **Blocks**: ready-made sections (banner, picture and text, text and picture, three highlights, call to action,
+    customer review, questions and answers, picture gallery, text section, products, contact), layout (section, two /
+    three / wide-and-narrow columns, space, line), basics (heading, text, list, button, picture, quote, YouTube / Vimeo
+    video, Google map) and shop blocks (**Products**: best sellers, newest, on sale, featured or a category, 4–24
+    products, 2–4 per row; **Contact form**).
+  - **Plain-language settings** for whatever is clicked: link search ("Goes to"), open in a new tab, button style,
+    section background (light panel / brand colour / dark / a picture from the media library), banner shade, picture
+    description; **Style** with brand colour swatches (saved as `var(--c-…)`, so designs follow later theme colour
+    changes), sizes in words (Small … Giant) instead of pixels, spacing, width, corners, shadow, and "More options".
+    Styles apply to the clicked part only; set in the phone or tablet view, they apply to that screen size.
+  - Pictures come from the media library (double-click a picture, or "Change picture"); links from the link search.
+  - First open: start with the page's current text, a story page, a promotion page or a blank page.
+- **`pages.design`, `pages.design_html`, `pages.design_css`** (migration `2026_10_28_000200_add_design_to_pages`):
+  the builder's project data, the cleaned page body and its styles. A designed page (`Page::isDesigned()`) shows the
+  design instead of its text, full width, whatever its template (home and blog pages can't be designed). Its text is
+  kept: **"Use the text editor instead"** on the page form removes the design and the text shows again.
+- `Content\PageDesign`: `cleanHtml()` (removes scripts, styles, event handlers, `javascript:` / `data:` links and any
+  iframe but YouTube, Vimeo and Google Maps embeds; lazy-loads pictures after the first), `cleanCss()` (scopes every
+  rule to `.pb-page`, drops `@import`, `expression()`, `javascript:` URLs and `<`), `render()`, `starter()`,
+  `products()`.
+- **`[product_grid source=best-sellers|newest|sale|featured|category category=ID limit=8 columns=4]`** shortcode and
+  `<div data-component="product-grid" …>` placeholder (theme partial `partials.product-grid`).
+- Admin routes `admin.pages.design` (GET/PUT/DELETE `pages/{page}/design`) and `admin.pages.design.css` (the theme
+  colours and fonts for the canvas).
+
+- **Meta Pixel and Google Ads purchase conversions** (Admin › Settings › SEO & tracking: "Facebook (Meta) Pixel ID",
+  "Google Ads purchase conversions" as the event snippets' `send_to`, `AW-…/label`, comma-separated for several
+  accounts, e.g. the shop's own and an agency's: each account gets the tag and counts the sale). The Pixel loads only once a visitor
+  accepts marketing cookies (on load, or straight from the cookie banner) and sends PageView, ViewContent (from the
+  product page's Product JSON-LD, so any theme), AddToCart (app.js's new `store:added-to-cart` event) and Purchase
+  (value, currency, SKUs, the order number as `eventID`). The Google Ads tag loads through gtag.js under Consent Mode
+  and counts each paid order once, with its value and order number. The cookie banner's "auto" mode shows when either
+  is set. The tracking head moved to `partials.tracking` (used by `layouts.app` and `checkout.layout`).
+- **Go-live sync** (WooCommerce API import: "Items imported before" › **Keep this site's changes**, `--keep-local`;
+  the default once a shop has had a completed import). For syncs after the first import and the last one before the
+  switch-over: new products, customers, orders and coupons come in, orders take the shop's latest status, products and
+  variations only its latest stock and prices (`Importer::KEEP_LOCAL_FIELDS`). Everything edited on the new site stays:
+  product names, descriptions, SKUs, pictures, categories, linked products and added sizes, categories, customers,
+  coupons, pages and posts; Shipping and Tax are not read (that step overwrote delivery prices even with "Leave them
+  alone"). The import page warns when orders placed on the new site (test orders) hold order numbers the shop's own
+  orders need.
+- **Settings › SEO › Category page title** (`seo.category_title`): the default title of category pages without their
+  own SEO title, `%name% Archives` (WordPress / Yoast, as before) or e.g. `%name%` (Rank Math), before the title ending.
+  Later pages of a category keep "| Page n of m".
+- **`MAIL_MAILER=smtp2go`**: email through SMTP2GO's web API (`Mail\Support\Smtp2GoTransport`) with `SMTP2GO_API_KEY`
+  (a key allowed to send emails; config `commerce.mail.smtp2go`). Attachments such as invoice PDFs, inline images,
+  Cc / Bcc, Reply-To and `X-` / `List-Unsubscribe` headers are sent; a refused message throws like a failed SMTP send.
+  The skeleton's `.env.example` lists the key.
+- **Page sections: picture help.** A theme's `image` block field can carry `'help'` (e.g. the size it needs: "Square,
+  at least 800 × 800 px"); the page editor shows it under the picture, in sections and list items.
+- **Register page**: `?email=` pre-fills the email (for "create an account" boxes elsewhere on a theme), and with
+  loyalty on and welcome points set, the lead names them ("Get 200 points – worth £5.00 off your first order – …").
+- **Shop events for GA4, Google Ads remarketing, the Meta Pixel and Tag Manager, like for like with a WooCommerce
+  shop's plugins** (Google Analytics for WooCommerce, Pixel Manager, GTM Kit). `Services\Marketing\Ecommerce` (set by
+  the controllers) feeds `partials.tracking`: `view_item_list` (shop, categories, search and theme listings through
+  `CatalogController::render`), `view_item`, `add_to_cart` (the add-to-basket JSON's `tracking`), `begin_checkout` (a
+  click on a link to the checkout; every basket JSON carries `tracking_cart`) and `purchase` (moved from
+  `checkout.thankyou`, once per order). Each goes to Tag Manager's dataLayer (GA4 ecommerce format), to GA4 (item_id =
+  the SKU, else "#" + the product ID, as the WooCommerce plugin's "product SKU" setting), to the Google Ads accounts
+  with **Settings › SEO & tracking › Google Ads dynamic remarketing** (items with the feed's IDs and
+  `google_business_vertical: retail`, as Pixel Manager), and to the Meta Pixel (ViewContent, AddToCart,
+  InitiateCheckout, Purchase; `content_ids` are now the feed's IDs, not SKUs, so they match a catalogue built from the
+  feed). Each is also the document event `store:track` for a theme's own tags.
+- **`Services\Marketing\ProductIds`**: one product ID for the Google Shopping feed and every tag. An imported product
+  keeps its WordPress post ID (catalogues, audiences and history built on the old shop still match); one made on this
+  site uses its own ID, with a "p" in front in a shop that has imported products, where a plain number could be an old
+  product's ID (feed `g:id` too); a variation its WordPress ID, else "v" + its ID.
+- **Settings › SEO & tracking › Send page views to Google Analytics** (`tracking.ga4_page_views`, default on): untick
+  when Tag Manager already sends GA4 page views; the shop's events still go to the GA4 ID.
+- With Tag Manager on the page too, the shop's gtag.js keeps its own queue (`storeGtagLayer`, `window.storeGtag()`), as
+  WooCommerce's plugins did with `dataLayerPYS`, so neither library reads the other's commands and no conversion can be
+  counted twice; consent and `set` commands go to both. With Google Ads set, `url_passthrough` keeps ad clicks
+  attributed when a visitor declines cookies.
+- **Google Shopping feed: clothing fields, clean descriptions, delivery left to Merchant Center.** Google requires
+  colour, size, gender and age group for clothing: `g:color` comes from the colour attribute, `g:size` from a
+  variation's size option plus its fitting / length option ("+2XL Short", so sizes of one product don't look like
+  duplicates), `g:gender` / `g:age_group` from the product's gender / age attributes, else the new **Settings › SEO &
+  tracking › Google Shopping feed › Gender / Age group** (config `commerce.feeds.google.*_attributes` names the
+  attributes). Descriptions lose page-builder shortcodes (`[vc_row]` …) as well as HTML. **Send the delivery cost in
+  the feed** (`feeds.include_shipping`, default on): untick to leave delivery to Merchant Center's delivery settings
+  (e.g. free over a certain spend, which a per-item feed price can't say).
+- **Loyalty points: pause spending** (Admin › Settings › Loyalty points › Spending › **Customers can spend points**,
+  `loyalty.spending`, config `commerce.loyalty.spending`, default on; `Loyalty::canSpend()`). Untick it and customers
+  still earn points (paid orders, welcome bonus) and see their balance, but can't use them: checkout says using them is
+  paused for now, My account › Points and the register page stop promising money off, `POST /cart/points` refuses, and
+  points chosen in a basket before the pause are not taken off.
+- With a GA4 ID set, the order-received page also sends GA4's `purchase` event through gtag.js (it was only pushed to
+  Tag Manager's dataLayer, which nothing read without Tag Manager).
+- **Background jobs health check.** On a live site (`APP_ENV=production`) administrators see "Background jobs aren't
+  set up" / "have stopped" in the back-office home's To do card when cron hasn't checked in for 5 minutes, linking to
+  Settings › Scheduled tasks with the line to copy. A scheduled task whose last run failed, or that cron has left more
+  than 15 minutes past its due time (`Scheduler::OVERDUE_GRACE_MINUTES`, e.g. a crashed run's overlap lock), is listed
+  there too ("2 background jobs need a look"), is a **Task: …** warning in `commerce:doctor` / Settings › System, and
+  shows **Late** in Settings › Scheduled tasks. New `Scheduler::health()`, `Scheduler::missedRun()`, and an `overdue`
+  key in `Scheduler::status()` rows.
+
+### Changed
+- `commerce:doctor` / Settings › System: no cron on a live site is now a **warning** even with the web fallback on (it
+  was informational). The fallback only runs while people visit, so the night-time tidy-up and the morning low-stock
+  email ran late or not at all without anyone being told. Other environments (`local`, `testing`, `staging`) are
+  unchanged.
+
+### Fixed
+- **Purchases are tracked again: the order-received page loads Tag Manager / Analytics.** `checkout.layout` loaded no
+  tracking at all, so the `purchase` dataLayer event on the order-received page never reached Tag Manager or GA4. That
+  page now gets `partials.tracking`; the checkout and order-pay pages, where card details are entered, still load no
+  third-party scripts.
+- **Products imported through the WooCommerce REST API can be saved again.** The API shows a variation that has no
+  SKU of its own with its parent's SKU, and the importer stored that copy on every size, so the admin refused to save
+  the product ("The SKU … is used more than once"). The importer now leaves such variations without a SKU, and
+  migration `2026_10_30_000100_clear_copied_variant_skus` clears the copies already imported. Orders, emails and
+  reports fall back to the product's SKU, as WooCommerce did. Imports read straight from the WordPress database were
+  not affected.
+
+### Theme contract
+- Optional view **`partials.tracking-page`** (`$tracking`, `$trackingOrder`, `$adsAccounts`) for a theme's own tags,
+  included before the shop's events are sent (listen for `store:track`); send Google tags through `window.storeGtag()`.
+  `checkout.thankyou` no longer sends the purchase itself: a child theme overriding it must drop its copy of that
+  script, or purchases are sent twice.
+- Child themes overriding `checkout.partials.summary`, `account.points` or `auth.register` can check
+  `Loyalty::canSpend()` to word the paused state; points can't be spent while it is off whatever the view shows.
+- New partial **`partials.tracking`** (`['part' => 'body']` for the noscript frame). Child themes overriding
+  `layouts.app` or `checkout.layout` should include it in place of their own Tag Manager / GA4 snippet; the layouts
+  no longer compute `$gtmId` / `$ga4Id`. `app.js` dispatches `store:added-to-cart` (detail: the cart response) after
+  a successful add to basket.
+- New optional view **`page.designed`** → `pages.designed` (falls back to `pages.full-width`, then `pages.default`,
+  which get the same variables). The default theme adds `pages/designed.blade.php`, `partials/product-grid.blade.php`
+  and `assets/css/page-design.css`; child themes inherit them and can restyle the builder's `pb-*` classes.
+
+### Migrations
+- `2026_10_28_000200_add_design_to_pages` (additive: three nullable long-text columns on `pages`).
+- `2026_10_30_000100_clear_copied_variant_skus` (data: clears a variation's SKU where it equals its product's; not
+  reversible, the values were copies).
+
+### Client actions
+- None beyond the usual: `php artisan migrate`, `commerce:publish`, `commerce:theme:publish` (Admin › Updates runs
+  them all).
+
 ## [1.10.0] - 2026-10-28
 
 Easier page editing: imported pages open as readable text instead of the old page builder's code, and the editor's

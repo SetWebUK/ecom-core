@@ -48,7 +48,12 @@
                     <span class="text-muted">Never</span>
                 @endif
             </td>
-            <td class="nowrap">@if ($task['next'] && $running)<x-admin.time :value="$task['next']" format="relative" />@elseif ($task['next'])<span class="text-muted">Needs cron</span>@else<span class="text-muted">–</span>@endif</td>
+            <td class="nowrap">
+                @if ($task['overdue'])
+                    <span class="text-danger fw-600">Late</span>
+                    <div class="cell-sub">Was due <x-admin.time :value="$task['overdue']" format="relative" /></div>
+                @elseif ($task['next'] && $running)<x-admin.time :value="$task['next']" format="relative" />@elseif ($task['next'])<span class="text-muted">Needs cron</span>@else<span class="text-muted">–</span>@endif
+            </td>
         </tr>
     @endforeach
 </x-admin.table>

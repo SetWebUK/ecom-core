@@ -13,7 +13,8 @@ use Pine\Commerce\Support\Features;
  *  - earned on paid orders of signed-in customers: loyalty.earn_per_pound points per £1 of the items' price after
  *    discounts (VAT included, delivery not), once per order, when it becomes processing / completed
  *  - spent at checkout: loyalty.points_per_pound points = £1 off, up to loyalty.max_discount_percent of the items,
- *    once the balance reaches loyalty.min_redeem; shown as a discount line ("Points (400)") like a coupon
+ *    once the balance reaches loyalty.min_redeem; shown as a discount line ("Points (400)") like a coupon.
+ *    loyalty.spending off pauses spending (points are still earned and shown; checkout says it's paused)
  *  - a cancelled, failed or refunded order takes back what it earned and gives back what it spent
  *  - loyalty.signup_points for a new account (the storefront registration and "create an account" at checkout)
  * The balance is the sum of the customer's LoyaltyPoint rows (a ledger: nothing is ever overwritten).
@@ -26,6 +27,12 @@ class Loyalty
     public static function enabled(): bool
     {
         return Features::enabled('loyalty', false);
+    }
+
+    /** Customers can spend points at checkout (loyalty.spending; off = paused, points are still earned). */
+    public static function canSpend(): bool
+    {
+        return static::enabled() && filter_var(setting('loyalty.spending', config('commerce.loyalty.spending', true)), FILTER_VALIDATE_BOOL);
     }
 
     /** Points per £1 spent. */
@@ -151,7 +158,7 @@ class Loyalty
      */
     public static function usable(?int $userId, float $itemsTotal): int
     {
-        if (! static::enabled() || ! $userId) {
+        if (! static::canSpend() || ! $userId) {
             return 0;
         }
         $balance = static::balance($userId);

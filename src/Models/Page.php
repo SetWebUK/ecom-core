@@ -10,7 +10,7 @@ class Page extends Model
 {
     protected $guarded = ['id'];
 
-    protected $casts = ['blocks' => 'array', 'noindex' => 'boolean'];
+    protected $casts = ['blocks' => 'array', 'design' => 'array', 'noindex' => 'boolean'];
 
     protected static function booted(): void
     {
@@ -38,6 +38,12 @@ class Page extends Model
     public function getUrlAttribute(): string
     {
         return $this->path === '' ? url('/') : url($this->path); // SlashUrlGenerator appends the trailing slash
+    }
+
+    /** Was this page laid out in the visual builder? Then the storefront shows design_html instead of content. */
+    public function isDesigned(): bool
+    {
+        return $this->design_html !== null && $this->template !== 'home' && $this->template !== 'blog';
     }
 
     /** Read a structured block value, e.g. $page->block('hero.title'). */

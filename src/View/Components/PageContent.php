@@ -151,7 +151,7 @@ class PageContent extends Component
 
     public static function expandShortcodes(string $html, array $context = [], ?bool $legacy = null): string
     {
-        // importer placeholders: <div data-component="contact-form|blog-index|sitemap|order-tracking" data-...></div>
+        // importer / visual builder placeholders: <div data-component="contact-form|blog-index|sitemap|order-tracking|product-grid" data-...></div>
         $html = preg_replace_callback('#<div data-component="([a-z0-9-]+)"([^>]*)>\s*</div>#i', function ($m) use ($context) {
             $atts = [];
             preg_match_all('/data-([a-z0-9-]+)="([^"]*)"/i', $m[2], $a, PREG_SET_ORDER);
@@ -164,6 +164,9 @@ class PageContent extends Component
                 'blog-index' => '[blog_index posts_per_page='.max(1, (int) ($atts['per-page'] ?? $atts['posts-per-page'] ?? 9)).']',
                 'sitemap' => '[sitemap]',
                 'order-tracking' => '[order_tracking]',
+                // the visual builder's Products block (Content\PageDesign::cleanHtml())
+                'product-grid' => '[product_grid source="'.e($atts['source'] ?? 'best-sellers').'" category='.(int) ($atts['category'] ?? 0)
+                    .' limit='.(int) ($atts['limit'] ?? 8).' columns='.(int) ($atts['columns'] ?? 4).']',
                 default => $m[0],
             };
         }, $html);

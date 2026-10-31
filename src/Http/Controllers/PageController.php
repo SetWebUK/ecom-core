@@ -2,6 +2,7 @@
 
 namespace Pine\Commerce\Http\Controllers;
 
+use Pine\Commerce\Content\PageDesign;
 use Pine\Commerce\Models\Page;
 use Pine\Commerce\Services\Admin\PageBlocks;
 use Pine\Commerce\View\Components\Seo;
@@ -13,6 +14,7 @@ use Illuminate\Http\Request;
  *     return app(PageController::class)->show($page);
  *
  * Templates (pages.template):
+ *   (designed)            - a page laid out in the visual builder: theme view pages.designed, any template but home/blog
  *   default / full-width  - stored HTML (Elementor pages render full width, classic pages get the theme title header)
  *   contact               - as default, and guarantees the enquiry form is present
  *   faq                   - accordion built from blocks.faq[] (legacy WPBakery accordions in the content render as toggles)
@@ -32,6 +34,23 @@ class PageController extends Controller
         }
         if ($page->template === 'blog' || $page->path === 'blog') {
             return app(BlogController::class)->index($request);
+        }
+
+        // laid out in the visual builder: the design, full width, whatever the template (Content\PageDesign)
+        if ($page->isDesigned()) {
+            $html = PageDesign::render($page);
+
+            // (themes without pages.designed fall back to their full-width / default page with the same variables)
+            return theme_view(['pages.designed', 'pages.full-width', 'pages.default'], [
+                'page' => $page,
+                'contentHtml' => $html,
+                'designCss' => (string) $page->design_css,
+                'isElementor' => false,
+                'showTitle' => false,
+                'pageCss' => null,
+                'seo' => $this->seo($page, $html),
+                'bodyClass' => $this->bodyClass($page, false),
+            ]);
         }
 
         $html = PageContent::process((string) $page->content, $page);
@@ -102,7 +121,7 @@ class PageController extends Controller
 
         return array_filter([
             'title' => $page->meta_title ?: Seo::title($page->title),
-            'description' => $page->meta_description ?: PageContent::excerpt($page->content, 28, ''),
+            'description' => $page->meta_description ?: PageContent::excerpt($page->isDesigned() ? $html : $page->content, 28, ''),
             'canonical' => $page->url,
             'noindex' => (bool) $page->noindex,
             'modified_time' => optional($page->updated_at)->toIso8601String(),

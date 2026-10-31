@@ -43,6 +43,7 @@ class ImportWooApiCommand extends Command
         {--since= : Only items changed since this date (incremental re-sync)}
         {--orders-after= : Only orders placed on or after this date (Y-m-d)}
         {--skip-existing : Leave items that were imported before untouched}
+        {--keep-local : Go-live sync: new items come in, orders update, products take only the shop’s stock and prices; everything edited here is kept}
         {--no-images : Do not download images}
         {--no-notes : Do not import order notes (one request per order)}
         {--same-site : This shop was imported from the same site with commerce:import-wordpress – update those rows}
@@ -105,7 +106,7 @@ class ImportWooApiCommand extends Command
             $run = $manager->create($connection, [
                 'entities' => $entities,
                 'images' => ! $this->option('no-images'),
-                'existing' => $this->option('skip-existing') ? 'skip' : 'update',
+                'existing' => $this->option('keep-local') ? 'keep' : ($this->option('skip-existing') ? 'skip' : 'update'),
                 'orders_after' => $this->option('orders-after'),
                 'since' => $this->option('since'),
                 'notes' => ! $this->option('no-notes'),

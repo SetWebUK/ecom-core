@@ -11,7 +11,6 @@
         return implode('<br>', array_map(fn ($v) => e($v === $country ? ($countries[$v] ?? $v) : $v), $lines));
     };
     $trackingUrl = \Pine\Commerce\Mail\CustomerCompletedOrder::trackingUrl($order->tracking_carrier, $order->tracking_number);
-    $isPaid = in_array($order->status, ['processing', 'completed', 'on-hold'], true);
     $payUrl = route('checkout.pay', ['order' => $order->number, 'key' => $order->order_key]);
 @endphp
 
@@ -99,20 +98,5 @@
         </div>
     </aside>
 </div>
-@if ($isPaid)
-    <script>
-        (function () {
-            var key = 'store_purchase_{{ $order->id }}';
-            try { if (window.localStorage && localStorage.getItem(key)) { return; } } catch (e) {}
-            window.dataLayer = window.dataLayer || [];
-            window.dataLayer.push({ ecommerce: null });
-            window.dataLayer.push({!! json_encode(['event' => 'purchase', 'ecommerce' => [
-                'transaction_id' => (string) $order->number, 'value' => (float) $order->total, 'tax' => (float) $order->tax_total,
-                'shipping' => (float) $order->shipping_total, 'currency' => $order->currency ?: config('commerce.currency.code', 'GBP'), 'coupon' => (string) $order->coupon_code,
-                'items' => $order->items->map(fn ($i) => ['item_id' => (string) ($i->sku ?: $i->product_id), 'item_name' => $i->name, 'price' => (float) $i->unit_price, 'quantity' => (int) $i->quantity])->values(),
-            ]], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!});
-            try { localStorage.setItem(key, '1'); } catch (e) {}
-        })();
-    </script>
-@endif
+{{-- the purchase (GA4, Google Ads, Meta, Tag Manager) is sent by partials.tracking, from Services\Marketing\Ecommerce::purchase() --}}
 @endsection

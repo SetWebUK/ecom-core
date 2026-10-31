@@ -357,7 +357,11 @@ class Doctor
         }
     }
 
-    /** Cron heartbeat (setting scheduler.last_run, written by every schedule:run) and what happens without it. */
+    /**
+     * Cron heartbeat (setting scheduler.last_run, written by every schedule:run) and what happens without it, then any
+     * task whose last run failed or that cron left overdue (Scheduler::health()). In production no cron is a warning even
+     * with the web fallback: that only runs while people visit, so the night-time tidy-up and morning email run late or not at all.
+     */
     protected function scheduler(): void
     {
         $cron = '* * * * * cd '.base_path().' && php artisan schedule:run >> /dev/null 2>&1';
@@ -366,19 +370,28 @@ class Doctor
 
             return;
         }
-        $beat = \Pine\Commerce\Scheduling\Scheduler::lastHeartbeat();
-        if (\Pine\Commerce\Scheduling\Scheduler::cronRunning()) {
+        $health = \Pine\Commerce\Scheduling\Scheduler::health();
+        $beat = $health['beat'];
+        if ($health['running']) {
             $this->pass('Scheduler', 'Cron is running (last heartbeat '.$beat->diffForHumans().'). Details: php artisan commerce:schedule:status');
-
-            return;
+        } else {
+            $fallback = filter_var(config('commerce.scheduler.web_fallback', false), FILTER_VALIDATE_BOOL);
+            $without = 'unpaid orders are still cancelled when the checkout is visited'
+                .($fallback ? ' and other due tasks run after storefront requests (web fallback, only while people visit)' : '; abandoned-cart reminders, scheduled sale prices, back-in-stock sweeps, tidy-up and the low-stock email wait for cron');
+            $message = ($beat ? 'Cron is not running (last heartbeat '.$beat->diffForHumans().')' : 'No cron detected (schedule:run has never run)').': '.$without.'.';
+            $fallback && ! app()->environment('production')
+                ? $this->info('Scheduler', $message.' Recommended cron: '.$cron)
+                : $this->warn('Scheduler', $message, 'Add the cron job (cPanel › Cron Jobs, every minute): '.$cron);
         }
-        $fallback = filter_var(config('commerce.scheduler.web_fallback', false), FILTER_VALIDATE_BOOL);
-        $without = 'unpaid orders are still cancelled when the checkout is visited'
-            .($fallback ? ' and other due tasks run after storefront requests (web fallback)' : '; abandoned-cart reminders, scheduled sale prices, back-in-stock sweeps, tidy-up and the low-stock email wait for cron');
-        $message = ($beat ? 'Cron is not running (last heartbeat '.$beat->diffForHumans().')' : 'No cron detected (schedule:run has never run)').': '.$without.'.';
-        $fallback
-            ? $this->info('Scheduler', $message.' Recommended cron: '.$cron)
-            : $this->warn('Scheduler', $message, 'Add the cron job (cPanel › Cron Jobs, every minute): '.$cron);
+
+        foreach ($health['failed'] as $task) {
+            $this->warn('Task: '.$task['label'], 'Its last run failed ('.$task['at']->diffForHumans().'): '.$task['summary'],
+                'Settings › Scheduled tasks shows every task\'s last run; php artisan commerce:schedule:task '.$task['key'].' runs it again now.');
+        }
+        foreach ($health['overdue'] as $task) {
+            $this->warn('Task: '.$task['label'], 'Cron is running but this task has not: it was due '.$task['due']->diffForHumans().' (last run '.$task['last']->diffForHumans().').',
+                'php artisan commerce:schedule:task '.$task['key'].' runs it now; if it stays late, php artisan schedule:clear-cache removes a stuck overlap lock.');
+        }
     }
 
     protected function importer(): void

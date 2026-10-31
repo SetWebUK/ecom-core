@@ -230,6 +230,9 @@ class CheckoutController extends Controller
             CheckoutService::closeBasket($model);
         }
         $model->load(['items.product.images', 'items.variation', 'notes' => fn ($q) => $q->where('is_customer_note', true)]);
+        if (in_array($model->status, ['processing', 'completed', 'on-hold'], true)) {
+            app(\Pine\Commerce\Services\Marketing\Ecommerce::class)->purchase($model); // partials.tracking, once per order
+        }
         $bacs = $model->payment_method === 'bacs' ? $this->payments->get('bacs') : null;
 
         return response(theme_view('checkout.thankyou', [

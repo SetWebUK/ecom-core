@@ -79,6 +79,9 @@ class PageController extends Controller
     public function store(PageRequest $request): RedirectResponse
     {
         $page = Page::create($request->pageData());
+        if ($request->input('after') === 'design' && ! in_array($page->template, ['home', 'blog'], true)) {
+            return redirect()->route('admin.pages.design', $page); // "Save and design" on a new page
+        }
 
         return redirect()->route('admin.pages.edit', $page)->with('success', $page->status === 'published'
             ? "Page “{$page->title}” published."

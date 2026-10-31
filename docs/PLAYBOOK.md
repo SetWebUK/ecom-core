@@ -591,6 +591,12 @@ Admin › Settings › Scheduled tasks shows the same table; `php artisan commer
   has been sent, at most every 5 minutes – fine for small shops, but reminders and reports then depend on traffic;
 - with it off the other tasks simply wait for cron; `commerce:doctor` warns.
 
+On a live site (`APP_ENV=production`) a missing or stopped cron is a `commerce:doctor` warning even with the web
+fallback, and administrators see **"Background jobs aren't set up"** (or "have stopped") in the back-office home's To do
+card. A task whose last run failed, or that cron has left more than 15 minutes past its due time (e.g. a crashed run's
+overlap lock: `php artisan schedule:clear-cache`), is a warning in both places too and shows **Late** in Settings ›
+Scheduled tasks.
+
 Developer switches: `config/commerce.php` → `scheduler` (`enabled`, `tasks` per key, `web_fallback`,
 `heartbeat_minutes`). Owner switches: Admin › Settings › Scheduled tasks (low-stock email – off by default; how long
 abandoned guest baskets are kept – 90 days, 0 = forever) and Admin › Settings › Abandoned carts.
@@ -623,6 +629,9 @@ leave; after the first delay run `php artisan commerce:schedule:task carts.aband
       `/feeds/google-shopping.xml` if used (feature `google_feed`), structured data (Google Rich Results Test on a
       product page), the 404 page, old `?add-to-cart=` links.
 - [ ] Analytics / Tag Manager id in Settings › SEO & tracking.
+- [ ] Meta Pixel ID and Google Ads purchase conversion ("send_to", `AW-…/label`) in Settings › SEO & tracking, if the
+      old shop had them (WooCommerce: PixelYourSite, Facebook for WooCommerce, Google Listings & Ads). Set them at go-live,
+      not on staging, so test orders don't count as sales.
 
 ### Step 13 – QA checklist (staging)
 
