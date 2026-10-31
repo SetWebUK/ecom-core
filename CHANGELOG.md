@@ -13,8 +13,8 @@ Every entry lists, where relevant: **Added / Changed / Fixed / Removed**, **conf
 
 A drag-and-drop page builder: staff who don't write code can lay out any content page with banners, columns,
 pictures, buttons, reviews, questions and live products, in the shop's own colours and fonts. Also: Meta Pixel and
-Google Ads purchase conversions, purchases tracked from the order-received page, and imported products with sizes
-can be saved again.
+Google Ads purchase conversions, purchases tracked from the order-received page, imported products with sizes can be
+saved again, and a live shop's back office says when its background jobs (cron) stop.
 
 ### Added
 - **Visual page builder** (Content › Pages › *page* › **Design page**, or "Save and design" on a new page): a
@@ -110,6 +110,19 @@ can be saved again.
   points chosen in a basket before the pause are not taken off.
 - With a GA4 ID set, the order-received page also sends GA4's `purchase` event through gtag.js (it was only pushed to
   Tag Manager's dataLayer, which nothing read without Tag Manager).
+- **Background jobs health check.** On a live site (`APP_ENV=production`) administrators see "Background jobs aren't
+  set up" / "have stopped" in the back-office home's To do card when cron hasn't checked in for 5 minutes, linking to
+  Settings › Scheduled tasks with the line to copy. A scheduled task whose last run failed, or that cron has left more
+  than 15 minutes past its due time (`Scheduler::OVERDUE_GRACE_MINUTES`, e.g. a crashed run's overlap lock), is listed
+  there too ("2 background jobs need a look"), is a **Task: …** warning in `commerce:doctor` / Settings › System, and
+  shows **Late** in Settings › Scheduled tasks. New `Scheduler::health()`, `Scheduler::missedRun()`, and an `overdue`
+  key in `Scheduler::status()` rows.
+
+### Changed
+- `commerce:doctor` / Settings › System: no cron on a live site is now a **warning** even with the web fallback on (it
+  was informational). The fallback only runs while people visit, so the night-time tidy-up and the morning low-stock
+  email ran late or not at all without anyone being told. Other environments (`local`, `testing`, `staging`) are
+  unchanged.
 
 ### Fixed
 - **Purchases are tracked again: the order-received page loads Tag Manager / Analytics.** `checkout.layout` loaded no

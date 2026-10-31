@@ -11,6 +11,7 @@ use Pine\Commerce\Models\ProductReview;
 use Pine\Commerce\Models\ShippingMethod;
 use Pine\Commerce\Models\StockNotification;
 use Pine\Commerce\Models\User;
+use Pine\Commerce\Scheduling\Scheduler;
 use Pine\Commerce\Services\Payments\PaymentManager;
 use Pine\Commerce\Support\Features;
 use Throwable;
@@ -84,6 +85,8 @@ class StoreTasks
                 ($from !== '' ? '“'.$from.'” isn’t a real address. ' : '').'Customers see the sender address on every order email.', static::route('admin.settings.edit', 'emails'), 'Email settings');
         }
 
+        $out = array_merge($out, static::backgroundJobs());
+
         if (! Product::query()->published()->exists()) {
             $out[] = static::entry('products', 'info', 'tag', 'Your shop has no products yet',
                 'Add a product, or import them from a spreadsheet.', static::route('admin.products.create'), 'Add a product');
@@ -123,6 +126,44 @@ class StoreTasks
         }
 
         return $out;
+    }
+
+    /**
+     * Live shops only (production): cron isn't checking in, or a scheduled task failed / is overdue (Scheduler::health()).
+     * A warning, not a danger: without cron the web fallback still cancels unpaid orders, but only while people visit.
+     *
+     * @return list<array{key:string, tone:string, icon:string, title:string, text:string, url:?string, action:?string}>
+     */
+    protected static function backgroundJobs(): array
+    {
+        if (! app()->environment('production') || ! filter_var(config('commerce.scheduler.enabled', true), FILTER_VALIDATE_BOOL)) {
+            return [];
+        }
+        try {
+            $health = Scheduler::health();
+        } catch (Throwable) {
+            return [];
+        }
+        $url = static::route('admin.settings.edit', 'automation');
+
+        if (! $health['running']) {
+            return [static::entry('scheduler', 'warning', 'clock', $health['beat'] ? 'Background jobs have stopped' : 'Background jobs aren’t set up',
+                ($health['beat'] ? 'The server’s cron job last checked in '.$health['beat']->diffForHumans().'. ' : 'The server needs a cron job, and it hasn’t run yet. ')
+                .'It cancels unpaid orders, starts and ends sale prices, sends basket reminders and tidies up each night. '
+                .($health['beat'] ? 'Ask your developer or host to check it: the line it should run is on the next screen.' : 'Ask your developer or host to add it: the line to copy is on the next screen.'),
+                $url, 'See what’s needed')];
+        }
+
+        $failed = array_column($health['failed'], 'label');
+        $late = array_values(array_diff(array_column($health['overdue'], 'label'), $failed));
+        if (! $failed && ! $late) {
+            return [];
+        }
+        $names = fn (array $labels) => (string) Str::of('“'.implode('”, “', $labels).'”')->replaceLast('”, “', '” and “');
+        $text = trim(($failed ? $names($failed).' didn’t finish last time. ' : '').($late ? $names($late).' '.(count($late) === 1 ? 'is' : 'are').' running late. ' : ''));
+
+        return [static::entry('scheduler-tasks', 'warning', 'clock', static::count(count($failed) + count($late), 'background job').' need'.(count($failed) + count($late) === 1 ? 's' : '').' a look',
+            $text.' The details are on the next screen.', $url, 'See the jobs')];
     }
 
     /** Stripe test keys or PayPal sandbox (PayPal's card form and wallets share its sandbox switch). */

@@ -36,6 +36,9 @@ class Scheduler
     /** Web fallback runs at most once per this many seconds (and never while cron is running). */
     public const WEB_FALLBACK_SECONDS = 300;
 
+    /** A task this many minutes past its due time (while cron runs) is overdue in the health checks (health()). */
+    public const OVERDUE_GRACE_MINUTES = 15;
+
     /**
      * key => [label, what it does, cron expression (store timezone), Task class].
      *
@@ -211,6 +214,44 @@ class Scheduler
         return $next !== null && $next->lte($now ?? now());
     }
 
+    /**
+     * The due time the task missed by more than OVERDUE_GRACE_MINUTES since its last run (null = on time, or never ran:
+     * cron may have been added after its last due time). Only meaningful while cron is running.
+     */
+    public static function missedRun(string $key, ?Carbon $now = null): ?Carbon
+    {
+        $last = static::lastRun($key);
+        $due = $last ? static::nextRun($key, $last['at']) : null;
+
+        return $due !== null && $due->lt(($now ?? now())->copy()->subMinutes(self::OVERDUE_GRACE_MINUTES)) ? $due : null;
+    }
+
+    /**
+     * What the health checks report (Support\Doctor, the back-office home's To do card): is cron checking in, which
+     * configured tasks failed on their last run, and – while cron runs – which are overdue (e.g. a run that crashed and
+     * left its overlap lock behind).
+     *
+     * @return array{running:bool, beat:?Carbon, failed:list<array{key:string, label:string, at:Carbon, summary:string}>, overdue:list<array{key:string, label:string, last:Carbon, due:Carbon}>}
+     */
+    public static function health(): array
+    {
+        $running = static::cronRunning();
+        $failed = $overdue = [];
+        foreach (static::tasks() as $key => ['label' => $label]) {
+            if (! static::configured($key) || ! ($last = static::lastRun($key))) {
+                continue;
+            }
+            if ($last['status'] === 'failed') {
+                $failed[] = ['key' => $key, 'label' => $label, 'at' => $last['at'], 'summary' => (string) $last['summary']];
+            }
+            if ($running && ($due = static::missedRun($key))) {
+                $overdue[] = ['key' => $key, 'label' => $label, 'last' => $last['at'], 'due' => $due];
+            }
+        }
+
+        return ['running' => $running, 'beat' => static::lastHeartbeat(), 'failed' => $failed, 'overdue' => $overdue];
+    }
+
     // ------------------------------------------------------------------ heartbeat + state
 
     /** Written by every `schedule:run` (the commerce:heartbeat event). Not through Setting::set: no cache flush every minute. */
@@ -272,13 +313,15 @@ class Scheduler
     }
 
     /**
-     * Every task with its config switch, schedule, last and next run (commerce:schedule:status, Settings › Scheduled tasks).
+     * Every task with its config switch, schedule, last and next run, and – while cron runs – the due time it missed
+     * ('overdue', see missedRun()) (commerce:schedule:status, Settings › Scheduled tasks).
      *
-     * @return list<array{key:string, label:string, description:string, cron:string, core:bool, configured:bool, skip:?string, last:?array, next:?Carbon}>
+     * @return list<array{key:string, label:string, description:string, cron:string, core:bool, configured:bool, skip:?string, last:?array, next:?Carbon, overdue:?Carbon}>
      */
     public static function status(): array
     {
         $rows = [];
+        $running = static::cronRunning();
         foreach (static::tasks() as $key => ['label' => $label, 'description' => $description, 'cron' => $cron, 'core' => $core]) {
             $skip = null;
             try {
@@ -291,6 +334,7 @@ class Scheduler
                 'key' => $key, 'label' => $label, 'description' => $description, 'cron' => $cron, 'core' => $core,
                 'configured' => $configured, 'skip' => $configured ? $skip : 'Switched off in config/commerce.php (scheduler.tasks).',
                 'last' => static::lastRun($key), 'next' => $configured ? static::nextRun($key) : null,
+                'overdue' => $configured && $running ? static::missedRun($key) : null,
             ];
         }
 

@@ -591,6 +591,12 @@ Admin › Settings › Scheduled tasks shows the same table; `php artisan commer
   has been sent, at most every 5 minutes – fine for small shops, but reminders and reports then depend on traffic;
 - with it off the other tasks simply wait for cron; `commerce:doctor` warns.
 
+On a live site (`APP_ENV=production`) a missing or stopped cron is a `commerce:doctor` warning even with the web
+fallback, and administrators see **"Background jobs aren't set up"** (or "have stopped") in the back-office home's To do
+card. A task whose last run failed, or that cron has left more than 15 minutes past its due time (e.g. a crashed run's
+overlap lock: `php artisan schedule:clear-cache`), is a warning in both places too and shows **Late** in Settings ›
+Scheduled tasks.
+
 Developer switches: `config/commerce.php` → `scheduler` (`enabled`, `tasks` per key, `web_fallback`,
 `heartbeat_minutes`). Owner switches: Admin › Settings › Scheduled tasks (low-stock email – off by default; how long
 abandoned guest baskets are kept – 90 days, 0 = forever) and Admin › Settings › Abandoned carts.
